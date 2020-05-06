@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">MiniDroid</string>
+    <string name="content_description">icon.png</string>
+    <string name="btn_text">Get Started</string>
+    <string name="btn2_text">Help</string>
+    <string name="btn3_text">BACK</string>
+    <string name="help_text">You can access MiniDAPP anywhere as long as the Node is running.  Type the following URL in any browser, device or desktop: http://</string>
 </resources>

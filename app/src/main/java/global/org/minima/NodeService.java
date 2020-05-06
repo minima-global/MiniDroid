@@ -17,7 +17,6 @@ import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 
 import org.minima.Start;
-import org.minima.android.R;
 import org.minima.objects.TxPOW;
 import org.minima.objects.base.MiniData;
 import org.minima.system.Main;
