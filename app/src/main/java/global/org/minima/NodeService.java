@@ -77,7 +77,6 @@ public class NodeService extends Service {
         mStart = new Start();
         mStart.fireStarter(getFilesDir().getAbsolutePath());
 
-//        Log.d("Minima Call:", "" + "Minima is running");
         Toast.makeText(mNodeService, "Minima Service Started", Toast.LENGTH_LONG).show();
 
         mHandler = new Handler(Looper.getMainLooper());
@@ -122,8 +121,7 @@ public class NodeService extends Service {
                     NotificationManager.IMPORTANCE_LOW
             );
 
-            mNotificationManager =
-                    getSystemService(NotificationManager.class);
+            mNotificationManager = getSystemService(NotificationManager.class);
             mNotificationManager.createNotificationChannel(serviceChannel);
         }
     }
@@ -147,67 +145,68 @@ public class NodeService extends Service {
 
         startForeground(1, mNotificationBuilder);
 
-
-        // do heavy work on background thread
-        if (!mStarted) {
-            mStarted = true;
-            try {
-                Thread.sleep(1000);
-            } catch (Exception exc) {
-            }
-        }
-
-        mStart.getServer().getConsensusHandler().addListener(new NativeListener() {
+        Runnable notfiylistener = new Runnable() {
             @Override
-            public void processMessage(final Message zMessage) {
-                //THIS GETS CALLED!
+            public void run() {
+                //Little wait..
                 try {
-                    if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_BALANCE)) {
-                        mHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-
-                                mNotificationBuilder = new NotificationCompat.Builder(NodeService.this, CHANNEL_ID)
-                                        .setContentTitle("Minima Node: ")
-                                        .setContentText("You just received coins!")
-                                        .setSmallIcon(R.drawable.ic_minima)
-                                        .setContentIntent(mPendingIntent)
-                                        .build();
-
-                                startForeground(1, mNotificationBuilder);
-
-                                Toast.makeText(NodeService.this,
-                                        "You just received some coins!",
-                                        Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    } else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_NEWBLOCK)) {
-                        mHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-
-                                TxPOW txpow = (TxPOW) zMessage.getObject("txpow");
-
-                                mBLOCK_NUMBER = txpow.getBlockNumber().toString();
-
-                                mNotificationBuilder = new NotificationCompat.Builder(NodeService.this, CHANNEL_ID)
-                                        .setContentTitle("Block "+mBLOCK_NUMBER)
-                                        .setContentText("Minima Node Channel")
-                                        .setSmallIcon(R.drawable.ic_minima)
-                                        .setContentIntent(mPendingIntent)
-                                        .build();
-
-                                startForeground(1, mNotificationBuilder);
-
-                            }
-                        });
-
-                    }
-                } catch (Exception exc) {
-
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+
+                mStart.getServer().getConsensusHandler().addListener(new NativeListener() {
+                    @Override
+                    public void processMessage(final Message zMessage) {
+                        //THIS GETS CALLED!
+                        try {
+                            if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_BALANCE)) {
+                                mHandler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+
+                                        mNotificationBuilder = new NotificationCompat.Builder(NodeService.this, CHANNEL_ID)
+                                                .setContentTitle("Minima Node: ")
+                                                .setContentText("You just received coins!")
+                                                .setSmallIcon(R.drawable.ic_minima)
+                                                .setContentIntent(mPendingIntent)
+                                                .build();
+
+                                        startForeground(1, mNotificationBuilder);
+
+                                        Toast.makeText(NodeService.this,
+                                                "You just received some coins!",
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            } else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_NEWBLOCK)) {
+                                mHandler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        TxPOW txpow = (TxPOW) zMessage.getObject("txpow");
+                                        mBLOCK_NUMBER = txpow.getBlockNumber().toString();
+                                        mNotificationBuilder = new NotificationCompat.Builder(NodeService.this, CHANNEL_ID)
+                                                .setContentTitle("Block "+mBLOCK_NUMBER)
+                                                .setContentText("Minima Node Channel")
+                                                .setSmallIcon(R.drawable.ic_minima)
+                                                .setContentIntent(mPendingIntent)
+                                                .build();
+
+                                        startForeground(1, mNotificationBuilder);
+                                    }
+                                });
+                            }
+                        } catch (Exception exc) {
+                            MinimaLogger.log("ERROR adding Notify Listener.."+exc);
+                        }
+                    }
+                });
             }
-        });
+        };
+
+        //Set the notify listeners up..
+        Thread notify = new Thread(notfiylistener);
+        notify.start();
 
         return START_STICKY;
     }

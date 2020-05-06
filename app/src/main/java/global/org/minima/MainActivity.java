@@ -48,10 +48,8 @@ public class MainActivity extends AppCompatActivity {
         tv.setText("\nConnect to Minima from your Desktop\n\nOpen a browser and go to\n\nhttp://" + mIP + ":21000/");
 
         //start Minima node Foreground Service
-//        Intent intent = new Intent(this, NodeService.class);
-//        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            startForegroundService(intent);
-//        }
+        Intent intent = new Intent(this, NodeService.class);
+        startForegroundService(intent);
     }
 
     public String getIP(){
