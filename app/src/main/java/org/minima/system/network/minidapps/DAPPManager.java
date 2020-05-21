@@ -241,8 +241,14 @@ public class DAPPManager extends SystemHandler {
 		
 					//Has to be the first file
 					if(subapps != null) {
-						if(subapps[0].isDirectory()) {
-							conf = new File(subapps[0],"minidapp.conf");
+						for(File subapp : subapps) {
+							//Ignore the SQL folder that we generate..
+							if(subapp.isDirectory() && !subapp.getName().toLowerCase().equals("sql")) {
+								conf = new File(subapp,"minidapp.conf");
+								if(conf.exists()) {
+									break;	
+								}
+							}
 						}
 					}
 				}
