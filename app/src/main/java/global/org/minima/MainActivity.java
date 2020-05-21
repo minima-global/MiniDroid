@@ -60,7 +60,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        setIPText();
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setIPText();
+    }
+
+    public void setIPText(){
         //Set the IP - it may change..
         mIP = getIP();
         mTextIP.setText("\nConnect to Minima from your Desktop\n\nOpen a browser and go to\n\nhttp://" + mIP + ":21000/");
