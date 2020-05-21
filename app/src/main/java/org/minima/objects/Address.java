@@ -4,8 +4,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.minima.GlobalParams;
 import org.minima.objects.base.MiniData;
-import org.minima.objects.base.MiniScript;
+import org.minima.objects.base.MiniString;
 import org.minima.utils.BaseConverter;
 import org.minima.utils.Crypto;
 import org.minima.utils.Streamable;
@@ -21,7 +22,7 @@ public class Address implements Streamable{
 	/**
 	 * The script that this address represents
 	 */
-	MiniScript mScript;
+	MiniString mScript;
 	
 	/**
 	 * The actual address hash in byte format
@@ -36,12 +37,12 @@ public class Address implements Streamable{
 	public Address() {}
 	
 	public Address(String zScript) {
-		this(zScript, 256);
+		this(zScript, GlobalParams.MINIMA_DEFAULT_HASH_STRENGTH);
 	}
 	
 	public Address(String zScript, int zBitLength) {
 		//Convert script..
-		mScript = new MiniScript(zScript);
+		mScript = new MiniString(zScript);
 		
 		//Set the Address..
 		mAddressData = new MiniData(Crypto.getInstance().hashData(mScript.getData(),zBitLength));
@@ -51,9 +52,14 @@ public class Address implements Streamable{
 	}
 	
 	public Address(MiniData zAddressData) {
+		mScript         = new MiniString("");
 		mAddressData 	= zAddressData;
-		mMinimaAddress  = zAddressData.to0xString();
-		mScript         = new MiniScript("");
+		
+		if(mAddressData.getLength()<16) {
+			mMinimaAddress  = mAddressData.to0xString();
+		}else {
+			mMinimaAddress  = makeMinimaAddress(mAddressData);	
+		}
 	}
 	
 	public JSONObject toJSON() {
@@ -69,10 +75,6 @@ public class Address implements Streamable{
 		return mAddressData.toString();
 	}
 	
-	public String toFullString() {
-		return toJSON().toString();
-	}
-	
 	/**
 	 * @return the script
 	 */
@@ -82,6 +84,10 @@ public class Address implements Streamable{
 	
 	public MiniData getAddressData() {
 		return mAddressData;
+	}
+	
+	public String getMinimaAddress() {
+		return mMinimaAddress;
 	}
 	
 	public boolean isEqual(Address zAddress) {
@@ -97,13 +103,13 @@ public class Address implements Streamable{
 	@Override
 	public void readDataStream(DataInputStream zIn) throws IOException {
 		mAddressData   = MiniData.ReadFromStream(zIn);
-		mScript        = MiniScript.ReadFromStream(zIn);
+		mScript        = MiniString.ReadFromStream(zIn);
 		
-		if(mScript.toString().equals("")) {
+		if(mAddressData.getLength()<20) {
 			mMinimaAddress  = mAddressData.to0xString();
 		}else {
-			mMinimaAddress  = makeMinimaAddress(mAddressData);
-		}		
+			mMinimaAddress  = makeMinimaAddress(mAddressData);	
+		}	
 	}
 	
 	/**
@@ -116,17 +122,53 @@ public class Address implements Streamable{
 		//The Original data
 		byte[] data = zAddress.getData();
 		
-		//First hash it and add 4 digits..
+		//First hash it to add some checksum digits..
 		byte[] hash = Crypto.getInstance().hashData(data, 160);
 		
+		//Calculate a new length - ONLY certain lengths allowed!
+		int len    = data.length;
 		int newlen = 0;
-		int len = data.length;
+		
+		//160 bit
 		if(len == 20) {
 			newlen = 25;
+
+		//224 bit
+		}else if(len == 28) {
+			newlen = 30;
+				
+		//256 bit
 		}else if(len == 32) {
 			newlen = 35;
+		
+		//288 bit
+		}else if(len == 36) {
+			newlen = 40;
+		
+		//320 bit
+		}else if(len == 40) {
+			newlen = 45;
+		
+		//384 bit
+		}else if(len == 48) {
+			newlen = 50;
+		
+		//416 bit
+		}else if(len == 52) {
+			newlen = 55;
+		
+		//448 bit
+		}else if(len == 56) {
+			newlen = 60;
+		
+		//480 bit
+		}else if(len == 60) {
+			newlen = 65;
+							
+		//512 bit
 		}else if(len == 64) {
 			newlen = 70;
+		
 		}else {
 			throw new ArithmeticException("ERROR - Make Minima Address : not a valid length address!");
 		}
@@ -165,16 +207,32 @@ public class Address implements Streamable{
 		//Get the data
 		byte[] data = BaseConverter.decode32(zMinimaAddress.substring(2)); 
 		
-		int len = data.length;
+		int len    = data.length;
 		int bitlen = 0; 
+		
+		//Convert back..
 		if(len == 25) {
 			bitlen = 20;
+		}else if(len == 30) {
+			bitlen = 28;
 		}else if(len == 35) {
 			bitlen = 32;
+		}else if(len == 40) {
+			bitlen = 36;
+		}else if(len == 45) {
+			bitlen = 40;
+		}else if(len == 50) {
+			bitlen = 48;
+		}else if(len == 55) {
+			bitlen = 52;
+		}else if(len == 60) {
+			bitlen = 56;
+		}else if(len == 65) {
+			bitlen = 60;
 		}else if(len == 70) {
 			bitlen = 64;
 		}else {
-			throw new ArithmeticException("Wrong length Minima Address "+len);
+			throw new ArithmeticException("Wrong length Minima Address : "+len);
 		}
 		
 		int hashlen = len - bitlen;

@@ -1,10 +1,11 @@
 package org.minima.database;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -31,7 +32,7 @@ import org.minima.objects.Coin;
 import org.minima.objects.PubPrivKey;
 import org.minima.objects.StateVariable;
 import org.minima.objects.Transaction;
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.Witness;
 import org.minima.objects.base.MMRSumNumber;
 import org.minima.objects.base.MiniByte;
@@ -42,9 +43,9 @@ import org.minima.objects.proofs.TokenProof;
 import org.minima.system.backup.BackupManager;
 import org.minima.system.backup.SyncPackage;
 import org.minima.system.backup.SyncPacket;
-import org.minima.system.bootstrap.GenesisTxPOW;
 import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.input.functions.gimme50;
+import org.minima.system.txpow.GenesisTxPOW;
 import org.minima.system.txpow.TxPoWChecker;
 import org.minima.system.txpow.TxPoWMiner;
 import org.minima.utils.Crypto;
@@ -107,7 +108,7 @@ public class MinimaDB {
 	 */ 
 	//Genesis txpow
 	public void DoGenesis() {
-		TxPOW gen = new GenesisTxPOW();
+		TxPoW gen = new GenesisTxPOW();
 		
 		//Add to the list
 		TxPOWDBRow row = mTxPOWDB.addTxPOWDBRow(gen);
@@ -149,7 +150,7 @@ public class MinimaDB {
 		getBackup().backupTxpow(gen); 
 	}
 	
-	public TxPOW getTxPOW(MiniData zTxPOWID) {
+	public TxPoW getTxPOW(MiniData zTxPOWID) {
 		TxPOWDBRow row = mTxPOWDB.findTxPOWDBRow(zTxPOWID);
 		if(row == null) {
 			return null;
@@ -168,7 +169,7 @@ public class MinimaDB {
 	/**
 	 * Process a TXPOW
 	 */
-	public void processTxPOW(TxPOW zTxPow) {
+	public void processTxPOW(TxPoW zTxPow) {
 		//Is it a block.. if so add a BASIC block to the tree
 		boolean treeadded = false;
 		if(zTxPow.isBlock()) {
@@ -257,7 +258,7 @@ public class MinimaDB {
 			//Now sort
 			for(BlockTreeNode treenode : list) {
 				//Get the Block
-				TxPOW txpow = treenode.getTxPow();
+				TxPoW txpow = treenode.getTxPow();
 				
 				//get the row..
 				TxPOWDBRow trow = mTxPOWDB.addTxPOWDBRow(txpow);
@@ -270,7 +271,8 @@ public class MinimaDB {
 				trow.setIsInBlock(true);
 				trow.setInBlockNumber(block);
 				
-				if(treenode.getTxPow().getBlockNumber().isMoreEqual(oldcascade)) {
+				//Take coins from the child of the cascade node onwards..
+				if(treenode.getTxPow().getBlockNumber().isMore(oldcascade)) {
 					//Check for coins in the MMR
 					scanMMRSetForCoins(treenode.getMMRSet());
 				}
@@ -288,45 +290,33 @@ public class MinimaDB {
 				}
 			}
 			
-			//Whats the weight of the tree now..
-			BigInteger weight = mMainTree.getChainRoot().getTotalWeight();
-			
-			if(weight.compareTo(BigInteger.ZERO) == 0) {
-				System.out.println("ZERO WEIGHT ERROR!");
-			}
+			//DEBUG TESTER
+//			Random rr = new Random();
+//			if(rr.nextBoolean()) {
+//				return;
+//			}
 			
 			/**
 			 * Cascade the tree
 			 */
-			//Create a cascaded version
 			MultiLevelCascadeTree casc = new MultiLevelCascadeTree(mMainTree);
-			
-			//Do it..
 			ArrayList<BlockTreeNode> removals = casc.cascadedTree();
-			
-			//Was it worth it..
-			BigInteger cascweight = casc.getCascadeTree().getChainRoot().getTotalWeight();
-			
-			//See what the difference is..
-			BigDecimal ratio = new BigDecimal(cascweight).divide(new BigDecimal(weight), MathContext.DECIMAL128);
-			
-			//If the cascade levels are long enough this should NEVER happen
-			if(ratio.compareTo(new BigDecimal(GlobalParams.MINIMA_CASCADE_RATIO)) < 0) {
-				//Too much power lost.. wait..
-				MinimaLogger.log("Cascade Tree LOST more than "+GlobalParams.MINIMA_CASCADE_RATIO+" "+ratio);
-				//For NOW continue..
-//				return;
-			}
 			
 			//Set it
 			mMainTree = casc.getCascadeTree();
 			
-			//Fix the MMR
+			//Fix the MMR to keep all details from the newly cascaded blocks..
 			BlockTreeNode newcascade  = mMainTree.getCascadeNode();
-			if(newcascade != null && newcascade.getMMRSet()!=null){
-				//Sort the MMR..
-				casc.recurseParentMMR(oldcascade,newcascade.getMMRSet());
+			
+			//recurse up the tree.. copying all the parents for the MMRSet
+			if(!oldcascade.isEqual(newcascade.getMMRSet().getBlockTime())) {
+				//Cascade copying all the parent MMRSet keepers..
+				newcascade.getMMRSet().recurseParentMMR(oldcascade);
+				
+				//And Clear it.. no txbody required or mmrset..
+				mMainTree.clearCascadeBody();
 			}
+			
 			
 			//Remove the deleted blocks..
 			for(BlockTreeNode node : removals) {
@@ -442,21 +432,26 @@ public class MinimaDB {
 				//Check the Super Block Levels are Correct! and point to the correct blocks
 				//..TODO
 				
-				//Create an MMR set that will ONLY be used if the block is VALID..
-				MMRSet mmrset = new MMRSet(zNode.getParent().getMMRSet());
-				
-				//Set this MMR..
-				zNode.setMMRset(mmrset);
-				
-				//Check all the transactions in the block are correct..
-				allok = checkFullTxPOW(zNode.getTxPow(), mmrset);
-				
-				//Check the root MMR..
-				if(allok) {
-					MiniData root = mmrset.getMMRRoot().getFinalHash();
-					if(!row.getTxPOW().getMMRRoot().isEqual(root)) {
-						allok = false;	
+				//need a  body for this..
+				if(row.getTxPOW().hasBody()) {
+					//Create an MMR set that will ONLY be used if the block is VALID..
+					MMRSet mmrset = new MMRSet(zNode.getParent().getMMRSet());
+					
+					//Set this MMR..
+					zNode.setMMRset(mmrset);
+					
+					//Check all the transactions in the block are correct..
+					allok = checkFullTxPOW(zNode.getTxPow(), mmrset);
+					
+					//Check the root MMR..
+					if(allok) {
+						MiniData root = mmrset.getMMRRoot().getFinalHash();
+						if(!row.getTxPOW().getMMRRoot().isEqual(root)) {
+							allok = false;	
+						}
 					}
+				}else {
+					MinimaLogger.log("WARNING : sortBlockTreeNodeStates on no body TxPoW..! "+zNode.toString());
 				}
 				
 				//if it all passes is OK.. otherwise not ok..
@@ -478,10 +473,11 @@ public class MinimaDB {
 		}
 	}
 	
-	private boolean checkFullTxPOW(TxPOW zBlock, MMRSet zMMRSet) {
+	private boolean checkFullTxPOW(TxPoW zBlock, MMRSet zMMRSet) {
 		//First check the main transaction..
 		if(zBlock.isTransaction()) {
-			boolean inputvalid = TxPoWChecker.checkTransactionMMR(zBlock, this, zBlock.getBlockNumber(), zMMRSet,true);
+			boolean inputvalid = TxPoWChecker.checkTransactionMMR(zBlock, this, 
+					zBlock.getBlockNumber(), zBlock.getTimeSecs(), zMMRSet,true);
 			if(!inputvalid) {
 				return false;
 			}
@@ -491,10 +487,11 @@ public class MinimaDB {
 		ArrayList<MiniData> txns = zBlock.getBlockTransactions();
 		for(MiniData txn : txns) {
 			TxPOWDBRow row = getTxPOWRow(txn);
-			TxPOW txpow = row.getTxPOW();
+			TxPoW txpow = row.getTxPOW();
 			
 			//Check the Proof..
-			boolean inputvalid = TxPoWChecker.checkTransactionMMR(txpow, this, zBlock.getBlockNumber(), zMMRSet,true);
+			boolean inputvalid = TxPoWChecker.checkTransactionMMR(txpow, this, 
+					zBlock.getBlockNumber(), zBlock.getTimeSecs(), zMMRSet,true);
 			if(!inputvalid) {
 				return false;
 			}
@@ -509,12 +506,12 @@ public class MinimaDB {
 	 * @param zTxPOW
 	 * @return
 	 */
-	public TxPOWDBRow addNewTxPow(TxPOW zTxPOW) {
+	public TxPOWDBRow addNewTxPow(TxPoW zTxPOW) {
 		//That's that
 		return mTxPOWDB.addTxPOWDBRow(zTxPOW);
 	}
 	
-	public BlockTreeNode hardAddTxPOWBlock(TxPOW zTxPoW, MMRSet zMMR, boolean zCascade) {
+	public BlockTreeNode hardAddTxPOWBlock(TxPoW zTxPoW, MMRSet zMMR, boolean zCascade) {
 		//Add to the list
 		TxPOWDBRow row = mTxPOWDB.addTxPOWDBRow(zTxPoW);
 		row.setIsInBlock(true);
@@ -544,6 +541,9 @@ public class MinimaDB {
 		MultiLevelCascadeTree casc = new MultiLevelCascadeTree(mMainTree);
 		casc.cascadedTree();
 		mMainTree = casc.getCascadeTree();
+	
+		//And Clear it.. no txbody required or mmrset.. below cascade
+		mMainTree.clearCascadeBody();
 	}
 	
 	/**
@@ -652,7 +652,7 @@ public class MinimaDB {
 		
 		ArrayList<TxPOWDBRow> rows = getTxPowDB().getAllUnusedTxPOW();
 		for(TxPOWDBRow row : rows) {
-			TxPOW txpow = row.getTxPOW();
+			TxPoW txpow = row.getTxPOW();
 			if(txpow.isTransaction()) {
 				ArrayList<Coin> inputs = txpow.getTransaction().getAllInputs();	
 				for(Coin cc : inputs) {
@@ -671,7 +671,7 @@ public class MinimaDB {
 		
 		ArrayList<TxPOWDBRow> rows = getTxPowDB().getAllUnusedTxPOW();
 		for(TxPOWDBRow row : rows) {
-			TxPOW txpow = row.getTxPOW();
+			TxPoW txpow = row.getTxPOW();
 			if(txpow.isTransaction()) {
 				ArrayList<Coin> inputs = txpow.getTransaction().getAllInputs();	
 				for(Coin cc : inputs) {
@@ -704,7 +704,7 @@ public class MinimaDB {
 		return amounts;
 	}
 	
-	public Hashtable<String, MiniNumber> getTransactionTokenAmounts(TxPOW zTxPOW) {
+	public Hashtable<String, MiniNumber> getTransactionTokenAmounts(TxPoW zTxPOW) {
 		Hashtable<String, MiniNumber> amounts = new Hashtable<>();
 	
 		if(zTxPOW.isTransaction()) {
@@ -955,17 +955,17 @@ public class MinimaDB {
 	 * @param zWitness
 	 * @return
 	 */
-	public TxPOW getCurrentTxPow(Transaction zTrans, Witness zWitness, JSONArray zContractLogs) {
+	public TxPoW getCurrentTxPow(Transaction zTrans, Witness zWitness, JSONArray zContractLogs) {
 		//Get the current best block..
 		BlockTreeNode tip = mMainTree.getChainTip();
 		
 		//TODO - Add Burn Transaction and Witness!
 		
 		//Fresh TxPOW
-		TxPOW txpow = new TxPOW();
+		TxPoW txpow = new TxPoW();
 				
 		//Set the time
-		txpow.setTimeSecs(new MiniNumber(""+(System.currentTimeMillis()/1000)));
+		txpow.setTimeMilli(new MiniNumber(""+System.currentTimeMillis()));
 			
 		//Set the Transaction..
 		txpow.setTransaction(zTrans);
@@ -978,9 +978,6 @@ public class MinimaDB {
 		
 		//Block Details..
 		txpow.setBlockNumber(tip.getTxPow().getBlockNumber().increment());
-		
-		//Previous block
-		txpow.setParent(tip.getTxPowID());
 		
 		if(!GlobalParams.MINIMA_ZERO_DIFF_BLK) {
 			//Calculate New Chain Speed
@@ -1005,6 +1002,11 @@ public class MinimaDB {
 				if(newdiff.compareTo(Crypto.MAX_VAL)>0) {
 					newdiff = Crypto.MAX_VAL;
 				}
+				
+//				//Check more than TX-MIN..
+//				if(newdiff.compareTo(Crypto.MEGA_VAL)>0) {
+//					newdiff = Crypto.MEGA_VAL;
+//				}
 								
 				//Create the hash
 				MiniData diffhash = new MiniData("0x"+newdiff.toString(16)); 
@@ -1016,7 +1018,7 @@ public class MinimaDB {
 		
 		//Super Block Levels.. FIRST just copy them all..
 		for(int i=0;i<GlobalParams.MINIMA_CASCADE_LEVELS;i++) {
-			txpow.mSuperParents[i] = tip.getTxPow().mSuperParents[i];
+			txpow.setSuperParent(i, tip.getTxPow().getSuperParent(i));
 		}
 
 		//And now set the correct SBL given the last block
@@ -1025,7 +1027,7 @@ public class MinimaDB {
 		//All levels below this now point to the last block..
 		MiniData tiptxid = tip.getTxPowID();
 		for(int i=sbl;i>=0;i--) {
-			txpow.mSuperParents[i] = tiptxid;
+			txpow.setSuperParent(i, tiptxid);
 		}			
 		
 		//Get the current MMRSet
@@ -1034,7 +1036,7 @@ public class MinimaDB {
 		//Check the first transaction
 		if(!zTrans.isEmpty()) {
 			boolean valid = TxPoWChecker.checkTransactionMMR(zTrans, zWitness, this, 
-					txpow.getBlockNumber(),newset,true, zContractLogs);
+					txpow.getBlockNumber(), txpow.getTimeSecs(), newset,true, zContractLogs);
 			
 			//MUST be valid.. ?
 			if(!valid) {
@@ -1047,14 +1049,15 @@ public class MinimaDB {
 		ArrayList<TxPOWDBRow> unused = mTxPOWDB.getAllUnusedTxPOW();
 		for(TxPOWDBRow row : unused) {
 			//Check is still VALID..
-			TxPOW txp = row.getTxPOW();
+			TxPoW txp = row.getTxPOW();
 			
 			/**
 			 * MUST be a transaction as that prevents double entry. A block with no transaction 
 			 * is valid.. but no way to check it has already been added
 			 */
 			if(txp.isTransaction()) {
-				boolean valid = TxPoWChecker.checkTransactionMMR(txp, this, txpow.getBlockNumber(),newset,true);
+				boolean valid = TxPoWChecker.checkTransactionMMR(txp, this, 
+						txpow.getBlockNumber(), txpow.getTimeSecs(), newset,true);
 				
 				if(valid) {
 					//Add it..
@@ -1067,7 +1070,7 @@ public class MinimaDB {
 					//And delete..
 					getBackup().deleteTxpow(txp);
 					
-					MinimaLogger.log("Removing invalid TXPOW.. "+txp);
+					MinimaLogger.log("Removing invalid TXPOW.. "+txp.getTxPowID());
 				}
 			}
 		}
@@ -1090,7 +1093,15 @@ public class MinimaDB {
 		return getMainTree().getChainTip().getTxPow().getBlockNumber();
 	}
 	
+	public TxPoW getTopTxPoW() {
+		return getMainTree().getChainTip().getTxPow();
+	}
+	
 	public SyncPackage getSyncPackage() {
+		return getSyncPackage(false);
+	}
+	
+	public SyncPackage getSyncPackage(boolean zDeepCopy) {
 		SyncPackage sp = new SyncPackage();
 		
 		//Is there anything.. ?
@@ -1108,7 +1119,37 @@ public class MinimaDB {
 		//Cycle through it all..
 		for(BlockTreeNode node : nodes) {
 			MiniNumber block = node.getTxPow().getBlockNumber();
-			sp.getAllNodes().add(0,new SyncPacket(node, block.isLessEqual(casc)));
+			sp.getAllNodes().add(0,new SyncPacket(node, block.isLess(casc)));
+		}
+		
+		//If sending this over the network.. make a copy.. as TxPoW could change (body removed if cascade)
+		if(zDeepCopy) {
+			//Write it out..
+			try {
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				DataOutputStream dos = new DataOutputStream(baos);
+				sp.writeDataStream(dos);
+				dos.flush();
+				dos.close();
+				
+				//And read it in..
+				ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+				DataInputStream dis = new DataInputStream(bais);
+				
+				//Now read it in.. 
+				SyncPackage spdeep = new SyncPackage();
+				spdeep.readDataStream(dis);
+				
+				//Clean up
+				dis.close();
+				bais.close();
+				baos.close();
+				
+				return spdeep;
+				
+			}catch(Exception exc) {
+				exc.printStackTrace();
+			}	
 		}
 		
 		return sp;

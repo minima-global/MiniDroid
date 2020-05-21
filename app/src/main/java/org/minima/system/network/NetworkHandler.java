@@ -3,6 +3,7 @@ package org.minima.system.network;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Date;
 
 import org.minima.system.Main;
 import org.minima.system.SystemHandler;
@@ -38,7 +39,7 @@ public class NetworkHandler extends SystemHandler{
 	/**
 	 * The  server listening for clients..
 	 */
-	MultiServer mServer;
+	MinimaServer mServer;
 	
 	/**
 	 * The RPC server listening for remote commands
@@ -73,7 +74,7 @@ public class NetworkHandler extends SystemHandler{
 		super(zMain,"NETWORK");
 	}
 	
-	public MultiServer getServer() {
+	public MinimaServer getServer() {
 		return mServer;
 	}
 	
@@ -107,7 +108,7 @@ public class NetworkHandler extends SystemHandler{
 			int rpcport = zMessage.getInteger("rpcport");
 			
 			//Start the network Server
-			mServer = new MultiServer(this,port);
+			mServer = new MinimaServer(this,port);
 			Thread multimain = new Thread(mServer, "Multi Server");
 			multimain.start();
 			
@@ -184,7 +185,7 @@ public class NetworkHandler extends SystemHandler{
 			String host = zMessage.getString("host");
 			int port 	= zMessage.getInteger("port");
 			
-			MinimaLogger.log("Attempting to connect to "+host+":"+port);
+			MinimaLogger.log("Attempting to connect to "+host+":"+port+" @ "+new Date().toString());
 			
 			//Create a NetClient
 			NetClient client = new NetClient(host, port, this);
@@ -229,6 +230,7 @@ public class NetworkHandler extends SystemHandler{
 				recon.addString("host", host);
 				recon.addInt("port", port);
 				
+				MinimaLogger.log("Connection lost @ "+new Date().toString());
 				MinimaLogger.log("Attempting reconnect to "+host+":"+port+" in 30s..");
 				
 				PostTimerMessage(recon);

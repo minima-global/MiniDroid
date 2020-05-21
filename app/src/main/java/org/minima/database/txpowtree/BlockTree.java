@@ -92,38 +92,24 @@ public class BlockTree {
 	 * @param zNode
 	 * @return
 	 */
-	public void hardAddNode(BlockTreeNode zNode, boolean zLinkAll) {
+	public void hardAddNode(BlockTreeNode zNode, boolean zTouchMMR) {
 		if(mRoot == null) {
 			setTreeRoot(zNode);
 			zNode.setParent(null);
 			return;
 		}
 		
-		//CHECK - this is breaking on Android ?
-		BlockTreeNode exists = findNode(zNode.getTxPowID());
-		if(exists != null) {
-			//All ready in there..
-			MinimaLogger.log("HARD ADDING NODE ALREADY THERE! "+zNode.toString());
-		}
-		
 		//Add to the end..
 		mTip.addChild(zNode);
 		
-		//Link the MMR..
-		if(zNode.getMMRSet() != null) {
-			if(zLinkAll) {
+		//Link the MMRSet
+		if(zTouchMMR) {
+			if(zNode.getMMRSet() != null) {
 				if(mTip.getTxPowID().isEqual(zNode.getTxPow().getParentID())) {
 					//Correct Parent.. can link the MMR!
-					zNode.getMMRSet().setParent(mTip.getMMRSet());
-				}
-			}else {
-//				if(!mTip.isCascade()) {
-//					zNode.getMMRSet().setParent(mTip.getMMRSet());
-//				}
-				
-				if(!mTip.isCascade() && mTip.getTxPowID().isEqual(zNode.getTxPow().getParentID())) {
-					//Correct Parent.. can link the MMR!
-					zNode.getMMRSet().setParent(mTip.getMMRSet());
+					zNode.getMMRSet().setParent(mTip.getMMRSet());	
+				}else {
+					zNode.getMMRSet().setParent(null);
 				}
 			}
 		}
@@ -309,13 +295,39 @@ public class BlockTree {
 		return nodes;
 	}
 	
+	/** 
+	 * Clear the TxPoW Body and MMRset from all nodes past the cascade
+	 */
+	public void clearCascadeBody() {
+		if(mCascadeNode == null) {
+			return;
+		}
+		
+		//Set the MMRSet parent to NULL
+		mCascadeNode.getMMRSet().setParent(null);
+		
+		//Clear from one node up..
+		BlockTreeNode clearnode = mCascadeNode.getParent();
+		while(clearnode != null) {
+			//Clear the TxPoW
+			clearnode.getTxPow().clearBody();
+			
+			//Clear the MMRset
+			clearnode.setMMRset(null);
+			
+			//Get the Parent
+			clearnode = clearnode.getParent();
+		}
+	}
+	
+	
 	/**
 	 * Get the Chain Speed..
 	 * 
 	 * Calculated as the different between the cascade node and the tip..
 	 */
 	public MiniNumber getChainSpeed() {
-		//Time difference between the cascade node and the tip
+		//Calculate to seconds..
 		MiniNumber start      = mCascadeNode.getTxPow().getTimeSecs();
 		MiniNumber end        = mTip.getTxPow().getTimeSecs();
 		MiniNumber timediff   = end.sub(start);

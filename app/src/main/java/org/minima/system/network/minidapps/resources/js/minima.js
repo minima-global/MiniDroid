@@ -107,7 +107,19 @@ var Minima = {
 		var rpc = "http://"+Minima.host+"/"+enc;
 
 		//And Call it..
-		httpGetAsync(rpc, callback,true);
+		httpGetAsync(rpc, callback, true);
+	},
+	
+	//Runs SQL in the Database created for this MiniDAPP
+	sql : function(query, callback){
+		//Encode ready for transmission..
+		var enc = encodeURIComponent(query);
+		
+		//Encoded copy
+		var rpc = "http://"+Minima.host+"/sql/"+enc;
+
+		//And Call it..
+		httpGetAsync(rpc, callback, true);
 	},
 	
 	//Wipes the Locally stored details of the phone IP

@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import org.minima.objects.base.MMRSumNumber;
 import org.minima.objects.base.MiniByte;
 import org.minima.objects.base.MiniData;
+import org.minima.objects.base.MiniNumber;
+import org.minima.utils.BaseConverter;
 import org.minima.utils.Crypto;
 import org.minima.utils.Streamable;
 import org.minima.utils.json.JSONArray;
@@ -69,37 +71,28 @@ public class Proof implements Streamable {
 	public void setProof(MiniData zChainSHAProof) {
 		mFinalized  = false;
 		mProofChain = new ArrayList<>();
-		
-		byte[] chdata = zChainSHAProof.getData();
-		
-		ByteArrayInputStream bais = new ByteArrayInputStream(chdata);
+	
+		ByteArrayInputStream bais = new ByteArrayInputStream(zChainSHAProof.getData());
 		DataInputStream dis = new DataInputStream(bais);
 		
-		int len  = chdata.length;  
-		int read = 0;
-		
-		//The HASH_BITS is first
 		try {
-			HASH_BITS = dis.readShort();
-			read += 2;
+			//The HASH_BITS is first
+			int hb    = MiniByte.ReadFromStream(dis).getValue();
+			HASH_BITS = hb * 32;
+			
+			while(dis.available()>0) {
+				//Is it to the left or the right 
+				MiniByte leftrigt = MiniByte.ReadFromStream(dis);
+				
+				//What data to hash
+				MiniData data = MiniData.ReadFromStream(dis);
+				
+				//Add to the Proof..
+				addProofChunk(leftrigt, data);
+			}
+			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-		
-		while(read<len) {
-			//Is it to the left or the right 
-			MiniByte leftrigt = MiniByte.ReadFromStream(dis);
-			read++;
-			
-			//What data to hash
-			MiniData data = MiniData.ReadFromStream(dis);
-			
-			//4 bytes for the len and the data itself..
-			read += 4 + data.getLength();
-			
-			//Add to the Proof..
-			addProofChunk(leftrigt, data);
 		}
 		
 		finalizeHash();
@@ -147,7 +140,8 @@ public class Proof implements Streamable {
 		
 		try {
 			//First write out the HASH_BITS
-			dos.writeShort(HASH_BITS);
+			MiniByte hb = new MiniByte(HASH_BITS / 32);
+			hb.writeDataStream(dos);
 			
 			//Now write out the data..
 			int len = mProofChain.size();
@@ -214,10 +208,13 @@ public class Proof implements Streamable {
 	
 	@Override
 	public void writeDataStream(DataOutputStream zOut) throws IOException {
-		zOut.writeInt(HASH_BITS);
+		MiniByte hb = new MiniByte(HASH_BITS / 32);
+		hb.writeDataStream(zOut);
+		
 		mData.writeDataStream(zOut);
-		int len = mProofChain.size();
-		zOut.writeInt(len);
+		MiniNumber mlen = new MiniNumber(mProofChain.size());
+		mlen.writeDataStream(zOut);
+		int len = mlen.getAsInt();
 		for(int i=0;i<len;i++) {
 			ProofChunk chunk = mProofChain.get(i);
 			chunk.getLeft().writeDataStream(zOut);
@@ -228,15 +225,17 @@ public class Proof implements Streamable {
 
 	@Override
 	public void readDataStream(DataInputStream zIn) throws IOException {
-		HASH_BITS = zIn.readInt();
+		MiniByte hb = MiniByte.ReadFromStream(zIn);
+		HASH_BITS   = hb.getValue() * 32;
+		
 		mData = MiniData.ReadFromStream(zIn);
 		mProofChain = new ArrayList<>();
-		int len = zIn.readInt();
+		MiniNumber mlen = MiniNumber.ReadFromStream(zIn);
+		int len = mlen.getAsInt();
 		for(int i=0;i<len;i++) {
 			MiniByte left    = MiniByte.ReadFromStream(zIn);
 			MiniData hash    = MiniData.ReadFromStream(zIn);
 			MMRSumNumber val = MMRSumNumber.ReadFromStream(zIn);
-			
 			mProofChain.add(new ProofChunk(left, hash, val));
 		}
 		
@@ -256,15 +255,19 @@ public class Proof implements Streamable {
 	}
 	
 	public static int getChainSHABits(String zChainSHA) throws Exception {
-		if(zChainSHA.startsWith("0x0200")) {
-			return 512;
-		}else if(zChainSHA.startsWith("0x0100")) {
-			return 256;
-		}else if(zChainSHA.startsWith("0x00A0")) {
-			return 160;
+		
+		//Get the first 4 digits..
+		String bits = zChainSHA.substring(0, 4);
+		
+		//Convert to Decimal.
+		int dec = BaseConverter.hexToNumber(bits);
+		
+		if(dec<5 || dec>16) {
+			//ERROR
+			throw new Exception("Invalid ChainSHA.. must be 160, 224, 256, 288, 320, 384, 416, 448, 480 or 512");	
 		}
 		
-		//ERROR
-		throw new Exception("Invalid ChainSHA.. must be 160, 256 or 512");
+		//And multiply by 32..
+		return dec * 32;
 	}
 }

@@ -11,7 +11,7 @@ import org.minima.database.txpowdb.TxPOWDBRow;
 import org.minima.database.txpowdb.TxPowDB;
 import org.minima.database.txpowtree.BlockTreeNode;
 import org.minima.database.userdb.java.JavaUserDB;
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
 import org.minima.system.Main;
@@ -21,7 +21,7 @@ import org.minima.system.backup.SyncPacket;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.messages.Message;
 
-public class ConsensusBackup {
+public class ConsensusBackup extends ConsensusProcessor {
 
 	public static final String CONSENSUS_PREFIX  = "CONSENSUSBACKUP_";
 	
@@ -37,32 +37,24 @@ public class ConsensusBackup {
 	public static final String USERDB_BACKUP = "user.minima";
 	public static final String SYNC_BACKUP   = "sync.package";
 	
-	MinimaDB mDB;
-	ConsensusHandler mHandler;
-	
 	public ConsensusBackup(MinimaDB zDB, ConsensusHandler zHandler) {
-		mDB = zDB;
-		mHandler = zHandler;
-	}
-	
-	private MinimaDB getMainDB() {
-		return mDB;
+		super(zDB, zHandler);
 	}
 	
 	private BackupManager getBackup() {
-		return mHandler.getMainHandler().getBackupManager();
+		return getConsensusHandler().getMainHandler().getBackupManager();
 	}
 	
 	public void processMessage(Message zMessage) throws Exception {
 		
 		if(zMessage.isMessageType(CONSENSUSBACKUP_BACKUPUSER)) {
 			//Get this as will need it a few times..
-			BackupManager backup = mHandler.getMainHandler().getBackupManager();
+			BackupManager backup = getBackup();
 			
 			//First backup the UserDB..
 			JavaUserDB userdb = (JavaUserDB) getMainDB().getUserDB();
 			File backuser     = backup.getBackUpFile(USERDB_BACKUP);
-			BackupManager.writeObjectToFile(backuser, userdb);
+			backup.writeObjectToFile(backuser, userdb);
 			
 		}else if(zMessage.isMessageType(CONSENSUSBACKUP_BACKUP)) {
 			//Is this for shut down or just a regular backup..
@@ -72,7 +64,7 @@ public class ConsensusBackup {
 			}
 			
 			//Get this as will need it a few times..
-			BackupManager backup = mHandler.getMainHandler().getBackupManager();
+			BackupManager backup = getBackup();
 			
 			//First backup the UserDB..
 			JavaUserDB userdb = (JavaUserDB) getMainDB().getUserDB();
@@ -86,13 +78,13 @@ public class ConsensusBackup {
 			
 			//Do we shut down..
 			if(shutdown) {
-				mHandler.getMainHandler().PostMessage(Main.SYSTEM_FULLSHUTDOWN);
+				getConsensusHandler().getMainHandler().PostMessage(Main.SYSTEM_FULLSHUTDOWN);
 			}
 			
 		}else if(zMessage.isMessageType(CONSENSUSBACKUP_RESTORE)) {
 			
 			//Get this as will need it a few times..
-			BackupManager backup = mHandler.getMainHandler().getBackupManager();
+			BackupManager backup = getBackup();
 			
 			//Check the backups exist..
 			File backuser  = backup.getBackUpFile(USERDB_BACKUP);
@@ -102,14 +94,14 @@ public class ConsensusBackup {
 			if(!backuser.exists()) {
 				//Not OK.. start fresh.. 
 				MinimaLogger.log("No User backups found.. @ "+backuser.getAbsolutePath());
-				mHandler.getMainHandler().PostMessage(Main.SYSTEM_INIT);
+				getConsensusHandler().getMainHandler().PostMessage(Main.SYSTEM_INIT);
 				return;
 			}
 			
 			if(!backsync.exists()) {
 				//Not OK.. start fresh.. 
 				MinimaLogger.log("No SyncPackage found.. @ "+backsync.getAbsolutePath());
-				mHandler.getMainHandler().PostMessage(Main.SYSTEM_INIT);
+				getConsensusHandler().getMainHandler().PostMessage(Main.SYSTEM_INIT);
 				return;
 			}
 			
@@ -153,7 +145,7 @@ public class ConsensusBackup {
 			TxPowDB txdb = getMainDB().getTxPowDB();
 			ArrayList<SyncPacket> packets = sp.getAllNodes();
 			for(SyncPacket spack : packets) {
-				TxPOW txpow     = spack.getTxPOW();
+				TxPoW txpow     = spack.getTxPOW();
 				MMRSet mmrset   = spack.getMMRSet();
 				boolean cascade = spack.isCascade();
 				
@@ -170,14 +162,14 @@ public class ConsensusBackup {
 				//Load the TxPOW files in the block..
 				ArrayList<MiniData> txns = txpow.getBlockTransactions();
 				for(MiniData txn : txns) {
-					TxPOW txinblock = loadTxPOW(backup.getTxpowFile(txn));
+					TxPoW txinblock = loadTxPOW(backup.getTxpowFile(txn));
 					
 					//Add it..
 					if(txinblock != null) {
 						getMainDB().addNewTxPow(txinblock);	
 					}
 				}
-				
+			
 				//Is this the cascade block
 				if(txpow.getBlockNumber().isEqual(sp.getCascadeNode())) {
 					getMainDB().hardSetCascadeNode(node);
@@ -194,10 +186,10 @@ public class ConsensusBackup {
 			//Now sort
 			for(BlockTreeNode treenode : list) {
 				//Get the Block
-				TxPOW txpow = treenode.getTxPow();
+				TxPoW txpow = treenode.getTxPow();
 				
 				//Store it..
-				mHandler.getMainHandler().getBackupManager().backupTxpow(txpow);
+				getBackup().backupTxpow(txpow);
 				
 				//What Block
 				MiniNumber block = txpow.getBlockNumber();
@@ -208,7 +200,7 @@ public class ConsensusBackup {
 					TxPOWDBRow trow = getMainDB().getTxPowDB().findTxPOWDBRow(txid);
 					if(trow!=null) {
 						//Store it..
-						mHandler.getMainHandler().getBackupManager().backupTxpow(trow.getTxPOW());
+						getBackup().backupTxpow(trow.getTxPOW());
 						
 						//Set that it is in this block
 						trow.setOnChainBlock(false);
@@ -219,17 +211,17 @@ public class ConsensusBackup {
 			}
 			
 			//Get on with it..
-			mHandler.getMainHandler().PostMessage(Main.SYSTEM_INIT);
+			getConsensusHandler().getMainHandler().PostMessage(Main.SYSTEM_INIT);
 		}
 	}
 	
-	public static TxPOW loadTxPOW(File zTxpowFile) {
+	public static TxPoW loadTxPOW(File zTxpowFile) {
 		if(!zTxpowFile.exists()) {
 			MinimaLogger.log("Load TxPOW Doesn't exist! "+zTxpowFile.getName());
 			return null;
 		}
 		
-		TxPOW txpow    = new TxPOW();
+		TxPoW txpow    = new TxPoW();
 		
 		try {
 			FileInputStream fis = new FileInputStream(zTxpowFile);

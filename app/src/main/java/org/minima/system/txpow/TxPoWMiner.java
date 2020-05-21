@@ -1,8 +1,9 @@
 package org.minima.system.txpow;
 
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniInteger;
+import org.minima.objects.base.MiniNumber;
 import org.minima.system.Main;
 import org.minima.system.SystemHandler;
 import org.minima.system.brains.ConsensusHandler;
@@ -42,8 +43,12 @@ public class TxPoWMiner extends SystemHandler{
 		
 		if(zMessage.isMessageType(TXMINER_MINETXPOW)) {
 			//Get TXPOW..
-			TxPOW txpow = (TxPOW) zMessage.getObject("txpow");
+			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
 			
+			//Hard set the Header Body hash - now we are mining it can never change
+			txpow.setHeaderBodyHash();
+			
+			//The Start Nonce..
 			MiniInteger nonce = new MiniInteger(0);
 			
 			//And now start hashing.. 
@@ -57,15 +62,18 @@ public class TxPoWMiner extends SystemHandler{
 			long maxTime  	  = currentTime + 5000;
 			
 			if(mShowTXPOWMine) {
-				MinimaLogger.log("START TXPOW MINING "+currentTime);
+				MinimaLogger.log("START TXPOW MINING "+currentTime+" "+txpow.getTransaction());
 			}
 			
 			while(mining && currentTime < maxTime && isRunning()) {
 				//Set the Nonce..
 				txpow.setNonce(nonce);
+
+				//Set the Time..
+				txpow.setTimeMilli(new MiniNumber(""+currentTime));
 				
 				//Now Hash it..
-				hash = Crypto.getInstance().hashObject(txpow);
+				hash = Crypto.getInstance().hashObject(txpow.getTxHeader());
 				
 				if(hash.isLess(txpow.getTxnDifficulty())) {
 					//For Now..
@@ -109,7 +117,10 @@ public class TxPoWMiner extends SystemHandler{
 			
 		}else if(zMessage.isMessageType(TXMINER_MEGAMINER)) {
 			//Get TXPOW..
-			TxPOW txpow = (TxPOW) zMessage.getObject("txpow");
+			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
+			
+			//Hard set the Header Body hash - now we are mining it can never change
+			txpow.setHeaderBodyHash();
 			
 			//Do so many then recalculate.. to have the latest block data
 			long currentTime  = System.currentTimeMillis();
@@ -122,14 +133,17 @@ public class TxPoWMiner extends SystemHandler{
 			MiniData hash = null;
 			while(mining && currentTime<maxTime && isRunning()) {
 				//Now Hash it..
-				hash = Crypto.getInstance().hashObject(txpow);
+				hash = Crypto.getInstance().hashObject(txpow.getTxHeader());
 				
 				//Success ?
 				if(hash.isLess(txpow.getBlockDifficulty())) {
 					mining = false;
 				}else {
 					//Set the Nonce..
-					txpow.setNonce(txpow.getNonce().increment());	
+					txpow.setNonce(txpow.getNonce().increment());
+					
+					//Set the Time..
+					txpow.setTimeMilli(new MiniNumber(""+currentTime));
 				}
 				
 				//New time

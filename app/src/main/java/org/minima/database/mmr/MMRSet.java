@@ -403,6 +403,13 @@ public class MMRSet implements Streamable {
 	}
 	
 	/**
+	 * Utility function when creating an MMRtree based on simple Hash values and not coins.. 
+	 */
+	public MMREntry addLeafNode(MiniData zData){
+		return addUnspentCoin(new MMRData(zData, MMRSumNumber.ZERO));
+	}
+	
+	/**
 	 * Add data - an UNSPENT coin - Must be added to the correct mmrset
 	 */
 	public MMREntry addExternalUnspentCoin(MMRProof zProof) {
@@ -714,13 +721,13 @@ public class MMRSet implements Streamable {
 	public boolean checkProof(MMRProof zProof) {
 		//Hmm.. this is not good..
 		if(zProof.getMMRData().isHashOnly()) {
-			System.out.println("Invalid PROOF check HASHONLY! : "+zProof);
+//			System.out.println("Invalid PROOF check HASHONLY! : "+zProof);
 			return false;
 		}
 		
 		//Check is not spent.. 
 		if(zProof.getMMRData().isSpent()) {
-			System.out.println("Invalid PROOF is SPENT! : "+zProof);
+//			System.out.println("Invalid PROOF is SPENT! : "+zProof);
 			return false;
 		}
 		
@@ -729,7 +736,7 @@ public class MMRSet implements Streamable {
 		
 		//The proof is it too old.. we can't check it. It's invalid.
 		if(proofset == null) {
-			System.out.println("ERROR Proof too Old "+zProof);
+//			System.out.println("ERROR Proof too Old "+zProof);
 			return false;
 		}
 		
@@ -763,7 +770,7 @@ public class MMRSet implements Streamable {
 		if(!entry.isEmpty() && !entry.getData().isHashOnly()) {
 			//Get the DATA - could be the original UNSPENT or the SPENT
 			if(entry.getData().isSpent()) {
-				System.out.println("ERROR Proof Spent! "+zProof);
+//				System.out.println("ERROR Proof Spent! "+zProof);
 				return false;
 			}
 		}
@@ -975,7 +982,30 @@ public class MMRSet implements Streamable {
 		//Re-finalise..
 		finalizeSet();
 	}
+
+	/**
+	 * Recursively copy the parents..
+	 * 
+	 * @param zCascade
+	 * @param zNode
+	 */
+	public void recurseParentMMR(MiniNumber zCascade) {
+		_recurseParentMMR(zCascade, this);
+	}
 	
+	private void _recurseParentMMR(MiniNumber zCascade, MMRSet zNode) {
+		if(zNode.getBlockTime().isMore(zCascade)) {
+			//Do all the parents
+			if(zNode.getParent() == null) {
+				MinimaLogger.log("ERROR - RECURSE TREE NULL PARENT : CASC:"+zCascade+" BLKTIME:"+zNode.getBlockTime());	
+			}else {
+				_recurseParentMMR(zCascade, zNode.getParent());	
+			}
+		}
+			
+		//The you do it..
+		zNode.copyParentKeepers();
+	}
 	/**
 	 * Drill down and get the last but one parent..
 	 * We will be pruning it.. 

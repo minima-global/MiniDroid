@@ -3,7 +3,6 @@ package org.minima.database.txpowtree;
 import java.util.ArrayList;
 
 import org.minima.GlobalParams;
-import org.minima.database.mmr.MMRSet;
 import org.minima.objects.base.MiniNumber;
 
 public class MultiLevelCascadeTree {
@@ -25,20 +24,6 @@ public class MultiLevelCascadeTree {
 	
 	public ArrayList<BlockTreeNode> getRemoved(){
 		return mRemovals;
-	}
-	
-	public void recurseParentMMR(MiniNumber zCascade, MMRSet zNode) {
-		if(zNode.getBlockTime().isMore(zCascade.increment())) {
-			//Do all the parents
-			if(zNode.getParent() == null) {
-				System.out.println("RECURSE TREE NULL PARENT : CASC:"+zCascade+" BLKTIME:"+zNode.getBlockTime());	
-			}else {
-				recurseParentMMR(zCascade, zNode.getParent());	
-			}
-		}
-			
-		//The you do it..
-		zNode.copyParentKeepers();
 	}
 	
 	public ArrayList<BlockTreeNode> cascadedTree() {
@@ -108,8 +93,13 @@ public class MultiLevelCascadeTree {
 				
 				//Keep at least this many at each level..
 				if(totlevel>=GlobalParams.MINIMA_MINUMUM_CASCADE_LEVEL_NODES) {
-					casclevel++;
-					totlevel = 0;
+					if(casclevel<GlobalParams.MINIMA_CASCADE_LEVELS-1) {
+						casclevel++;
+						totlevel = 0;
+					}else {
+						//We've reached the top level.. keep them ALL!
+						//..
+					}
 				}
 				
 				//METHOD2 - slightly better
@@ -168,7 +158,7 @@ public class MultiLevelCascadeTree {
 		}
 				
 		//Add the rest
-		mCascadeTree.hardAddNode(fullkeep, false);
+		mCascadeTree.hardAddNode(fullkeep, true);
 		
 		//And sort the weights
 		mCascadeTree.resetWeights();

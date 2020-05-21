@@ -17,7 +17,7 @@ import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 
 import org.minima.Start;
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniData;
 import org.minima.system.Main;
 import org.minima.system.NativeListener;
@@ -43,7 +43,7 @@ public class NodeService extends Service {
     NotificationManager mNotificationManager, mNotificationManagerLow;
     android.app.Notification mNotificationBuilder;
     PendingIntent mPendingIntent;
-    TxPOW txpow;
+    TxPoW txpow;
     public String mBLOCK_NUMBER;
 
     public static final String CHANNEL_ID = "MinimaNodeServiceChannel";
@@ -183,7 +183,7 @@ public class NodeService extends Service {
                                 mHandler.post(new Runnable() {
                                     @Override
                                     public void run() {
-                                        TxPOW txpow = (TxPOW) zMessage.getObject("txpow");
+                                        TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
                                         mBLOCK_NUMBER = txpow.getBlockNumber().toString();
                                         mNotificationBuilder = new NotificationCompat.Builder(NodeService.this, CHANNEL_ID)
                                                 .setContentTitle("Block "+mBLOCK_NUMBER)
@@ -211,7 +211,6 @@ public class NodeService extends Service {
         return START_STICKY;
     }
 
-
     @Override
     public void onDestroy() {
         Toast.makeText(this, "Minima stopped running.", Toast.LENGTH_LONG).show();
@@ -221,13 +220,11 @@ public class NodeService extends Service {
         mWifiLock.release();
     }
 
-
     @Override
     public IBinder onBind(Intent intent) {
         // TODO: Return the communication channel to the service.
         throw new UnsupportedOperationException("Not yet implemented");
     }
-
 
 }
 

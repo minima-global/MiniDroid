@@ -18,6 +18,7 @@ import org.minima.objects.Coin;
 import org.minima.objects.PubPrivKey;
 import org.minima.objects.StateVariable;
 import org.minima.objects.Transaction;
+import org.minima.objects.TxPoW;
 import org.minima.objects.Witness;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
@@ -32,7 +33,7 @@ import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
 
-public class ConsensusTxn {
+public class ConsensusTxn extends ConsensusProcessor {
 
 	/**
 	 * Used for the custom Transactions
@@ -64,17 +65,8 @@ public class ConsensusTxn {
 	public static final String CONSENSUS_REMOUTPUT 			= CONSENSUS_PREFIX+"REMOUTPUT";
 	public static final String CONSENSUS_REMINPUT 			= CONSENSUS_PREFIX+"REMINPUT";
 	
-	MinimaDB mDB;
-	
-	ConsensusHandler mHandler;
-	
 	public ConsensusTxn(MinimaDB zDB, ConsensusHandler zHandler) {
-		mDB = zDB;
-		mHandler = zHandler;
-	}
-	
-	private MinimaDB getMainDB() {
-		return mDB;
+		super(zDB, zHandler);
 	}
 	
 	private boolean checkTransactionValid(int zTrans) {
@@ -91,7 +83,7 @@ public class ConsensusTxn {
 	private void listTransactions(Message zMessage) {
 		Message list = new Message(CONSENSUS_TXNLIST);
 		InputHandler.addResponseMesage(list, zMessage);
-		mHandler.PostMessage(list);
+		getConsensusHandler().PostMessage(list);
 	}
 	
 	private void outputTransaction(Message zMessage, int zTransaction) {
@@ -107,6 +99,8 @@ public class ConsensusTxn {
 	}
 	
 	public void processMessage(Message zMessage) throws Exception {
+		
+//		MinimaLogger.log("CONSENSUSTXN "+zMessage);
 		
 		/**
 		 * Custom Transactions
@@ -546,7 +540,7 @@ public class ConsensusTxn {
 			InputHandler.addResponseMesage(msg, zMessage);
 			
 			//Post it..
-			mHandler.PostMessage(msg);
+			getConsensusHandler().PostMessage(msg);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_TXNVALIDATE)) {
 			//Which transaction
@@ -590,9 +584,10 @@ public class ConsensusTxn {
 			}
 			
 			//And Check the actual Transaction..
+			TxPoW toptxpow = getMainDB().getTopTxPoW();
 			JSONArray contractlogs = new JSONArray();
 			boolean checkok = TxPoWChecker.checkTransactionMMR(trx, wit, getMainDB(),
-					getMainDB().getTopBlock(),
+					toptxpow.getBlockNumber(), toptxpow.getTimeSecs(),
 					getMainDB().getMainTree().getChainTip().getMMRSet(),false,contractlogs);
 			
 			resp.put("script_check", checkok);

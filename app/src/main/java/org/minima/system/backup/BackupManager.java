@@ -5,7 +5,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniData;
 import org.minima.system.Main;
 import org.minima.system.SystemHandler;
@@ -56,6 +56,10 @@ public class BackupManager extends SystemHandler {
 		return mTxPOWDB;
 	}
 	
+	public File getMiniDAPPFolder() {
+		return mMiniDAPPS;
+	}
+	
 	public File getBackUpFolder() {
 		return mBackup;
 	}
@@ -72,7 +76,7 @@ public class BackupManager extends SystemHandler {
 		return mTempFolder;
 	}
 		
-	public void backupTxpow(TxPOW zTxPOW) {
+	public void backupTxpow(TxPoW zTxPOW) {
 		//Create the File
 		File back = new File(mTxPOWDB,zTxPOW.getTxPowID().to0xString()+".txpow");
 
@@ -88,7 +92,7 @@ public class BackupManager extends SystemHandler {
 		PostMessage(backup);
 	}
 
-	public void deleteTxpow(TxPOW zTxPOW) {
+	public void deleteTxpow(TxPoW zTxPOW) {
 		//Create the File
 		File delfile = new File(mTxPOWDB,zTxPOW.getTxPowID().toString()+".txpow");
 		
@@ -154,6 +158,12 @@ public class BackupManager extends SystemHandler {
 		mMiniDAPPS = ensureFolder(new File(mRoot,"minidapps"));
 		
 		//TEMP folder for file upload in MiniDAPPS
+		File temp = new File(mRoot,"temp");
+		
+		//Clear it..
+		deleteFileOrFolder(temp);
+		
+		//Make it..
 		mTempFolder = ensureFolder(new File(mRoot,"temp"));
 	}
 	

@@ -9,11 +9,11 @@ import org.minima.database.MinimaDB;
 import org.minima.objects.Address;
 import org.minima.objects.Coin;
 import org.minima.objects.Transaction;
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.Witness;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
-import org.minima.objects.base.MiniScript;
+import org.minima.objects.base.MiniString;
 import org.minima.objects.proofs.TokenProof;
 import org.minima.system.Main;
 import org.minima.system.NativeListener;
@@ -25,6 +25,8 @@ import org.minima.system.network.NetClientReader;
 import org.minima.system.network.NetworkHandler;
 import org.minima.system.txpow.TxPoWChecker;
 import org.minima.system.txpow.TxPoWMiner;
+import org.minima.utils.MiniFormat;
+import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
@@ -193,7 +195,7 @@ public class ConsensusHandler extends SystemHandler {
 		 */
 		if ( zMessage.isMessageType(CONSENSUS_PROCESSTXPOW) ) {
 			//A TXPOW - that has been checked already and added to the DB
-			TxPOW txpow = (TxPOW) zMessage.getObject("txpow");
+			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
 			
 			//Process
 			getMainDB().processTxPOW(txpow);
@@ -218,20 +220,16 @@ public class ConsensusHandler extends SystemHandler {
 			 */
 		}else if ( zMessage.isMessageType(CONSENSUS_PRE_PROCESSTXPOW) ) {
 			//The TXPOW
-			TxPOW txpow = (TxPOW) zMessage.getObject("txpow");
-			
-			//Could be 	an internal PULSE message
-			if(txpow.getTransaction().isEmpty() && !txpow.isBlock()) {
-				//It's Pulse.. send it.. 
-				//..
-				return;
-			}
+			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
 			
 			//Double check added...
 			getMainDB().addNewTxPow(txpow);
 			
 			//Back it up!
 			getMainHandler().getBackupManager().backupTxpow(txpow);
+			
+			//Process it
+			PostMessage(new Message(ConsensusHandler.CONSENSUS_PROCESSTXPOW).addObject("txpow", txpow));
 			
 			//Only do this once..
 			boolean relevant = false;
@@ -251,25 +249,21 @@ public class ConsensusHandler extends SystemHandler {
 				PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
 				
 				//Notify those listening..
-				Message upd = new Message(CONSENSUS_NOTIFY_BALANCE);
-				updateListeners(upd);
+				updateListeners(new Message(CONSENSUS_NOTIFY_BALANCE));
 			}
 			
 			//Message for the clients
-			Message msg  = new Message(NetClient.NETCLIENT_SENDOBJECT).addObject("type", NetClientReader.NETMESSAGE_TXPOWID).addObject("object", txpow.getTxPowID());
+			Message msg  = new Message(NetClient.NETCLIENT_SENDOBJECT)
+								.addObject("type", NetClientReader.NETMESSAGE_TXPOWID)
+								.addObject("object", txpow.getTxPowID());
 			Message netw = new Message(NetworkHandler.NETWORK_SENDALL).addObject("message", msg);
 			
 			//Post It..
 			getMainHandler().getNetworkHandler().PostMessage(netw);
 			
-			//Process it
-			Message proc = new Message(ConsensusHandler.CONSENSUS_PROCESSTXPOW).addObject("txpow", txpow);
-			PostMessage(proc);
-
 			//Tell the listeners.. ?
 			if(txpow.isBlock()) {
-				Message upd = new Message(CONSENSUS_NOTIFY_NEWBLOCK).addObject("txpow", txpow);
-				updateListeners(upd);
+				updateListeners(new Message(CONSENSUS_NOTIFY_NEWBLOCK).addObject("txpow", txpow));
 			}
 		
 		}else if ( zMessage.isMessageType(CONSENSUS_AUTOBACKUP) ) {
@@ -322,9 +316,7 @@ public class ConsensusHandler extends SystemHandler {
 		
 		}else if ( zMessage.isMessageType(CONSENSUS_MINEBLOCK) ) {
 			//DEBUG MODE - only mine a block when you make a transction..
-			if(GlobalParams.MINIMA_ZERO_DIFF_BLK) {
-				return;
-			}
+			if(GlobalParams.MINIMA_ZERO_DIFF_BLK) {return;}
 				
 			//Are we Mining..
 			if(!getMainHandler().getMiner().isAutoMining()) {
@@ -333,7 +325,7 @@ public class ConsensusHandler extends SystemHandler {
 			}
 			
 			//Fresh TXPOW
-			TxPOW txpow = getMainDB().getCurrentTxPow(new Transaction(), new Witness(), new JSONArray());
+			TxPoW txpow = getMainDB().getCurrentTxPow(new Transaction(), new Witness(), new JSONArray());
 			
 			//Send it to the Miner..
 			Message mine = new Message(TxPoWMiner.TXMINER_MEGAMINER).addObject("txpow", txpow);
@@ -355,7 +347,7 @@ public class ConsensusHandler extends SystemHandler {
 			
 			//Add it to the current TX-POW
 			JSONArray contractlogs = new JSONArray();
-			TxPOW txpow = getMainDB().getCurrentTxPow(trans, wit, contractlogs);
+			TxPoW txpow = getMainDB().getCurrentTxPow(trans, wit, contractlogs);
 			
 			//Is is valid.. ?
 			if(txpow==null) {
@@ -498,7 +490,7 @@ public class ConsensusHandler extends SystemHandler {
 
 		}else if(zMessage.isMessageType(CONSENSUS_FINISHED_MINE)) {
 			//The TXPOW
-			TxPOW txpow = (TxPOW) zMessage.getObject("txpow");
+			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
 			
 			//Remove from the List of Mined transactions..
 			getMainDB().remeoveMiningTransaction(txpow.getTransaction());
@@ -599,8 +591,8 @@ public class ConsensusHandler extends SystemHandler {
 				TokenProof tokengen = new TokenProof(Coin.COINID_OUTPUT, 
 													 new MiniNumber(scale+""), 
 													 sendamount, 
-													 new MiniScript(name,false),
-													 new MiniScript(script));
+													 new MiniString(name),
+													 new MiniString(script));
 				
 				//Create the Transaction
 				Message ret = getMainDB().createTransaction(sendamount, recipient, change, confirmed, tok, changetok,tokengen);

@@ -30,14 +30,15 @@ public class TimerMessage extends Message implements Runnable {
 	@Override
 	public void run() {
 		try {
-			Thread.sleep(mDelay);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			//e.printStackTrace();
-		}
+			//Nice and easy - 2 second intervals..
+			while( mProcessor.isRunning() && System.currentTimeMillis() < mTimer) {
+				Thread.sleep(2000);	
+			}
+		} catch (InterruptedException e) {}
 		
 		//And Post..
-		mProcessor.PostMessage(this);
-	} 
-
+		if(mProcessor.isRunning()) {
+			mProcessor.PostMessage(this);
+		} 
+	}
 }

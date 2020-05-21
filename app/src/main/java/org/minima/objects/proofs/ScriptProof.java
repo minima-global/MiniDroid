@@ -6,37 +6,21 @@ import java.io.IOException;
 
 import org.minima.objects.Address;
 import org.minima.objects.base.MiniData;
-import org.minima.objects.base.MiniScript;
+import org.minima.objects.base.MiniString;
+import org.minima.utils.BaseConverter;
 import org.minima.utils.json.JSONObject;
 
 public class ScriptProof extends Proof {
 
-	MiniScript mScript;
+	MiniString mScript;
 	
 	private ScriptProof() {
 		super();
 	}
 	
-	/**
-	 * Create a simple one hash Proof for a script
-	 * @param zScript
-	 * @throws Exception 
-	 */
-//	public ScriptProof(String zScript) throws Exception {
-//		super();
-//		init(zScript,"0x0200");
-//	}
-	
 	public ScriptProof(String zScript, int zBitLength) throws Exception {
 		super();
-		
-		if(zBitLength == 512) {
-			init(zScript,"0x0200");
-		}else if(zBitLength == 256) {
-			init(zScript,"0x0100");
-		}else if(zBitLength == 160) {
-			init(zScript,"0x00A0");
-		} 
+		init(zScript,BaseConverter.numberToHex(zBitLength/32));
 	}
 	
 	public ScriptProof(String zScript, String zChainSHAProof) throws Exception {
@@ -45,7 +29,7 @@ public class ScriptProof extends Proof {
 	}
 	
 	private void init(String zScript, String zChainSHAProof) throws Exception {
-		mScript = new MiniScript(zScript);
+		mScript = new MiniString(zScript);
 		
 		//How many Bits in HASH
 		int bits = Proof.getChainSHABits(zChainSHAProof);
@@ -61,7 +45,7 @@ public class ScriptProof extends Proof {
 	}
 	
 	
-	public MiniScript getScript() {
+	public MiniString getScript() {
 		return mScript;
 	}
 	
@@ -81,7 +65,7 @@ public class ScriptProof extends Proof {
 
 	@Override
 	public void readDataStream(DataInputStream zIn) throws IOException {
-		mScript = MiniScript.ReadFromStream(zIn);
+		mScript = MiniString.ReadFromStream(zIn);
 		super.readDataStream(zIn);
 	}
 	

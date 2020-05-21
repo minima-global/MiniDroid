@@ -19,7 +19,7 @@ import org.minima.objects.Coin;
 import org.minima.objects.PubPrivKey;
 import org.minima.objects.StateVariable;
 import org.minima.objects.Transaction;
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.Witness;
 import org.minima.objects.base.MiniByte;
 import org.minima.objects.base.MiniData;
@@ -40,7 +40,12 @@ public class TxPoWChecker {
 	 * @param zTxPOW
 	 * @return
 	 */
-	public static boolean checkSigs(TxPOW zTxPOW) {
+	public static boolean checkSigs(TxPoW zTxPOW) {
+		//Only if it has a body
+		if(!zTxPOW.hasBody()) {
+			return true;
+		}
+		
 		//get the Transaction..
 		Transaction trans = zTxPOW.getTransaction();
 		
@@ -81,13 +86,18 @@ public class TxPoWChecker {
 	 * @param zMMRSet
 	 * @return
 	 */
-	public static boolean checkTransactionMMR(TxPOW zTxPOW, MinimaDB zDB) {
+	public static boolean checkTransactionMMR(TxPoW zTxPOW, MinimaDB zDB) {
 		//And use the chaintip for all the parameters..
 		BlockTreeNode tip = zDB.getMainTree().getChainTip();
-		return checkTransactionMMR(zTxPOW, zDB, tip.getTxPow().getBlockNumber(), tip.getMMRSet(), false);
+		return checkTransactionMMR(zTxPOW, zDB, tip.getTxPow().getBlockNumber(), tip.getTxPow().getTimeSecs(), tip.getMMRSet(), false);
 	}
 	
-	public static boolean checkTransactionMMR(TxPOW zTxPOW, MinimaDB zDB, MiniNumber zBlockNumber, MMRSet zMMRSet, boolean zTouchMMR) {
+	public static boolean checkTransactionMMR(TxPoW zTxPOW, MinimaDB zDB, MiniNumber zBlockNumber, MiniNumber zBlockTime, MMRSet zMMRSet, boolean zTouchMMR) {
+		//need a body
+		if(!zTxPOW.hasBody()) {
+			return true;
+		}
+			
 		//Burn Transaction check!.. 
 		if(!zTxPOW.getBurnTransaction().isEmpty()) {
 			//Get MAIN Transaction Hash - make sure is correct in Burn Transaction
@@ -100,7 +110,7 @@ public class TxPoWChecker {
 			
 			boolean burntrans = checkTransactionMMR(zTxPOW.getBurnTransaction(), 
 													zTxPOW.getBurnWitness(), 
-													zDB, zBlockNumber, zMMRSet, zTouchMMR, 
+													zDB, zBlockNumber, zBlockTime, zMMRSet, zTouchMMR, 
 													new JSONArray());
 			if(!burntrans) {
 				return false;
@@ -112,14 +122,16 @@ public class TxPoWChecker {
 			return false;
 		}
 		
-		return checkTransactionMMR(zTxPOW.getTransaction(), zTxPOW.getWitness(), zDB, zBlockNumber, zMMRSet, zTouchMMR, new JSONArray());	
+		return checkTransactionMMR(zTxPOW.getTransaction(), zTxPOW.getWitness(), zDB, zBlockNumber, zBlockTime, zMMRSet, zTouchMMR, new JSONArray());	
 	}
 	
-	public static boolean checkTransactionMMR(Transaction zTrans, Witness zWit, MinimaDB zDB, MiniNumber zBlockNumber, MMRSet zMMRSet, boolean zTouchMMR) {
-		return checkTransactionMMR(zTrans, zWit, zDB, zBlockNumber, zMMRSet, zTouchMMR, new JSONArray());	
+	public static boolean checkTransactionMMR(Transaction zTrans, Witness zWit, MinimaDB zDB, MiniNumber zBlockNumber, MiniNumber zBlockTime, MMRSet zMMRSet, boolean zTouchMMR) {
+		return checkTransactionMMR(zTrans, zWit, zDB, zBlockNumber, zBlockTime, zMMRSet, zTouchMMR, new JSONArray());	
 	}
 	
-	public static boolean checkTransactionMMR(Transaction zTrans, Witness zWit, MinimaDB zDB, MiniNumber zBlockNumber, MMRSet zMMRSet, boolean zTouchMMR, JSONArray zContractLog) {
+	public static boolean checkTransactionMMR(Transaction zTrans, Witness zWit, MinimaDB zDB, 
+			MiniNumber zBlockNumber, MiniNumber zBlockTime, MMRSet zMMRSet, boolean zTouchMMR, JSONArray zContractLog) {
+		
 		//Make a deep copy.. as we may need to edit it.. with floating values and DYN_STATE
 		Transaction trans = zTrans.deepCopy();
 		
@@ -140,7 +152,6 @@ public class TxPoWChecker {
 		//If ANY of the inputs are floating.. check for remainder outputs.
 		boolean isfloating = false;
 
-		
 		//First Inputs..
 		int ins = inputs.size();
 		for(int i=0;i<ins;i++) {
@@ -158,6 +169,7 @@ public class TxPoWChecker {
 				return false;
 			}
 			
+			//the script for this input
 			String script = sp.getScript().toString();
 			
 			contractlog.put("input", i);
@@ -247,10 +259,11 @@ public class TxPoWChecker {
 				}
 				
 				//Create the Contract to check..
-				Contract cc = new Contract(script,sigs, zWit, trans,proof.getMMRData().getPrevState());
+				Contract cc = new Contract(script, sigs, zWit, trans,proof.getMMRData().getPrevState());
 				
 				//set the environment
 				cc.setGlobalVariable("@BLKNUM", new NumberValue(zBlockNumber));
+				cc.setGlobalVariable("@BLKTIME", new NumberValue(zBlockTime));
 				cc.setGlobalVariable("@INBLKNUM", new NumberValue(proof.getMMRData().getInBlock()));
 				cc.setGlobalVariable("@BLKDIFF", new NumberValue(zBlockNumber.sub(proof.getMMRData().getInBlock())));
 				cc.setGlobalVariable("@INPUT", new NumberValue(i));
@@ -273,6 +286,7 @@ public class TxPoWChecker {
 				//Run it!
 				cc.run();
 				
+				//Contract Execution details
 				contractlog.put("script", cc.getMiniScript());
 				contractlog.put("size", cc.getMiniScript().length());
 				contractlog.put("instructions", cc.getNumberOfInstructions());
@@ -296,51 +310,41 @@ public class TxPoWChecker {
 				if(!input.getTokenID().isEqual(Coin.MINIMA_TOKENID)) {
 					//Complex Script ?
 					if(!tokscript.equals("RETURN TRUE")) {
-						//Check the Script!
-						cc = new Contract(tokscript,sigs, zWit, trans,proof.getMMRData().getPrevState());
+						//Check the Token Script!
+						Contract tokencc = new Contract(tokscript, sigs, zWit, trans, proof.getMMRData().getPrevState());
 						
-						//set the environment
-						cc.setGlobalVariable("@BLKNUM", new NumberValue(zBlockNumber));
-						cc.setGlobalVariable("@INBLKNUM", new NumberValue(proof.getMMRData().getInBlock()));
-						cc.setGlobalVariable("@BLKDIFF", new NumberValue(zBlockNumber.sub(proof.getMMRData().getInBlock())));
-						cc.setGlobalVariable("@INPUT", new NumberValue(i));
-						cc.setGlobalVariable("@AMOUNT", new NumberValue(input.getAmount()));
-						cc.setGlobalVariable("@ADDRESS", new HEXValue(input.getAddress()));
-						cc.setGlobalVariable("@TOKENID", new HEXValue(input.getTokenID()));
-						cc.setGlobalVariable("@COINID", new HEXValue(input.getCoinID()));
-						cc.setGlobalVariable("@SCRIPT", new ScriptValue(script));
-						cc.setGlobalVariable("@TOKENSCRIPT", new ScriptValue(tokscript));
-						cc.setGlobalVariable("@FLOATING", new BooleanValue(input.isFloating()));
-						cc.setGlobalVariable("@TOTIN", new NumberValue(trans.getAllInputs().size()));
-						cc.setGlobalVariable("@TOTOUT", new NumberValue(trans.getAllOutputs().size()));
+						//set the environment - same as the first contract
+						tokencc.setAllGlobalVariables(cc.getGlobalVariables());
 						
 						//Is it a floating coin..
-						cc.setFloating(input.isFloating());
+						tokencc.setFloating(input.isFloating());
 						
 						//Set the DYNState..
-						cc.setCompleteDYNState(DYNState,checkState);
+						tokencc.setCompleteDYNState(DYNState,checkState);
 						
 						//Run it!
-						cc.run();
+						tokencc.run();
 						
 						//Get the DynState
-						DYNState   = cc.getCompleteDYNState();
-						checkState = cc.getCompleteCheckState();
-									
+						DYNState = tokencc.getCompleteDYNState();
+						
+						//Log it all
 						JSONObject toklog = new JSONObject();
 						contractlog.put("tokencontract", toklog);
 						
-						toklog.put("script", cc.getMiniScript());
-						toklog.put("size", cc.getMiniScript().length());
-						toklog.put("instructions", cc.getNumberOfInstructions());
+						//Token Contract execution details
+						toklog.put("script", tokencc.getMiniScript());
+						toklog.put("size", tokencc.getMiniScript().length());
+						toklog.put("instructions", tokencc.getNumberOfInstructions());
 						toklog.put("address", input.getAddress().to0xString());
-						toklog.put("parseok", cc.isParseOK());
-						toklog.put("parse", cc.getCompleteTraceLog());
-						toklog.put("exception", cc.isException());
-						toklog.put("result", cc.isSuccess());
+						toklog.put("parseok", tokencc.isParseOK());
+						toklog.put("parse", tokencc.getCompleteTraceLog());
+						toklog.put("exception", tokencc.isException());
+						toklog.put("excvalue", tokencc.getException());
+						toklog.put("result", tokencc.isSuccess());
 						
 						//and.. ?
-						if(!cc.isSuccess()) {
+						if(!tokencc.isSuccess()) {
 							return false;
 						}
 					}
@@ -461,9 +465,6 @@ public class TxPoWChecker {
 				
 				//Do we keep this output..
 				boolean reladdress = zDB.getUserDB().isAddressRelevant(output.getAddress());
-//				if(!rel) {
-//					rel = zDB.getUserDB().isStateListRelevant(trans.getCompleteState());
-//				}
 				
 				//Do we keep it..
 				if(reladdress || relstate) {

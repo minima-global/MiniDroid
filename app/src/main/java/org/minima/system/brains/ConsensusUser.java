@@ -28,17 +28,16 @@ import org.minima.objects.Coin;
 import org.minima.objects.PubPrivKey;
 import org.minima.objects.StateVariable;
 import org.minima.objects.Transaction;
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.Witness;
 import org.minima.objects.base.MMRSumNumber;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniInteger;
 import org.minima.objects.base.MiniNumber;
-import org.minima.objects.base.MiniScript;
+import org.minima.objects.base.MiniString;
 import org.minima.objects.proofs.ScriptProof;
 import org.minima.system.input.InputHandler;
 import org.minima.system.network.NetClient;
-import org.minima.system.network.NetClientReader;
 import org.minima.system.network.NetworkHandler;
 import org.minima.system.txpow.TxPoWChecker;
 import org.minima.utils.Crypto;
@@ -47,7 +46,7 @@ import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
 
-public class ConsensusUser {
+public class ConsensusUser extends ConsensusProcessor {
 
 
 	public static final String CONSENSUS_PREFIX 			= "CONSENSUSUSER_";
@@ -76,17 +75,8 @@ public class ConsensusUser {
 	
 	public static final String CONSENSUS_MMRTREE 		    = CONSENSUS_PREFIX+"MMRTREE";
 	
-    MinimaDB mDB;
-	
-	ConsensusHandler mHandler;
-	
 	public ConsensusUser(MinimaDB zDB, ConsensusHandler zHandler) {
-		mDB = zDB;
-		mHandler = zHandler;
-	}
-	
-	private MinimaDB getMainDB() {
-		return mDB;
+		super(zDB, zHandler);
 	}
 	 
 	public void processMessage(Message zMessage) throws Exception {
@@ -105,7 +95,7 @@ public class ConsensusUser {
 			InputHandler.endResponse(zMessage, true, "");
 		
 			//Do a backup..
-			mHandler.PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
+			getConsensusHandler().PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_SIGN)) {
 			String data   = zMessage.getString("data");
@@ -150,7 +140,7 @@ public class ConsensusUser {
 			InputHandler.endResponse(zMessage, true, "");
 		
 			//Do a backup..
-			mHandler.PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
+			getConsensusHandler().PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_NEWSCRIPT)) {
 			//Get the script
@@ -168,7 +158,7 @@ public class ConsensusUser {
 			InputHandler.endResponse(zMessage, true, "");
 		
 			//Do a backup..
-			mHandler.PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
+			getConsensusHandler().PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_NEWKEY)) {
 			//Get the bitlength
@@ -183,7 +173,7 @@ public class ConsensusUser {
 			InputHandler.endResponse(zMessage, true, "");
 			
 			//Do a backup..
-			mHandler.PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
+			getConsensusHandler().PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_CHECK)) {
 			String data = zMessage.getString("data");
@@ -223,14 +213,14 @@ public class ConsensusUser {
 			int bitlength = zMessage.getInteger("bitlength");
 			
 			//Create an MMR TREE from the array of inputs..
-			ArrayList<MiniScript> leaves = (ArrayList<MiniScript>) zMessage.getObject("leaves");
+			ArrayList<MiniString> leaves = (ArrayList<MiniString>) zMessage.getObject("leaves");
 		
 			//First create an MMR Tree..
 			MMRSet mmr = new MMRSet(bitlength);
 			
 			//Now add each 
 			JSONArray nodearray = new JSONArray();
-			for(MiniScript leaf : leaves) {
+			for(MiniString leaf : leaves) {
 				String leafstr = leaf.toString();
 				JSONObject mmrnode = new JSONObject();
 				MiniData finaldata = null;
@@ -286,9 +276,6 @@ public class ConsensusUser {
 				
 				//Get the proof..
 				MMRProof proof = mmr.getFullProofToRoot(new MiniInteger(i));
-				
-				//Set the Bits
-				proof.setHashBitLength(bitlength);
 				
 				//Calculate the CHAINSHA proof..
 				node.put("chainsha", proof.getChainSHAProof().to0xString());
@@ -429,7 +416,8 @@ public class ConsensusUser {
 			Address ccaddress = new Address(cc.getMiniScript());
 			
 			//Set the environment
-			MiniNumber blocknum  = getMainDB().getTopBlock();
+			MiniNumber blocknum  = getMainDB().getTopTxPoW().getBlockNumber();
+			MiniNumber blocktime = getMainDB().getTopTxPoW().getTimeSecs();
 			
 			//These 2 are set automatically..
 			cc.setGlobalVariable("@ADDRESS", new HEXValue(ccaddress.getAddressData()));
@@ -437,6 +425,7 @@ public class ConsensusUser {
 			
 			//These can be played with..
 			cc.setGlobalVariable("@BLKNUM", new NumberValue(blocknum));
+			cc.setGlobalVariable("@BLKTIME", new NumberValue(blocktime));
 			cc.setGlobalVariable("@INPUT", new NumberValue(0));
 			cc.setGlobalVariable("@INBLKNUM", new NumberValue(0));
 			cc.setGlobalVariable("@AMOUNT", new NumberValue(0));
@@ -504,10 +493,9 @@ public class ConsensusUser {
 			ArrayList<MiniData> remove = new ArrayList<>();
 			JSONArray requested = new JSONArray();
 			
-			
 			//Check them all..
 			for(TxPOWDBRow txrow : unused) {
-				TxPOW txpow    = txrow.getTxPOW();
+				TxPoW txpow    = txrow.getTxPOW();
 				
 				//Do we just remove them all.. ?
 				if(hard) {
@@ -527,19 +515,18 @@ public class ConsensusUser {
 					if(!sigsok || !trxok) {
 						remove.add(txpow.getTxPowID());
 					}else {
+						NetworkHandler nethandler = getConsensusHandler().getMainHandler().getNetworkHandler();
 						//Check All..
 						if(txpow.isBlock()) {
 							MiniData parent = txpow.getParentID();
 							if(tdb.findTxPOWDBRow(parent) == null) {
-								//Request it from ALL your peers..
-								Message msg  = new Message(NetClient.NETCLIENT_SENDOBJECT)
-										.addObject("type", NetClientReader.NETMESSAGE_TXPOW_REQUEST)
-										.addObject("object", parent);
+								Message msg  = new Message(NetClient.NETCLIENT_SENDTXPOWREQ)
+													.addObject("txpowid", parent);
 								Message netw = new Message(NetworkHandler.NETWORK_SENDALL)
-										.addObject("message", msg);
+													.addObject("message", msg);
 								
 								//Post it..
-								mHandler.getMainHandler().getNetworkHandler().PostMessage(netw);
+								nethandler.PostMessage(netw);
 								
 								//Add to out list
 								requested.add(parent.to0xString());
@@ -549,15 +536,13 @@ public class ConsensusUser {
 							ArrayList<MiniData> txns = txpow.getBlockTransactions();
 							for(MiniData txn : txns) {
 								if(tdb.findTxPOWDBRow(txn) == null) {
-									//Request it from ALL your peers..
-									Message msg  = new Message(NetClient.NETCLIENT_SENDOBJECT)
-											.addObject("type", NetClientReader.NETMESSAGE_TXPOW_REQUEST)
-											.addObject("object", txn);
+									Message msg  = new Message(NetClient.NETCLIENT_SENDTXPOWREQ)
+											.addObject("txpowid", txn);
 									Message netw = new Message(NetworkHandler.NETWORK_SENDALL)
 											.addObject("message", msg);
 									
 									//Post it..
-									mHandler.getMainHandler().getNetworkHandler().PostMessage(netw);
+									nethandler.PostMessage(netw);
 									
 									//Add to out list
 									requested.add(txn.to0xString());
@@ -632,7 +617,7 @@ public class ConsensusUser {
 			InputHandler.endResponse(zMessage, true, "");
 			
 			//Do a backup..
-			mHandler.PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
+			getConsensusHandler().PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_IMPORTCOIN)) {
 			MiniData data = (MiniData)zMessage.getObject("proof");
@@ -706,7 +691,7 @@ public class ConsensusUser {
 			InputHandler.endResponse(zMessage, true, "");
 			
 			//Do a backup..
-			mHandler.PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
+			getConsensusHandler().PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_EXPORTCOIN)) {
 			MiniData coinid = (MiniData)zMessage.getObject("coinid");
@@ -763,7 +748,7 @@ public class ConsensusUser {
 			}
 			
 			//Do a backup..
-			mHandler.PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
+			getConsensusHandler().PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUPUSER);
 		}
 	}
 	

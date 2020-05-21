@@ -10,6 +10,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.zip.ZipEntry;
@@ -35,7 +36,9 @@ public class DAPPManager extends SystemHandler {
 	JSONArray CURRENT_MINIDAPPS = new JSONArray();
 	String MINIDAPPS_FOLDER     = "";
 	
-	DAPPServer mDAPPServer;
+	
+	ArrayList<NanoDAPPServer> mDAPPServers = new ArrayList<>();
+	
 	NanoDAPPServer mNanoDAPPServer;
 	
 	//The Edited minima.js file..
@@ -75,15 +78,10 @@ public class DAPPManager extends SystemHandler {
 		//Calculate the current MiniDAPPS
 		recalculateMiniDAPPS();
 		
-//		///Start the DAPP server
-//		mDAPPServer = new DAPPServer(zPort,this);
-//		Thread tt = new Thread(mDAPPServer, "DAPP Server");
-//		tt.start();
-		
 		mNanoDAPPServer = new NanoDAPPServer(zPort, this);
 		try {
 			mNanoDAPPServer.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
-			MinimaLogger.log("MiniDAPP server started on "+hostport);
+			MinimaLogger.log("MiniDAPP server started on "+mHost+":"+zPort);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -100,9 +98,7 @@ public class DAPPManager extends SystemHandler {
 	}
 	
 	public void stop() {
-//		mDAPPServer.stop();
 		mNanoDAPPServer.stop();
-		
 		stopMessageProcessor();
 	}
 	
@@ -164,19 +160,16 @@ public class DAPPManager extends SystemHandler {
 		CURRENT_MINIDAPPS.clear();
 		
 		//This is the folder..
-		File root = getMainHandler().getBackupManager().getRootFolder();
-		
-		//Create the new Folder...
-		File alldapps = new File(root,"minidapps");
-		if(!alldapps.exists()) {
-			alldapps.mkdirs();
-		}
+		File alldapps = getMainHandler().getBackupManager().getMiniDAPPFolder();
 		
 		//Store for later
 		MINIDAPPS_FOLDER = alldapps.getAbsolutePath();
 		
 		//List it..
 		File[] apps = alldapps.listFiles();
+		
+		//Each MiniDAPP gets it's OWN port..
+		int miniport = 1;
 		
 		//Cycle through them..
 		if(apps != null) {
@@ -201,6 +194,9 @@ public class DAPPManager extends SystemHandler {
 				if(conf.exists()) {
 					//Load it..
 					JSONObject confjson = loadConfFile(conf);
+					
+					///Give it a unique Port..
+					confjson.put("port", miniport++);
 					
 					//Add it..
 					CURRENT_MINIDAPPS.add(confjson);
@@ -244,10 +240,7 @@ public class DAPPManager extends SystemHandler {
 			MiniData hash = Crypto.getInstance().hashObject(data, 160);
 			
 			//This is the folder..
-			File root = getMainHandler().getBackupManager().getRootFolder();
-			
-			//Create the new Folder...
-			File alldapps = new File(root,"minidapps");
+			File alldapps = getMainHandler().getBackupManager().getMiniDAPPFolder();
 			
 			//And the actual folder...
 			File dapp  = new File(alldapps,hash.to0xString());

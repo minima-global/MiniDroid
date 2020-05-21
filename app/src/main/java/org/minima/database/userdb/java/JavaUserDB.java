@@ -14,10 +14,10 @@ import org.minima.objects.Coin;
 import org.minima.objects.PubPrivKey;
 import org.minima.objects.StateVariable;
 import org.minima.objects.Transaction;
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
-import org.minima.objects.base.MiniScript;
+import org.minima.objects.base.MiniString;
 import org.minima.objects.proofs.TokenProof;
 import org.minima.utils.Streamable;
 
@@ -278,7 +278,7 @@ public class JavaUserDB implements UserDB, Streamable{
 	public boolean isStateListRelevant(ArrayList<StateVariable> zStateVarList) {
 		for(StateVariable sv : zStateVarList) {
 			//Get the data
-			MiniScript data = sv.getData();
+			MiniString data = sv.getValue();
 			
 			//Only check HEX values..
 			if(data.toString().startsWith("0x")) {
@@ -478,7 +478,7 @@ public class JavaUserDB implements UserDB, Streamable{
 	}
 
 	@Override
-	public void addToHistory(TxPOW zTxPOW, Hashtable<String, MiniNumber> zValues) {
+	public void addToHistory(TxPoW zTxPOW, Hashtable<String, MiniNumber> zValues) {
 		mHistory.add(new reltxpow( zTxPOW, zValues));
 	}
 

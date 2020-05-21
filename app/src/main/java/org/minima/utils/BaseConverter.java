@@ -1,5 +1,7 @@
 package org.minima.utils;
 
+import java.math.BigInteger;
+
 public class BaseConverter {
 	
 	/**
@@ -42,6 +44,19 @@ public class BaseConverter {
 	    
 	    return data;
 	}
+	
+	public static String numberToHex(int zNumber) {
+		String hex = Integer.toHexString(zNumber);
+		if(hex.length() % 2 != 0) {
+			hex = "0"+hex;
+		}
+		return new String("0x"+hex.toUpperCase());
+	}
+	
+	public static int hexToNumber(String zHex) {
+		return new BigInteger(zHex.substring(2), 16).intValue();
+	}
+	
 	
 	/**
 	 * BASE 32 Encode and Decode
@@ -148,6 +163,12 @@ public class BaseConverter {
 	}
 	
 	public static void main(String[] zArgs) {
+		
+		String tt = numberToHex(8687);
+		System.out.println(tt);
+		
+		System.out.println(hexToNumber(tt));
+		
 
 //		MiniData hash = MiniData.getRandomData(64);
 //		byte[] hdata = hash.getData();
@@ -168,29 +189,29 @@ public class BaseConverter {
 //		System.out.println(hash.to0xString());
 //		System.out.println(address);
 		
-		//BASE32
-		byte[] data = new byte[10];
-		
-		data[0] = (byte) 1;
-		data[1] = (byte) 13;
-		data[2] = (byte) 34;
-		data[3] = (byte) 44;
-		data[4] = (byte) 33;
-		data[5] = (byte) 56;
-		data[6] = (byte) 99;
-		data[7] = (byte) 76;
-		data[8] = (byte) 9;
-		data[9] = (byte) 12;
-
-		String tt = encode32(data);
-		
-		System.out.println("32 "+tt);
-		
-		byte[] reda = decode32(tt);
-		
-		for(int i=0;i<10;i++) {
-			System.out.println(i+") "+( reda[i] & 255 ) );	
-		}
+//		//BASE32
+//		byte[] data = new byte[10];
+//		
+//		data[0] = (byte) 1;
+//		data[1] = (byte) 13;
+//		data[2] = (byte) 34;
+//		data[3] = (byte) 44;
+//		data[4] = (byte) 33;
+//		data[5] = (byte) 56;
+//		data[6] = (byte) 99;
+//		data[7] = (byte) 76;
+//		data[8] = (byte) 9;
+//		data[9] = (byte) 12;
+//
+//		String tt = encode32(data);
+//		
+//		System.out.println("32 "+tt);
+//		
+//		byte[] reda = decode32(tt);
+//		
+//		for(int i=0;i<10;i++) {
+//			System.out.println(i+") "+( reda[i] & 255 ) );	
+//		}
 //		
 //		byte[] hh = new byte[2];
 //		hh[0] = (byte) 15;

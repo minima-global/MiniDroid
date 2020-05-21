@@ -5,10 +5,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
+import java.util.Hashtable;
 import java.util.Random;
 
-import org.minima.objects.TxPOW;
+import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniByte;
+import org.minima.objects.base.MiniData;
 import org.minima.system.Main;
 import org.minima.system.brains.ConsensusNet;
 import org.minima.utils.MinimaLogger;
@@ -28,7 +31,9 @@ public class NetClient extends MessageProcessor {
 	public static final String NETCLIENT_SHUTDOWN 		= "NETCLIENT_SHUTDOWN";
 	
 	public static final String NETCLIENT_SENDOBJECT 	= "NETCLIENT_SENDOBJECT";
+	
 	public static final String NETCLIENT_SENDTXPOW 	    = "NETCLIENT_SENDTXPOW";
+	public static final String NETCLIENT_SENDTXPOWREQ 	= "NETCLIENT_SENDTXPOWREQ";
 		
 	//Main Network Handler
 	NetworkHandler mNetworkMain;
@@ -58,6 +63,8 @@ public class NetClient extends MessageProcessor {
 	//Did we start up..
 	boolean mStartOK;
 	
+	Hashtable<String, Long> mOldTxPoWRequests = new Hashtable<>();
+	
 	/**
 	 * Constructor
 	 * 
@@ -84,24 +91,6 @@ public class NetClient extends MessageProcessor {
 		
 		//Start the connection
 		PostMessage(NETCLIENT_INITCONNECT);
-		
-//		//Store
-//		try {
-////			mSocket = new Socket(zHost, zPort);
-//			mSocket = new Socket();
-//			mSocket.connect(new InetSocketAddress(zHost, zPort), 10000);
-//			
-//		}catch (Exception e) {
-//			MinimaLogger.log("Error @ connection start : "+zHost+":"+zPort);
-//			
-//			// Error - let the handler know
-//			mNetworkMain.PostMessage(new Message(NetworkHandler.NETWORK_CLIENTERROR).addObject("client", this));
-//			
-//			return;
-//		}	
-//		
-//		//Start the system..
-//		PostMessage(NETCLIENT_STARTUP);
 	}
 	
 	public NetClient(Socket zSock, NetworkHandler zNetwork) {
@@ -224,13 +213,49 @@ public class NetClient extends MessageProcessor {
 		
 		}else if(zMessage.isMessageType(NETCLIENT_SENDTXPOW)) {
 			//get the TxPOW
-			TxPOW txpow = (TxPOW)zMessage.getObject("txpow");
+			TxPoW txpow = (TxPoW)zMessage.getObject("txpow");
 			
-			//What Type..
-			NetClientReader.NETMESSAGE_TXPOW.writeDataStream(mOutput);
-	
-			//First the TXPOW
-			txpow.writeDataStream(mOutput);
+			//And send it..
+			sendMessage(NetClientReader.NETMESSAGE_TXPOW, txpow);
+				
+		}else if(zMessage.isMessageType(NETCLIENT_SENDTXPOWREQ)) {
+			//get the TxPOW
+			MiniData txpowid = (MiniData)zMessage.getObject("txpowid");
+			
+			//Current time..
+			long timenow     = System.currentTimeMillis();
+			
+			//Remove the old..
+			Hashtable<String, Long> newTxPoWRequests = new Hashtable<>();
+			Enumeration<String> keys = mOldTxPoWRequests.keys();
+			while(keys.hasMoreElements()) {
+				String key = keys.nextElement();
+				
+				//Remove after 10 minuutes
+				Long timeval = mOldTxPoWRequests.get(key);
+				long time    = timeval.longValue();
+				long diff    = timenow - time;
+				if(diff < 60000) {
+					newTxPoWRequests.put(key, timeval);
+				}
+			}
+			
+			//Swap them..
+			mOldTxPoWRequests = newTxPoWRequests;
+			
+			//NOW - Check not doing it too often..
+			String val = txpowid.to0xString();
+			
+			//If it's in.. it's less than 10 minutes..
+			if(mOldTxPoWRequests.get(val) != null) {
+				return;
+			}
+			
+			//Store this as the LAST time we requested it.. won't do it again for 10 minutes
+			mOldTxPoWRequests.put(val, new Long(timenow));
+			
+			//And send it..
+			sendMessage(NetClientReader.NETMESSAGE_TXPOW_REQUEST, txpowid);
 			
 		}else if(zMessage.isMessageType(NETCLIENT_SENDOBJECT)) {
 			//What type of object is this..
@@ -258,15 +283,15 @@ public class NetClient extends MessageProcessor {
 	/**
 	 * Send a message down the network
 	 */
-	protected void sendMessage(Streamable zMessageType, Streamable zMessage) {
+	protected void sendMessage(Streamable zMessageType, Streamable zObject) {
 		//Send it..
 		try {
 			//First write the Message type..
 			zMessageType.writeDataStream(mOutput);
 			
-			if(zMessage != null) {
+			if(zObject != null) {
 				//And now write the message
-				zMessage.writeDataStream(mOutput);
+				zObject.writeDataStream(mOutput);
 			}
 			
 			//Send..
@@ -274,7 +299,7 @@ public class NetClient extends MessageProcessor {
 			
 		}catch(Exception ec) {
 			//Show..
-			MinimaLogger.log("Error sending message : "+zMessageType.toString()+" "+ec);
+//			MinimaLogger.log("Error sending message : "+zMessageType.toString()+" "+ec);
 //			ec.printStackTrace();
 			
 			//Tell the network Handler
