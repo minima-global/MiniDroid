@@ -1,5 +1,6 @@
 package org.minima.system.network;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -12,7 +13,9 @@ import java.util.Random;
 import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniByte;
 import org.minima.objects.base.MiniData;
+import org.minima.objects.base.MiniNumber;
 import org.minima.system.Main;
+import org.minima.system.backup.SyncPackage;
 import org.minima.system.brains.ConsensusNet;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.Streamable;
@@ -30,8 +33,10 @@ public class NetClient extends MessageProcessor {
 	public static final String NETCLIENT_STARTUP 		= "NETCLIENT_STARTUP";
 	public static final String NETCLIENT_SHUTDOWN 		= "NETCLIENT_SHUTDOWN";
 	
-	public static final String NETCLIENT_SENDOBJECT 	= "NETCLIENT_SENDOBJECT";
+//	public static final String NETCLIENT_SENDOBJECT 	= "NETCLIENT_SENDOBJECT";
 	
+	public static final String NETCLIENT_INTRO 	        = "NETCLIENT_INTRO";
+	public static final String NETCLIENT_SENDTXPOWID 	= "NETCLIENT_SENDTXPOWID";
 	public static final String NETCLIENT_SENDTXPOW 	    = "NETCLIENT_SENDTXPOW";
 	public static final String NETCLIENT_SENDTXPOWREQ 	= "NETCLIENT_SENDTXPOWREQ";
 		
@@ -176,13 +181,11 @@ public class NetClient extends MessageProcessor {
 	protected void processMessage(Message zMessage) throws Exception {
 		
 		if(zMessage.isMessageType(NETCLIENT_INITCONNECT)) {
-			//Store
 			try {
-				//Crtaeter socket
 				mSocket = new Socket();
 				
 				//Connect with timeout
-				mSocket.connect(new InetSocketAddress(mHost, mPort), 10000);
+				mSocket.connect(new InetSocketAddress(mHost, mPort), 60000);
 				
 			}catch (Exception e) {
 				MinimaLogger.log("Error @ connection start : "+mHost+":"+mPort);
@@ -211,11 +214,16 @@ public class NetClient extends MessageProcessor {
 			init.addObject("netclient", this);
 			getMain().getConsensusHandler().PostMessage(init);
 		
+		}else if(zMessage.isMessageType(NETCLIENT_INTRO)) {
+			SyncPackage sp = (SyncPackage)zMessage.getObject("syncpackage");
+			sendMessage(NetClientReader.NETMESSAGE_INTRO, sp);
+		
+		}else if(zMessage.isMessageType(NETCLIENT_SENDTXPOWID)) {
+			MiniData txpowid = (MiniData)zMessage.getObject("txpowid");
+			sendMessage(NetClientReader.NETMESSAGE_TXPOWID, txpowid);
+				
 		}else if(zMessage.isMessageType(NETCLIENT_SENDTXPOW)) {
-			//get the TxPOW
 			TxPoW txpow = (TxPoW)zMessage.getObject("txpow");
-			
-			//And send it..
 			sendMessage(NetClientReader.NETMESSAGE_TXPOW, txpow);
 				
 		}else if(zMessage.isMessageType(NETCLIENT_SENDTXPOWREQ)) {
@@ -231,11 +239,11 @@ public class NetClient extends MessageProcessor {
 			while(keys.hasMoreElements()) {
 				String key = keys.nextElement();
 				
-				//Remove after 10 minuutes
+				//Remove after 10 minutes
 				Long timeval = mOldTxPoWRequests.get(key);
 				long time    = timeval.longValue();
 				long diff    = timenow - time;
-				if(diff < 60000) {
+				if(diff < (1000 * 60 * 10)) {
 					newTxPoWRequests.put(key, timeval);
 				}
 			}
@@ -246,7 +254,7 @@ public class NetClient extends MessageProcessor {
 			//NOW - Check not doing it too often..
 			String val = txpowid.to0xString();
 			
-			//If it's in.. it's less than 10 minutes..
+			//If it's in.. it's less than 30 minutes..
 			if(mOldTxPoWRequests.get(val) != null) {
 				return;
 			}
@@ -256,19 +264,6 @@ public class NetClient extends MessageProcessor {
 			
 			//And send it..
 			sendMessage(NetClientReader.NETMESSAGE_TXPOW_REQUEST, txpowid);
-			
-		}else if(zMessage.isMessageType(NETCLIENT_SENDOBJECT)) {
-			//What type of object is this..
-			MiniByte type = (MiniByte) zMessage.getObject("type");
-			
-			//get the Streamable Object
-			Streamable obj = null;
-			if(zMessage.exists("object")) {
-				obj = (Streamable) zMessage.getObject("object");
-			}
-			
-			//And send it..
-			sendMessage(type, obj);
 	
 		}else if(zMessage.isMessageType(NETCLIENT_SHUTDOWN)) {
 			
@@ -283,24 +278,60 @@ public class NetClient extends MessageProcessor {
 	/**
 	 * Send a message down the network
 	 */
-	protected void sendMessage(Streamable zMessageType, Streamable zObject) {
+	protected void sendMessage(MiniByte zMessageType, Streamable zObject) {
 		//Send it..
 		try {
+			//Create a Data Object 
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(baos);
+			
+			//Now write the Data..
+			zObject.writeDataStream(dos);
+			dos.flush();
+			
+			//Get the data..
+			byte[] data = baos.toByteArray();
+			int len     = data.length; 
+			
+			//Now wrap the message as a MiniData
+			MiniData complete = new MiniData(data);
+			
+			//Check within acceptable parameters - this should be set in TxPoW header.. for now fixed
+			if(zMessageType.isEqual(NetClientReader.NETMESSAGE_TXPOWID) || zMessageType.isEqual(NetClientReader.NETMESSAGE_TXPOW_REQUEST)) {
+				if(len != NetClientReader.TXPOWID_LEN) {
+					throw new Exception("Send Invalid Message length for TXPOWID "+len);
+				}
+			}else if(zMessageType.isEqual(NetClientReader.NETMESSAGE_INTRO)) {
+				if(len > NetClientReader.MAX_INTRO) {
+					throw new Exception("Send Invalid Message length for TXPOW_INTRO "+len);
+				}
+			}else if(zMessageType.isEqual(NetClientReader.NETMESSAGE_TXPOW)) {
+				if(len > NetClientReader.MAX_TXPOW) {
+					throw new Exception("Send Invalid Message length for TXPOW "+len);
+				}
+			}
+			
 			//First write the Message type..
 			zMessageType.writeDataStream(mOutput);
 			
-			if(zObject != null) {
-				//And now write the message
-				zObject.writeDataStream(mOutput);
-			}
+			//Now write out the Size..
+			MiniNumber minlen = new MiniNumber(len);
+			minlen.writeDataStream(mOutput);
+			
+			//Now write the complete package..
+			complete.writeDataStream(mOutput);
 			
 			//Send..
 			mOutput.flush();
 			
+			//Close the streams
+			dos.close();
+			baos.close();
+			
 		}catch(Exception ec) {
 			//Show..
-//			MinimaLogger.log("Error sending message : "+zMessageType.toString()+" "+ec);
-//			ec.printStackTrace();
+			MinimaLogger.log("Error sending message : "+zMessageType.toString()+" "+ec);
+			ec.printStackTrace();
 			
 			//Tell the network Handler
 			mNetworkMain.PostMessage(new Message(NetworkHandler.NETWORK_CLIENTERROR).addObject("client", this));

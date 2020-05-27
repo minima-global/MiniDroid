@@ -4,6 +4,7 @@ import java.io.File;
 import java.math.BigInteger;
 import java.util.ArrayList;
 
+import org.minima.GlobalParams;
 import org.minima.database.MinimaDB;
 import org.minima.database.mmr.MMRSet;
 import org.minima.database.txpowdb.TxPOWDBRow;
@@ -59,19 +60,15 @@ public class ConsensusNet extends ConsensusProcessor {
 	public void processMessage(Message zMessage) throws Exception {
 		
 		if(zMessage.isMessageType(CONSENSUS_NET_INITIALISE)) {
-			//Lets create a sync package
-			ArrayList<BlockTreeNode> nodes = getMainDB().getMainTree().getAsList();
-			
-			//Do we have any info.. ?
-			if(nodes.size()==0) {
-				return;
-			}
-			
 			//Get the complete sync package - deep copy.. 
 			SyncPackage sp = getMainDB().getSyncPackage(true);
 			
-			//Now send that on..
-			sendNetMessage(zMessage, NetClientReader.NETMESSAGE_INTRO, sp);
+			//Get the NetClient...
+			NetClient client = (NetClient) zMessage.getObject("netclient");
+			Message req      = new Message(NetClient.NETCLIENT_INTRO).addObject("syncpackage", sp);
+			
+			//And Post it..
+			client.PostMessage(req);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_NET_INTRO)) {
 			//Get the Sync Package..
@@ -79,6 +76,11 @@ public class ConsensusNet extends ConsensusProcessor {
 			
 			boolean hardreset = false;
 			MiniNumber cross = MiniNumber.MINUSONE;
+			
+			//Check Versions..
+			if(!sp.getSyncVersion().toString().equals(GlobalParams.MINIMA_VERSION)) {
+				MinimaLogger.log("DIFFERENT VERSION ON SYNC "+sp.getSyncVersion());
+			}
 			
 			//How much POW do you currently have
 			BigInteger myweight = BigInteger.ZERO;
@@ -103,12 +105,14 @@ public class ConsensusNet extends ConsensusProcessor {
 				cross = checkCrossover(sp);
 				
 				if(cross.isEqual(MiniNumber.MINUSONE)) {
-					MinimaLogger.log("IRREGULAR POW INTRO CHAIN. NO CROSSOVER BLOCK.. !");
+					if(netweight.compareTo(BigInteger.ZERO)>0) {
+						MinimaLogger.log("IRREGULAR POW INTRO CHAIN. NO CROSSOVER BLOCK.. !");
+					}
 					
 					if(netweight.compareTo(myweight)>0) {
 						MinimaLogger.log("INTRO CHAIN HEAVIER.. ");
 					}else {
-						MinimaLogger.log("YOUR CHAIN HEAVIER.. NO CHANGE REQUIRED");
+//						MinimaLogger.log("YOUR CHAIN HEAVIER.. NO CHANGE REQUIRED");
 						return;
 					}
 					
@@ -166,7 +170,7 @@ public class ConsensusNet extends ConsensusProcessor {
 				getMainDB().hardResetChain();
 			
 				//FOR NOW
-				MinimaLogger.log("Sync Complete.. Current block : "+getMainDB().getMainTree().getChainTip());
+				MinimaLogger.log("Sync Complete.. Current block : "+getMainDB().getMainTree().getChainTip().getTxPow().getBlockNumber());
 			
 				//Do you want a copy of ALL the TxPoW in the Blocks.. ?
 				//Only really useful for txpowsearch - DEXXED
@@ -373,30 +377,6 @@ public class ConsensusNet extends ConsensusProcessor {
 		client.PostMessage(req);
 	}
 	
-	
-	/**
-	 * Send a network message to the sender of this message
-	 * 
-	 * This _should also send out a timerMessage that checks if we got it and if not to
-	 * send a TXPOW_REQUEST to everyone.. 
-	 */
-	private void sendNetMessage(Message zFromMessage, MiniByte zMessageType, Streamable zObject) {
-		//Get the NetClient...
-		NetClient client = (NetClient) zFromMessage.getObject("netclient");
-		
-		//Send the message
-		Message msg = new Message(NetClient.NETCLIENT_SENDOBJECT);
-		msg.addObject("type", zMessageType);
-		
-		//Object can be null
-		if(zObject != null) {
-			msg.addObject("object", zObject);
-		}
-		
-		//Post it..
-		client.PostMessage(msg);
-	}
-
 	/**
 	 * Find a crossover node.. Check 2 chains and find where they FIRST intersect.
 	 */
@@ -408,9 +388,13 @@ public class ConsensusNet extends ConsensusProcessor {
 		MiniNumber maintip     = getMainDB().getMainTree().getChainTip().getTxPow().getBlockNumber();
 		MiniNumber maincascade = getMainDB().getMainTree().getCascadeNode().getTxPow().getBlockNumber();
 		
-		//The incoming chain
+		//The incoming chain - could be empty
 		ArrayList<SyncPacket> introchain = zIntro.getAllNodes();
 		int len = introchain.size();
+		if(len == 0) {
+			return MiniNumber.MINUSONE;
+		}
+		
 		SyncPacket tip = introchain.get(len-1);
 		
 		//The Intro cascade node..

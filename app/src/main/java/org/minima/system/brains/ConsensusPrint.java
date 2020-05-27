@@ -29,6 +29,7 @@ import org.minima.objects.proofs.TokenProof;
 import org.minima.system.Main;
 import org.minima.system.input.InputHandler;
 import org.minima.system.network.NetClient;
+import org.minima.system.network.NetworkHandler;
 import org.minima.utils.Maths;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONArray;
@@ -61,6 +62,17 @@ public class ConsensusPrint extends ConsensusProcessor {
 	public static final String CONSENSUS_NETWORK 			= CONSENSUS_PREFIX+"NETWORK";
 	
 	public static final String CONSENSUS_PRINTCHAIN_TREE 	= CONSENSUS_PREFIX+"PRINTCHAIN_TREE";
+	
+	/**
+	 * The Old Balance that was sent to the listeners..
+	 */
+	String mOldWebSocketBalance = "";
+	
+	/**
+	 * The Old Status that was sent to the listeners..
+	 */
+	String mOldWebSocketStatus = "";
+	
 	
 	public ConsensusPrint(MinimaDB zDB, ConsensusHandler zHandler) {
 		super(zDB, zHandler);
@@ -588,6 +600,26 @@ public class ConsensusPrint extends ConsensusProcessor {
 			//All good
 			InputHandler.endResponse(zMessage, true, "");
 	
+			//Do we notify..
+			String balancestring = totbal.toString();
+			
+			//Is this a notification message for the listeners..
+			if(!balancestring.equals(mOldWebSocketBalance)) {
+				//Store for later.. 
+				mOldWebSocketBalance = balancestring;
+				
+				MinimaLogger.log("NEW BALANCE : "+mOldWebSocketBalance);
+				
+				//Send this to the WebSocket..
+				JSONObject newbalance = new JSONObject();
+				newbalance.put("event","newbalance");
+				newbalance.put("balance",totbal);
+				
+				Message msg = new Message(NetworkHandler.NETWORK_WS_NOTIFY);
+				msg.addString("message", newbalance.toString());
+				getConsensusHandler().getMainHandler().getNetworkHandler().PostMessage(msg);
+			}
+			
 		}else if(zMessage.isMessageType(CONSENSUS_COINSIMPLE)){
 			//Which token..
 			String tokenid = zMessage.getString("tokenid");
@@ -816,7 +848,7 @@ public class ConsensusPrint extends ConsensusProcessor {
 
 			status.put("uptime", uptime);
 			status.put("conf", main.getBackupManager().getRootFolder().getAbsolutePath());
-			status.put("host", main.getNetworkHandler().getRPCServer().getHost());
+			status.put("host", main.getNetworkHandler().getDAPPManager().getHostIP());
 			status.put("port", main.getNetworkHandler().getServer().getPort());
 			status.put("rpcport", main.getNetworkHandler().getRPCServer().getPort());
 			
@@ -873,6 +905,30 @@ public class ConsensusPrint extends ConsensusProcessor {
 			//Add it to the output
 			InputHandler.endResponse(zMessage, true, "");
 		
+			//Do we notify..
+			String statusstring = status.toString();
+			
+			//Is this a notification message for the listeners..
+			if(!statusstring.equals(mOldWebSocketStatus)) {
+				//Store for later.. 
+				mOldWebSocketStatus = statusstring;
+				
+//				MinimaLogger.log("NEW Status : "+mOldWebSocketBalance);
+				
+				//Send this to the WebSocket..
+				JSONObject newblock = new JSONObject();
+				newblock.put("event","newblock");
+				newblock.put("status",status);
+				newblock.put("txpow",tip.getTxPow());
+				
+				Message msg = new Message(NetworkHandler.NETWORK_WS_NOTIFY);
+				msg.addString("message", newblock.toString());
+				getConsensusHandler().getMainHandler().getNetworkHandler().PostMessage(msg);
+				
+				//Notofy the native Listeners..
+//				getConsensusHandler().updateListeners(zMessage);
+			}
+			
 		}else if(zMessage.isMessageType(CONSENSUS_NETWORK)){
 			//Get the response JSON
 			JSONObject network = InputHandler.getResponseJSON(zMessage);

@@ -197,22 +197,37 @@ public class ConsensusHandler extends SystemHandler {
 			//A TXPOW - that has been checked already and added to the DB
 			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
 			
+			//What's the current chain tip..
+			MiniData oldtip = getMainDB().getMainTree().getChainTip().getTxPowID();
+			
 			//Process
 			getMainDB().processTxPOW(txpow);
 		
+			//What's the new chain tip..
+			TxPoW newtip = getMainDB().getMainTree().getChainTip().getTxPow();
+			MiniData newtipid = newtip.getTxPowID();
+			
+			//Has there been a change
+			if(!oldtip.isEqual(newtipid)) {
+				//Notify..
+				updateListeners(new Message(CONSENSUS_NOTIFY_NEWBLOCK).addObject("txpow", newtip));
+			
+				//Update the web listeners..
+				PostMessage(ConsensusPrint.CONSENSUS_STATUS);
+				
+				//Do the balance.. Update listeners if changed..
+				PostMessage(ConsensusPrint.CONSENSUS_BALANCE);
+				
+				//MEMPOOL - can get one message stuck that invalidates new messages.. 
+				if(newtip.getBlockNumber().modulo(MiniNumber.TEN).isEqual(MiniNumber.ZERO)) {
+					PostMessage(new Message(ConsensusUser.CONSENSUS_FLUSHMEMPOOL));	
+				}
+			}
+			
 			//Print the tree..
 			if(mPrintChain) {
 				Message print = new Message(ConsensusPrint.CONSENSUS_PRINTCHAIN_TREE).addBoolean("systemout", true);
 				PostMessage(print);
-			}
-			
-			//MEMPOOL - can get one message stuck that invalidates new messages.. so check it if this is a block..
-			if(txpow.isBlock()) {
-				//Every 10 blocks..
-				if(txpow.getBlockNumber().modulo(MiniNumber.TEN).isEqual(MiniNumber.ZERO)) {
-					//Send a check mempool messsage..
-					PostMessage(new Message(ConsensusUser.CONSENSUS_FLUSHMEMPOOL));	
-				}
 			}
 						
 			/**
@@ -222,11 +237,17 @@ public class ConsensusHandler extends SystemHandler {
 			//The TXPOW
 			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
 			
-			//Double check added...
-			getMainDB().addNewTxPow(txpow);
-			
 			//Back it up!
 			getMainHandler().getBackupManager().backupTxpow(txpow);
+			
+			//Notify the WebSocket Listeners
+			JSONObject newtrans = new JSONObject();
+			newtrans.put("event","newtransaction");
+			newtrans.put("txpow",txpow.toJSON());
+			
+			Message msg = new Message(NetworkHandler.NETWORK_WS_NOTIFY);
+			msg.addString("message", newtrans.toString());
+			getMainHandler().getNetworkHandler().PostMessage(msg);
 			
 			//Process it
 			PostMessage(new Message(ConsensusHandler.CONSENSUS_PROCESSTXPOW).addObject("txpow", txpow));
@@ -245,27 +266,20 @@ public class ConsensusHandler extends SystemHandler {
 				//Store ion the database..
 				getMainDB().getUserDB().addToHistory(txpow,tokamt);
 				
-				//Back up..
-				PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
-				
 				//Notify those listening..
 				updateListeners(new Message(CONSENSUS_NOTIFY_BALANCE));
+				
+				//Do the balance.. Update listeners if changed..
+				PostMessage(ConsensusPrint.CONSENSUS_BALANCE);
 			}
 			
-			//Message for the clients
-			Message msg  = new Message(NetClient.NETCLIENT_SENDOBJECT)
-								.addObject("type", NetClientReader.NETMESSAGE_TXPOWID)
-								.addObject("object", txpow.getTxPowID());
-			Message netw = new Message(NetworkHandler.NETWORK_SENDALL).addObject("message", msg);
+			//Message for ALL the clients
+			Message netmsg  = new Message(NetClient.NETCLIENT_SENDTXPOWID).addObject("txpowid", txpow.getTxPowID());
+			Message netw    = new Message(NetworkHandler.NETWORK_SENDALL).addObject("message", netmsg);
 			
 			//Post It..
 			getMainHandler().getNetworkHandler().PostMessage(netw);
 			
-			//Tell the listeners.. ?
-			if(txpow.isBlock()) {
-				updateListeners(new Message(CONSENSUS_NOTIFY_NEWBLOCK).addObject("txpow", txpow));
-			}
-		
 		}else if ( zMessage.isMessageType(CONSENSUS_AUTOBACKUP) ) {
 			//Backup the system..
 			PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
@@ -320,7 +334,7 @@ public class ConsensusHandler extends SystemHandler {
 				
 			//Are we Mining..
 			if(!getMainHandler().getMiner().isAutoMining()) {
-				PostTimerMessage(new TimerMessage(10000, CONSENSUS_MINEBLOCK));
+				PostTimerMessage(new TimerMessage(30000, CONSENSUS_MINEBLOCK));
 				return;
 			}
 			

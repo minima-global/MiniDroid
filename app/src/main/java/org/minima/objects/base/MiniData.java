@@ -12,6 +12,7 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 
 import org.minima.utils.BaseConverter;
+import org.minima.utils.Crypto;
 import org.minima.utils.Streamable;
 
 /**
@@ -158,29 +159,78 @@ public class MiniData implements Streamable {
 
 	@Override
 	public void readDataStream(DataInputStream zIn) throws IOException {
+		readDataStream(zIn, -1);
+	}
+	
+	/**
+	 * Read in a specific amount.. when receiving messages over the network
+	 * 
+	 * @param zIn
+	 * @param zSize
+	 * @throws IOException
+	 */
+	public void readDataStream(DataInputStream zIn, int zSize) throws IOException {
 		int len = zIn.readInt();
+		if(zSize != -1) {
+			if(len != zSize) {
+				throw new IOException("Read Error : MiniData Length not correct as specified "+zSize);
+			}
+		}
 		mData = new byte[len];
 		zIn.readFully(mData);
 		
 		//Set the data value
 		setDataValue();
 	}
-
 	
-	public static MiniData ReadFromStream(DataInputStream zIn){
+	public static MiniData ReadFromStream(DataInputStream zIn) throws IOException{
+		return ReadFromStream(zIn, -1);
+	}
+	
+	/**
+	 * Specify Size - as network input can be dangerous..
+	 * @param zIn
+	 * @param zSize
+	 * @return
+	 * @throws IOException 
+	 */
+	public static MiniData ReadFromStream(DataInputStream zIn, int zSize) throws IOException{
 		MiniData data = new MiniData();
-		
-		try {
-			data.readDataStream(zIn);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-//			e.printStackTrace();
-			return null;
-		}
-		
+		data.readDataStream(zIn, zSize);
 		return data;
 	}
 
+	/**
+	 * Special Functions to input output HASH data..
+	 */
+	public void writeHashToStream(DataOutputStream zOut) throws IOException {
+		if(mData.length > Crypto.MINIMA_DEFAULT_MAX_HASH_LENGTH) {
+			throw new IOException("Write Error : HASH Length greater than 64! "+mData.length);
+		}
+		
+		zOut.writeInt(mData.length);
+		zOut.write(mData);
+	}
+
+	public void readHashFromStream(DataInputStream zIn) throws IOException {
+		int len = zIn.readInt();
+		if(len > Crypto.MINIMA_DEFAULT_MAX_HASH_LENGTH) {
+			throw new IOException("Read Error : HASH Length greater then 64! "+len);
+		}
+		
+		mData = new byte[len];
+		zIn.readFully(mData);
+		
+		//Set the data value
+		setDataValue();
+	}
+	
+	public static MiniData ReadHashFromStream(DataInputStream zIn) throws IOException{
+		MiniData data = new MiniData();
+		data.readHashFromStream(zIn);
+		return data;
+	}
+	
 	public static MiniData getMiniDataVersion(Streamable zObject) {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		DataOutputStream dos = new DataOutputStream(baos);

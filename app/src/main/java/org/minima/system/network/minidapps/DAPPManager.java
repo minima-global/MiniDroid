@@ -49,15 +49,24 @@ public class DAPPManager extends SystemHandler {
 	byte[] mMINIMAJS = new byte[0];
 	
 	//HOST  - this will be inserted into the minima.js file
-	String mHost;	
+	String mHost = "";	
+	boolean mHardSet = false;
 	int mRPCPort;
 	
 	public DAPPManager(Main zMain, String zHost, int zPort, int zRPCPort) {
 		super(zMain, "DAPPMAnager");
 		
 		//Correct HOST from RPC server
-		mHost    = zHost;
 		mRPCPort = zRPCPort;
+		
+		mHost = "127.0.0.1";
+		if(!zHost.equals("")) {
+			mHardSet = true;
+			mHost = zHost;
+		}
+		
+		//Calculate the HOST
+		getHostIP();
 		
 	    //Here it is.. can hack it on android..
 	    String hostport = mHost+":"+mRPCPort;
@@ -79,6 +88,10 @@ public class DAPPManager extends SystemHandler {
 	}
 	
 	public String getHostIP() {
+		if(mHardSet) {
+			return mHost;
+		}
+		
 		String host = "127.0.0.1";
 		try {
 			boolean found = false;
@@ -141,8 +154,6 @@ public class DAPPManager extends SystemHandler {
 	}
 	
 	public byte[] getMinimaJS() {
-//		MinimaLogger.log("GET MINIMAJS");
-		
 		//Check if the Host has changed..
 		String host = getHostIP();
 		if(!host.equals(mHost)) {
@@ -243,7 +254,7 @@ public class DAPPManager extends SystemHandler {
 					if(subapps != null) {
 						for(File subapp : subapps) {
 							//Ignore the SQL folder that we generate..
-							if(subapp.isDirectory() && !subapp.getName().toLowerCase().equals("sql")) {
+							if(subapp.isDirectory()) {
 								conf = new File(subapp,"minidapp.conf");
 								if(conf.exists()) {
 									break;	

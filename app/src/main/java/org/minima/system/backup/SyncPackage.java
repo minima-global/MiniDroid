@@ -6,12 +6,14 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 
+import org.minima.GlobalParams;
 import org.minima.database.mmr.MMRSet;
 import org.minima.database.txpowtree.BlockTree;
 import org.minima.database.txpowtree.BlockTreeNode;
 import org.minima.database.txpowtree.MultiLevelCascadeTree;
 import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniNumber;
+import org.minima.objects.base.MiniString;
 import org.minima.utils.Streamable;
 
 public class SyncPackage implements Streamable{
@@ -19,11 +21,9 @@ public class SyncPackage implements Streamable{
 	/**
 	 * The Current SyncPackage Version..
 	 * 
-	 * This is the INTRO nmessage to.. so peer to peer know what network language to speak
+	 * This is the INTRO message to.. so peer to peer know what network language to speak
 	 */
-	public static final MiniNumber SYNC_VERSION = MiniNumber.ONE;
-	
-	MiniNumber mSyncVersion = SYNC_VERSION;
+	MiniString mVersion     = new MiniString(GlobalParams.MINIMA_VERSION);
 	
 	MiniNumber mCascadeNode = MiniNumber.ZERO;
 	
@@ -31,8 +31,8 @@ public class SyncPackage implements Streamable{
 	
 	public SyncPackage() {}
 	
-	public MiniNumber getSyncVersion() {
-		return mSyncVersion;
+	public MiniString getSyncVersion() {
+		return mVersion;
 	}
 	
 	public void setCascadeNode(MiniNumber zNumber) {
@@ -50,6 +50,11 @@ public class SyncPackage implements Streamable{
 	public BigInteger calculateWeight() {
 		//Create a Tree and add all these blocks.. then calculate the weight..
 		BlockTree blktree = new BlockTree();
+		
+		//Is it empty..
+		if(mNodes.size() == 0) {
+			return BigInteger.ZERO;
+		}
 		
 		//Drill down 
 		for(SyncPacket spack : mNodes) {
@@ -90,7 +95,7 @@ public class SyncPackage implements Streamable{
 	@Override
 	public void writeDataStream(DataOutputStream zOut) throws IOException {
 		//What version..
-		mSyncVersion.writeDataStream(zOut);
+		mVersion.writeDataStream(zOut);
 		
 		//Write the details..
 		MiniNumber len =  new MiniNumber(mNodes.size());
@@ -104,7 +109,7 @@ public class SyncPackage implements Streamable{
 	@Override
 	public void readDataStream(DataInputStream zIn) throws IOException {
 		//Which Version..
-		mSyncVersion = MiniNumber.ReadFromStream(zIn);
+		mVersion = MiniString.ReadFromStream(zIn);
 		
 		mNodes = new ArrayList<>();
 		MiniNumber nodelen = MiniNumber.ReadFromStream(zIn);
