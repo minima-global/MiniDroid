@@ -178,6 +178,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     return;
                 }
 
+                //Remove previous listeners if there are any..
+                mMinima.mStart.getServer().getConsensusHandler().clearListeners();
+
                 //Set a listener..
                 mMinima.mStart.getServer().getConsensusHandler().addListener(new NativeListener() {
                     @Override
