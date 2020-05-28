@@ -72,38 +72,27 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         //start Minima node Foreground Service
         Intent intent = new Intent(this, NodeService.class);
         startForegroundService(intent);
-
-        Runnable servbind = new Runnable() {
-            @Override
-            public void run() {
-                //Wait 5 seconds..
-                try {Thread.sleep(2000);} catch (InterruptedException e) {}
-
-                //Bind to the service
-                bindService(new Intent(MainActivity.this, NodeService.class), MainActivity.this, Context.BIND_AUTO_CREATE);
-            }
-        };
-
-        Thread binder = new Thread(servbind);
-        binder.start();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         setIPText();
+
+        //Bind to the service
+        bindService(new Intent(MainActivity.this, NodeService.class), MainActivity.this, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unbindService(this);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         setIPText();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        unbindService(this);
     }
 
     public void setIPText() {
@@ -178,9 +167,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     return;
                 }
 
-                //Remove previous listeners if there are any..
-                mMinima.mStart.getServer().getConsensusHandler().clearListeners();
-
                 //Set a listener..
                 mMinima.mStart.getServer().getConsensusHandler().addListener(new NativeListener() {
                     @Override
@@ -198,7 +184,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         Thread tt = new Thread(notify);
         tt.start();
-
     }
 
     @Override

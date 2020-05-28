@@ -29,6 +29,7 @@ import org.minima.utils.messages.Message;
 import org.w3c.dom.Node;
 
 import java.io.InputStream;
+import java.util.Date;
 
 /** Foreground Service for the Minima Node
  *
@@ -194,9 +195,13 @@ public class NodeService extends Service {
                                     @Override
                                     public void run() {
                                         TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
+
+                                        //Calculate the date..
+                                        Date txpowdate = new Date(txpow.getTimeMilli().getAsLong());
+
                                         mBLOCK_NUMBER = txpow.getBlockNumber().toString();
                                         mNotificationBuilder = new NotificationCompat.Builder(NodeService.this, CHANNEL_ID)
-                                                .setContentTitle("Block "+mBLOCK_NUMBER)
+                                                .setContentTitle("Block "+mBLOCK_NUMBER+" @ "+txpowdate.toString())
                                                 .setContentText("Minima Node Channel")
                                                 .setSmallIcon(R.drawable.ic_minima)
                                                 .setContentIntent(mPendingIntent)
@@ -223,8 +228,11 @@ public class NodeService extends Service {
 
     @Override
     public void onDestroy() {
-        Toast.makeText(this, "Minima stopped running.", Toast.LENGTH_LONG).show();
         super.onDestroy();
+
+        //Shut down..
+        Toast.makeText(this, "Minima stopped running.", Toast.LENGTH_LONG).show();
+
 
         mWakeLock.release();
         mWifiLock.release();
