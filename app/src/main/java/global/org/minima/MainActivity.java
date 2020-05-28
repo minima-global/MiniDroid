@@ -79,8 +79,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 //Wait 5 seconds..
                 try {Thread.sleep(2000);} catch (InterruptedException e) {}
 
-                MinimaLogger.log("Attempt to bind to Minima servoice..");
-
                 //Bind to the service
                 bindService(new Intent(MainActivity.this, NodeService.class), MainActivity.this, Context.BIND_AUTO_CREATE);
             }
