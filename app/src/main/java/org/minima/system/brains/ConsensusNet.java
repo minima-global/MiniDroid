@@ -45,16 +45,34 @@ public class ConsensusNet extends ConsensusProcessor {
 	
 	boolean mFullSyncOnInit = true;
 	
+	/**
+	 * Has the initial Sync been done..
+	 */
+	public boolean mInitialSync;
+	
 	public ConsensusNet(MinimaDB zDB, ConsensusHandler zHandler) {
 		super(zDB, zHandler);
+		
+		mInitialSync = false;
 	}
 	 
 	public void setHardResest(boolean zHardResetAllowed) {
 		mHardResetAllowed = zHardResetAllowed;
+	
+		if(!mHardResetAllowed) {
+			mInitialSync = true;
+		}
 	}
 	
 	public void setFullSyncOnInit(boolean zFull) {
 		mFullSyncOnInit = zFull;
+	}
+	
+	public void initialSyncComplete() {
+		if(!mInitialSync) {
+			mInitialSync = true;
+			getConsensusHandler().updateListeners(new Message(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC));	
+		}
 	}
 	
 	public void processMessage(Message zMessage) throws Exception {
@@ -112,7 +130,9 @@ public class ConsensusNet extends ConsensusProcessor {
 					if(netweight.compareTo(myweight)>0) {
 						MinimaLogger.log("INTRO CHAIN HEAVIER.. ");
 					}else {
-//						MinimaLogger.log("YOUR CHAIN HEAVIER.. NO CHANGE REQUIRED");
+						//This normally means you are STUCK.. hmm..
+						MinimaLogger.log("YOUR CHAIN HEAVIER.. NO CHANGE REQUIRED");
+						initialSyncComplete();
 						return;
 					}
 					
@@ -122,6 +142,7 @@ public class ConsensusNet extends ConsensusProcessor {
 					}else {
 						MinimaLogger.log("NO HARD RESET ALLOWED.. ");
 						hardreset = false;
+						initialSyncComplete();
 						return;
 					}
 				}
@@ -169,9 +190,19 @@ public class ConsensusNet extends ConsensusProcessor {
 				//Reset weights
 				getMainDB().hardResetChain();
 			
+				//Now the Initial SYNC has been done you can receive TXPOW message..
+				initialSyncComplete();
+				
 				//FOR NOW
-				MinimaLogger.log("Sync Complete.. Current block : "+getMainDB().getMainTree().getChainTip().getTxPow().getBlockNumber());
+				TxPoW tip = getMainDB().getMainTree().getChainTip().getTxPow();
+				MinimaLogger.log("Sync Complete.. Reset Current block : "+tip.getBlockNumber());
 			
+				//Post a message to those listening
+				getConsensusHandler().updateListeners(new Message(ConsensusHandler.CONSENSUS_NOTIFY_NEWBLOCK).addObject("txpow", tip));
+				
+				//Backup the system..
+				getConsensusHandler().PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
+				
 				//Do you want a copy of ALL the TxPoW in the Blocks.. ?
 				//Only really useful for txpowsearch - DEXXED
 				if(mFullSyncOnInit) {
@@ -202,6 +233,9 @@ public class ConsensusNet extends ConsensusProcessor {
 				//Some crossover was found..
 				MinimaLogger.log("CROSSOVER BLOCK FOUND.. @ "+cross);
 				
+				//Now the Initial SYNC has been done you can receive TXPOW message..
+				initialSyncComplete();
+				
 				//Otherwise.. 
 				ArrayList<SyncPacket> intro = sp.getAllNodes();
 				int totalreq = 0;
@@ -229,6 +263,9 @@ public class ConsensusNet extends ConsensusProcessor {
 				}
 				
 				MinimaLogger.log("Sync complete. "+totalreq+" blocks added.. ");
+				
+				//Backup the system..
+				getConsensusHandler().PostMessage(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
 			}
 			
 		}else if ( zMessage.isMessageType(CONSENSUS_NET_TXPOWID)) {
@@ -264,6 +301,14 @@ public class ConsensusNet extends ConsensusProcessor {
 			/**
 			 * The SINGLE entry point into the system for NEW TXPOW messages..
 			 */
+			
+			//Have we done the initia SYNC..
+			if(!mInitialSync) {
+				MinimaLogger.log("NET TxPoW received before Initial Sync Finished.");
+				return;
+			}
+			
+			//The TxPoW
 			TxPoW txpow = (TxPoW)zMessage.getObject("txpow");
 			
 			//Do we have it.. now check DB - hmmm..
@@ -288,7 +333,8 @@ public class ConsensusNet extends ConsensusProcessor {
 			//Check Header and Body Agree..
 			MiniData bodyhash = Crypto.getInstance().hashObject(txpow.getTxBody());
 			if(!txpow.getTxHeader().getBodyHash().isEqual(bodyhash)) {
-				MinimaLogger.log("ERROR NET TxHeader and TxBody Mismatch! "+txpow.getBlockNumber()+" "+txpow.getTxPowID()); 
+				MinimaLogger.log("ERROR NET TxHeader and TxBody Mismatch! "
+							+txpow.getBlockNumber()+" "+txpow.getTxPowID()+" "+txpow.getTxHeader().getBodyHash().to0xString()+" "+bodyhash.to0xString()); 
 				return;
 			}
 			

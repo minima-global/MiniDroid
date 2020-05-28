@@ -74,6 +74,7 @@ public class ConsensusHandler extends SystemHandler {
 	public static final String CONSENSUS_NOTIFY_QUIT 	    = "CONSENSUS_NOTIFY_QUIT";
 	public static final String CONSENSUS_NOTIFY_BALANCE 	= "CONSENSUS_NOTIFY_BALANCE";
 	public static final String CONSENSUS_NOTIFY_NEWBLOCK 	= "CONSENSUS_NOTIFY_NEWBLOCK";
+	public static final String CONSENSUS_NOTIFY_INITIALSYNC = "CONSENSUS_NOTIFY_INITIALSYNC";
 	
 		
 	/**
@@ -188,6 +189,10 @@ public class ConsensusHandler extends SystemHandler {
 		return mMainDB;
 	}
 	
+	public boolean isInitialSyncComplete() {
+		return mConsensusNet.mInitialSync;
+	}
+	
 	@Override
 	protected void processMessage(Message zMessage) throws Exception {
 		/**
@@ -205,10 +210,9 @@ public class ConsensusHandler extends SystemHandler {
 		
 			//What's the new chain tip..
 			TxPoW newtip = getMainDB().getMainTree().getChainTip().getTxPow();
-			MiniData newtipid = newtip.getTxPowID();
 			
 			//Has there been a change
-			if(!oldtip.isEqual(newtipid)) {
+			if(!oldtip.isEqual(newtip.getTxPowID())) {
 				//Notify..
 				updateListeners(new Message(CONSENSUS_NOTIFY_NEWBLOCK).addObject("txpow", newtip));
 			
@@ -371,6 +375,7 @@ public class ConsensusHandler extends SystemHandler {
 			}
 			
 			//Create the correct transID..
+			txpow.setHeaderBodyHash();
 			txpow.calculateTXPOWID();
 			
 			//Check the SIGS!

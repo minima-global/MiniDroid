@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.net.wifi.WifiManager;
+import android.os.Binder;
 import android.os.Handler;
 import android.os.Build;
 import android.os.IBinder;
@@ -37,8 +38,17 @@ import java.io.InputStream;
  * */
 public class NodeService extends Service {
 
+    public class MyBinder extends Binder {
+        public NodeService getService() {
+            return NodeService.this;
+        }
+    }
+    private final IBinder mBinder = new MyBinder();
+
+
+    public Start mStart;
+
     Handler mHandler;
-    Start mStart;
     boolean mStarted = false;
     NotificationManager mNotificationManager, mNotificationManagerLow;
     android.app.Notification mNotificationBuilder;
@@ -68,7 +78,7 @@ public class NodeService extends Service {
 
         //WiFi..
         WifiManager wifi = (WifiManager) getSystemService(WIFI_SERVICE);
-        mWifiLock = wifi.createWifiLock(WifiManager.WIFI_MODE_FULL, "Minima::MinimWiFi");
+        mWifiLock = wifi.createWifiLock(WifiManager.WIFI_MODE_FULL, "Minima::MiniWiFi");
         if(!mWifiLock.isHeld()){
             mWifiLock.acquire();
         }
@@ -222,8 +232,7 @@ public class NodeService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        // TODO: Return the communication channel to the service.
-        throw new UnsupportedOperationException("Not yet implemented");
+        return mBinder;
     }
 
 }
