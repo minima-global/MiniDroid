@@ -171,9 +171,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 mMinima.mStart.getServer().getConsensusHandler().addListener(new NativeListener() {
                     @Override
                     public void processMessage(final Message zMessage) {
-                        MinimaLogger.log("Notify Message : "+zMessage);
                         try {
                             if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
+                                MinimaLogger.log("Initial Sync Complete "+zMessage);
                                 setPostSyncDetails(true);
                             }
                         } catch (Exception exc) {}
@@ -190,7 +190,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void onBackPressed() {
         moveTaskToBack(true);
     }
-        @Override
+
+    @Override
     public void onServiceDisconnected(ComponentName name) {
         mMinima = null;
     }

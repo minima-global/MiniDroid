@@ -57,6 +57,16 @@ public class BlockTreeNode implements Comparable<BlockTreeNode> {
 	MMRSet mMMRSet = new MMRSet();
 	
 	/**
+	 * When Traversing.. remeber which child was used last
+	 */
+	public int mTraversedChild = 0;
+	
+	/**
+	 * When calculating the cascade weight.. has this node been used..
+	 */
+	public boolean mCascadeWeighted = false;
+	
+	/**
 	 * When loading from bloc ctore just use the TxpowID
 	 */
 	public BlockTreeNode() {}
@@ -139,13 +149,16 @@ public class BlockTreeNode implements Comparable<BlockTreeNode> {
 	
 	public void resetCurrentWeight() {
 		//Now multiply by the current level pow 2
-		BigDecimal factor = new BigDecimal(BIG_TWO.pow(getCurrentLevel()), MathContext.DECIMAL128) ;
+		BigDecimal factor = new BigDecimal(BIG_TWO.pow(getCurrentLevel()), MathContext.UNLIMITED) ;
 		
 		//Set the Weight
-		mWeight = mRealWeight.multiply(factor, MathContext.DECIMAL128).toBigInteger();
+		mWeight = mRealWeight.multiply(factor, MathContext.UNLIMITED).toBigInteger();
 		
 		//Reset the total weight..
 		mTotalWeight = mWeight;
+		
+		//Not used yet..
+		mCascadeWeighted = false;
 	}
 	
 	public BigInteger getWeight() {
@@ -195,8 +208,7 @@ public class BlockTreeNode implements Comparable<BlockTreeNode> {
 		//Set Parent for child
 		zChild.setParent(this);
 		
-		// Order the child nodes.. This way it looks the same in 
-		// the TREE on different devices
+		// Order the child nodes.. This way it looks the same in the TREE on different devices
 		Collections.sort(mChildren);		
 	}
 	
@@ -206,6 +218,10 @@ public class BlockTreeNode implements Comparable<BlockTreeNode> {
 	
 	public int getNumberChildren(){
 		return mChildren.size();
+	}
+	
+	public boolean hasChildren(){
+		return mChildren.size() > 0;
 	}
 	
 	public BlockTreeNode getChild(int zChild) {

@@ -99,6 +99,9 @@ public class NodeService extends Service {
                 try{
                     //Wait for Minima to start..
                     Thread.sleep(1000);
+                    while(mStart.getServer().getNetworkHandler().getDAPPManager() == null){
+                        Thread.sleep(1000);
+                    }
 
                     Message msg = new Message(DAPPManager.DAPP_INSTALL);
                     msg.addObject("overwrite", false);

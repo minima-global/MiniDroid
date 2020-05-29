@@ -3,6 +3,7 @@ package org.minima.database.txpowtree;
 import java.math.BigInteger;
 import java.util.ArrayList;
 
+import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
 import org.minima.utils.MinimaLogger;
@@ -16,12 +17,17 @@ public class BlockTree {
 	/**
 	 * The Tip of the longest Chain
 	 */
-	BlockTreeNode mTip;
+	public BlockTreeNode mTip;
 	
 	/**
 	 * The Block beyond which you are cascading and parents may be of a higher level
 	 */
 	BlockTreeNode mCascadeNode;
+	
+	/**
+	 * When searching for the tip.. 
+	 */
+	BlockTreeNode _mOldTip;
 	
 	/**
 	 * Main Constructor
@@ -126,79 +132,117 @@ public class BlockTree {
 	 * Resets the weights in the tree
 	 */
 	public void resetWeights() {
+		//Store the Old Tip
+		_mOldTip = mTip;
+		
 		//First default them
-		_zeroWeights(getChainRoot());
+		_zeroWeights();
 		
 		//Start at root..
-		_cascadeWeights(getChainRoot());
+		_cascadeWeights();
 		
 		//And get the tip..
-		mTip = getHeaviestBranchTip(getChainRoot());		
+		mTip = _getHeaviestBranchTip();		
 	}
 	
-	private void _zeroWeights(BlockTreeNode zNode) {
-		zNode.resetCurrentWeight();
-		ArrayList<BlockTreeNode> children = zNode.getChildren();
-		for(BlockTreeNode child : children) {
-			_zeroWeights(child);
-		}
+	/**
+	 * Set all the weights to 0
+	 */
+	private void _zeroWeights() {
+		//Go down the whole tree..
+		_recurseTree(new NodeAction() {
+			@Override
+			public void runAction(BlockTreeNode zNode) {
+				zNode.resetCurrentWeight();
+			}
+		});
 	}
 	
-	private void _cascadeWeights(BlockTreeNode zNode) {
-		//Only add valid blocks
-		if(zNode.getState() != BlockTreeNode.BLOCKSTATE_VALID) {
-			return;
+	/**
+	 * Calculate the correct weights per block on the chain
+	 */
+	private void _cascadeWeights() {
+		//First lets stream up the OLD main chain.. OPTIMISATION
+		if(_mOldTip != null) {
+			BigInteger weight        = _mOldTip.getWeight();
+			_mOldTip.mCascadeWeighted = true;
+			
+			//Add to all the parents..
+			BlockTreeNode parent = _mOldTip.getParent();
+			while(parent != null) {
+				//A new cascading weight
+				BigInteger newweight = weight.add(parent.getWeight()); 
+				
+				//Add to this parent..
+				parent.mCascadeWeighted = true;
+				parent.addToTotalWeight(weight);
+				parent = parent.getParent();
+				
+				//Set the new weight
+				weight = newweight;
+			}
 		}
 		
-		//The weight of this block
-		BigInteger weight = zNode.getWeight();
-		
-		//Add to all the parents..
-		BlockTreeNode parent = zNode.getParent();
-		while(parent != null) {
-			parent.addToTotalWeight(weight);
-			parent = parent.getParent();
-		}
-		
-		//Now scour the children
-		ArrayList<BlockTreeNode> children = zNode.getChildren();
-		for(BlockTreeNode child : children) {
-			_cascadeWeights(child);
-		}
+		//Add all the weights up..
+		_recurseTree(new NodeAction() {
+			@Override
+			public void runAction(BlockTreeNode zNode) {
+				//Only add valid blocks
+				if(zNode.getState() == BlockTreeNode.BLOCKSTATE_VALID && !zNode.mCascadeWeighted) {
+					//The weight of this block
+					BigInteger weight = zNode.getWeight();
+					
+					//Add to all the parents..
+					BlockTreeNode parent = zNode.getParent();
+					while(parent != null) {
+						parent.addToTotalWeight(weight);
+						parent = parent.getParent();
+					}
+				}
+			}
+		});
 	}
-	
 	
 	/**
 	 * Pick the GHOST heaviest Branch of the tree
 	 * @param zStartNode
 	 * @return
 	 */
-	private BlockTreeNode getHeaviestBranchTip(BlockTreeNode zStartNode) {
-		if(zStartNode.getNumberChildren()>0) {
-			//Max weight Node..
-			BlockTreeNode max = null;
-			
+	private BlockTreeNode _getHeaviestBranchTip() {
+		//If nothing on chain return nothing
+		if(getChainRoot() == null) {
+			return null;
+		}
+	
+		//Start at root
+		BlockTreeNode curr = getChainRoot();
+		
+		while(true) {
 			//Get the heaviest child branch
-			ArrayList<BlockTreeNode> children = zStartNode.getChildren();
+			ArrayList<BlockTreeNode> children = curr.getChildren();
+			
+			//Do we have any children
+			if(children.size()==0) {
+				return curr;
+			}
+			
+			//Only keep the heaviest
+			BlockTreeNode heavy = null;
 			for(BlockTreeNode node : children) {
-				//ONLY VALID BLOCKS
 				if(node.getState() == BlockTreeNode.BLOCKSTATE_VALID) {
-					if(max == null) {
-						max = node;
+					if(heavy == null) {
+						heavy = node;
 					}else {
-						if(node.getTotalWeight().compareTo(max.getTotalWeight()) > 0) {
-							max = node;
+						if(node.getTotalWeight().compareTo(heavy.getTotalWeight()) > 0) {
+							heavy = node;
 						}
 					}
 				}
 			}
-
-			if(max != null) {
-				return getHeaviestBranchTip(max);
-			}
+			
+			//reset and do it again!
+			curr = heavy;
 		}
-		
-		return zStartNode;
 	}
 	
 	/**
@@ -207,61 +251,86 @@ public class BlockTree {
 	 * @param zTxPOWID
 	 * @return
 	 */
+	
 	public BlockTreeNode findNode(MiniData zTxPOWID) {
-		if(getChainRoot() == null) {
-			return null;
-		}
-		
-		//Strange BUG on Android..
-//		try {
-//			BlockTreeNode finder = _findNode(getChainRoot(), zTxPOWID);
-//			return finder;
-//		}catch(StackOverflowError stacker) {
-//			MinimaLogger.log("STACK OVERFLOW err  "+stacker);
-//			MinimaLogger.log("STACK OVERFLOW id   "+zTxPOWID);
-//			MinimaLogger.log("STACK OVERFLOW size "+getAsList().size());
-//		}
-		
-		//Do it again..
-		return _findNode(getChainRoot(), zTxPOWID);
-	}
-	
-	private BlockTreeNode _findNode(BlockTreeNode zRoot, MiniData zTxPOWID) {
-		//Check..
-		if(zRoot.getTxPowID().isEqual(zTxPOWID)) {
-			return zRoot;
-		}
-		
-		//Search the Children..
-		ArrayList<BlockTreeNode> children = zRoot.getChildren();
-		
-		for(BlockTreeNode child : children) {
-			BlockTreeNode found = _findNode(child, zTxPOWID);
-		
-			if(found != null) {
-				return found;
+		//Action that checks for a specific node..
+		NodeAction finder = new NodeAction(zTxPOWID) {
+			@Override
+			public void runAction(BlockTreeNode zNode) {
+				if(zNode.getTxPowID().isEqual(getExtraData())) {
+        			setReturnObject(zNode);
+        		}
 			}
-		}
+		}; 
 		
-		return null;
+		return _recurseTree(finder);
 	}
 	
-	public BlockTreeNode getOnChainBlock(MiniNumber zBlockNumber) {
-			return _getOnChainBlock(zBlockNumber, mTip);
-	}
-	
-	private BlockTreeNode _getOnChainBlock(MiniNumber zBlockNumber, BlockTreeNode zTip) {
-		if(zTip == null) {
-			return null;
-		}
+	/**
+	 * Recurse the whole tree and ru an action..
+	 * 
+	 * return object if something special found..
+	 * 
+	 * @param zNodeAction
+	 * @return
+	 */
+	private BlockTreeNode _recurseTree(NodeAction zNodeAction) {
+		//If nothing on chain return nothing
+		if(getChainRoot() == null) {return null;}
 		
-		if(zTip.getTxPow().getBlockNumber().isEqual(zBlockNumber)) {
-			return zTip;
-		}
+		//Create a STACK..
+		NodeStack stack = new NodeStack();
 		
-		return _getOnChainBlock(zBlockNumber, zTip.getParent());
+		//Now loop..
+		BlockTreeNode curr   = getChainRoot(); 
+		curr.mTraversedChild = 0;
+		
+        // traverse the tree 
+        while (curr != null || !stack.isEmpty()) { 
+        	while (curr !=  null) { 
+            	//Run the Action
+        		zNodeAction.runAction(curr);
+        		
+        		//Have we found what we were looking for..
+        		if(zNodeAction.returnObject()) {
+        			return zNodeAction.getObject();
+        		}
+            	
+            	//Push on the stack..
+            	stack.push(curr); 
+            	
+            	//Does it have children
+            	int childnum = curr.mTraversedChild;
+            	if(curr.getNumberChildren() > childnum) {
+                	curr.mTraversedChild++;
+                	curr = curr.getChild(childnum); 
+                	curr.mTraversedChild = 0;
+                }else {
+                	curr = null;
+                }
+            } 
+  
+            //Current must be NULL at this point
+            curr = stack.peek();
+        	
+            //Get the next child..
+            int childnum = curr.mTraversedChild;
+        	if(curr.getNumberChildren() > childnum) {
+            	//Increment so next time a different child is chosen
+        		curr.mTraversedChild++;
+            	curr = curr.getChild(childnum); 
+            	curr.mTraversedChild = 0;
+            }else{
+            	//We've seen all the children.. remove from the stack
+            	stack.pop();
+            	
+            	//Reset the current to null
+            	curr = null;
+            }
+        }
+        
+        return null;
 	}
-	
 	
 	/**
 	 * Get the list of TreeNodes in the LongestChain
@@ -387,4 +456,62 @@ public class BlockTree {
 		mCascadeNode 	= null;
 	}
 
+	public static TxPoW createRandomTxPow() {
+		TxPoW txpow = new TxPoW();
+		txpow.setHeaderBodyHash();
+		txpow.calculateTXPOWID();
+		
+		return txpow;
+	}
+	
+	public static void main(String[] zArgs) {
+		
+		BlockTree tree = new BlockTree();
+		
+		TxPoW root = createRandomTxPow();
+		BlockTreeNode rootnode = new BlockTreeNode(root);
+		tree.setTreeRoot(rootnode);
+		System.out.println("root : "+rootnode.getTxPowID().to0xString(10));
+		
+		//2 kids..
+		TxPoW child = createRandomTxPow();
+		BlockTreeNode treenode = new BlockTreeNode(child);
+		rootnode.addChild(treenode);
+		System.out.println("rootchild1 : "+treenode.getTxPowID().to0xString(10));
+		
+		TxPoW child4 = createRandomTxPow();
+		BlockTreeNode treenode4 = new BlockTreeNode(child4);
+		treenode.addChild(treenode4);
+		System.out.println("child1child1 : "+treenode4.getTxPowID().to0xString(10));
+		
+		TxPoW child5 = createRandomTxPow();
+		BlockTreeNode treenode5 = new BlockTreeNode(child5);
+		treenode.addChild(treenode5);
+		System.out.println("child1child2 : "+treenode5.getTxPowID().to0xString(10));
+		
+		TxPoW child6 = createRandomTxPow();
+		BlockTreeNode treenode6 = new BlockTreeNode(child6);
+		treenode.addChild(treenode6);
+		System.out.println("child1child3 : "+treenode6.getTxPowID().to0xString(10));
+		
+		TxPoW child2 = createRandomTxPow();
+		BlockTreeNode treenode2 = new BlockTreeNode(child2);
+		rootnode.addChild(treenode2);
+		System.out.println("rootchild2 : "+treenode2.getTxPowID().to0xString(10));
+		
+		TxPoW child3 = createRandomTxPow();
+		BlockTreeNode treenode3 = new BlockTreeNode(child3);
+		treenode2.addChild(treenode3);
+		System.out.println("child2child1 : "+treenode3.getTxPowID().to0xString(10));
+		
+		//Search for the child..
+		System.out.println("\nSearch for "+child3.getTxPowID().to0xString(10)+"\n\n");
+//		BlockTreeNode find =  tree.findNode(child3.getTxPowID());
+		BlockTreeNode find =  tree.findNode(MiniData.getRandomData(5));
+		
+		System.out.println("NODE : "+find);
+		
+	}
+	
+	
 }
