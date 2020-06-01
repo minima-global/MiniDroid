@@ -50,7 +50,8 @@ public class Start {
 				
 				//Start up Variables
 				ArrayList<String> vars = new ArrayList<>();
-				
+
+//				vars.add("-private");
 				vars.add("-daemon");
 //				vars.add("-clean");
 //				vars.add("-port");
