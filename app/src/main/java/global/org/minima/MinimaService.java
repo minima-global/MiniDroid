@@ -137,6 +137,7 @@ public class MinimaService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         MinimaLogger.log("Service : OnStartCommand "+startId);
 
+        //Only do this once..
         if(!mListenerAdded){
             mListenerAdded = true;
 
@@ -149,13 +150,6 @@ public class MinimaService extends Service {
                 while(mStart.getServer() == null){Thread.sleep(500);}
                 while(mStart.getServer().getNetworkHandler() == null){Thread.sleep(500);}
                 while(mStart.getServer().getNetworkHandler().getDAPPManager() == null){Thread.sleep(500);}
-
-                Thread.sleep(1000);
-
-                //Wait until this is ready..
-                while(mStart.getServer().getNetworkHandler().getDAPPManager() == null){
-                    Thread.sleep(1000);
-                }
 
                 Message msg = new Message(DAPPManager.DAPP_INSTALL);
                 msg.addObject("overwrite", false);

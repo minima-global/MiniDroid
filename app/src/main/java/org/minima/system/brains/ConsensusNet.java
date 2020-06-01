@@ -8,10 +8,8 @@ import org.minima.GlobalParams;
 import org.minima.database.MinimaDB;
 import org.minima.database.mmr.MMRSet;
 import org.minima.database.txpowdb.TxPOWDBRow;
-import org.minima.database.txpowtree.BlockTree;
 import org.minima.database.txpowtree.BlockTreeNode;
 import org.minima.objects.TxPoW;
-import org.minima.objects.base.MiniByte;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
 import org.minima.system.backup.BackupManager;
@@ -22,7 +20,6 @@ import org.minima.system.network.NetClientReader;
 import org.minima.system.txpow.TxPoWChecker;
 import org.minima.utils.Crypto;
 import org.minima.utils.MinimaLogger;
-import org.minima.utils.Streamable;
 import org.minima.utils.messages.Message;
 
 public class ConsensusNet extends ConsensusProcessor {
@@ -31,6 +28,9 @@ public class ConsensusNet extends ConsensusProcessor {
 	 * Used for the custom Transactions
 	 */
 	public static final String CONSENSUS_PREFIX 			= "CONSENSUSNET_";
+	
+//	public static final String CONSENSUS_NET_INTRO 	        = CONSENSUS_PREFIX+"NET_INTRO";
+	
 	
 	public static final String CONSENSUS_NET_INITIALISE 	= CONSENSUS_PREFIX+"NET_INITIALISE";
 	public static final String CONSENSUS_NET_INTRO 			= CONSENSUS_PREFIX+"NET_MESSAGE_"+NetClientReader.NETMESSAGE_INTRO.getValue();

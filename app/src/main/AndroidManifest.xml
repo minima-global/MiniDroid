@@ -13,7 +13,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name=".MinimaActivity" android:launchMode="singleInstance">
+        <activity android:name=".MinimaActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,7 +25,7 @@
         <service
             android:name=".MinimaService"
             android:enabled="true"
-            android:process=":service"
+            android:process="org.mimina.service"
             android:exported="true">
         </service>
 
@@ -37,8 +37,7 @@
             </intent-filter>
         </receiver>
 
-
-        <receiver android:name=".Alarm" android:process=":alarm"></receiver>
+        <receiver android:name=".Alarm" android:process="org.minima.alarm"></receiver>
 
     </application>
 
