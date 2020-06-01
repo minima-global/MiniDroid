@@ -115,6 +115,9 @@ public class MinimaService extends Service {
 
         //Set the Alarm..
         mAlarm = new Alarm();
+        //Cancel an old alarm..
+        mAlarm.cancelAlarm(this);
+        //Start a new one..
         mAlarm.setAlarm(this);
 
         mService = this;
@@ -206,7 +209,7 @@ public class MinimaService extends Service {
 
         Toast.makeText(this, "Minima Service Stopped", Toast.LENGTH_SHORT).show();
 
-        mAlarm.cancelAlarm(this);
+//        mAlarm.cancelAlarm(this);
 
         mWakeLock.release();
         mWifiLock.release();
