@@ -23,8 +23,10 @@ import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniData;
 import org.minima.system.NativeListener;
 import org.minima.system.brains.ConsensusHandler;
+import org.minima.system.input.InputMessage;
 import org.minima.system.network.minidapps.DAPPManager;
 import org.minima.utils.MinimaLogger;
+import org.minima.utils.ResponseStream;
 import org.minima.utils.messages.Message;
 
 import java.io.InputStream;
@@ -207,10 +209,26 @@ public class MinimaService extends Service {
 
         MinimaLogger.log("Service : onDestroy");
 
+        //Post It..
+        if(mStart != null){
+            //Create a response stream
+            ResponseStream resp = new ResponseStream();
+
+            //Send a backup message!
+            InputMessage backup = new InputMessage("backup",resp);
+
+            MinimaLogger.log("Service : POST BACKUP MESSAGE");
+            mStart.getServer().getInputHandler().PostMessage(backup);
+
+            //Wait for it..
+            resp.waitToFinish();
+            MinimaLogger.log("Service : WAIT FINISHED");
+        }
+
+        //Mention..
         Toast.makeText(this, "Minima Service Stopped", Toast.LENGTH_SHORT).show();
 
-//        mAlarm.cancelAlarm(this);
-
+        //Release the wakelocks..
         mWakeLock.release();
         mWifiLock.release();
     }

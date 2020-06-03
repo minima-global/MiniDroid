@@ -108,7 +108,10 @@ public class MinimaActivity extends AppCompatActivity {
         //Set the IP - it may change..
         if (mSynced) {
             mIP = getIP();
-            mTextIP.setText("\nBrowse locally or connect to Minima from your Desktop\n\nOpen a browser and go to\n\nhttp://" + mIP + ":21000/\n\nThe best experience - charge phone while using MiniDAPPs");
+            mTextIP.setText("\nConnect to Minima from your Desktop\n\n" +
+                    "Open a browser and go to\n\n" +
+                    "http://" + mIP + ":21000/\n\n" +
+                    "The best experience..\n\nCharge phone while using MiniDAPPs");
         }
     }
 

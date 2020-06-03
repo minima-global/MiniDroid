@@ -18,7 +18,9 @@ import org.minima.system.Main;
 import org.minima.system.backup.BackupManager;
 import org.minima.system.backup.SyncPackage;
 import org.minima.system.backup.SyncPacket;
+import org.minima.system.input.InputHandler;
 import org.minima.utils.MinimaLogger;
+import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
 
 public class ConsensusBackup extends ConsensusProcessor {
@@ -57,9 +59,9 @@ public class ConsensusBackup extends ConsensusProcessor {
 			backup.writeObjectToFile(backuser, userdb);
 			
 		}else if(zMessage.isMessageType(CONSENSUSBACKUP_BACKUP)) {
-			//Tell us whe you do this..
-			MinimaLogger.log("Full Backup performed..");
-
+			//Return details..
+			JSONObject details = InputHandler.getResponseJSON(zMessage);
+			
 			//Is this for shut down or just a regular backup..
 			boolean shutdown = false;
 			if(zMessage.exists("shutdown")) {
@@ -73,11 +75,16 @@ public class ConsensusBackup extends ConsensusProcessor {
 			JavaUserDB userdb = (JavaUserDB) getMainDB().getUserDB();
 			File backuser     = backup.getBackUpFile(USERDB_BACKUP);
 			BackupManager.writeObjectToFile(backuser, userdb);
+			details.put("userdb", backuser.getAbsolutePath());
 			
 			//Now the complete SyncPackage..
 			SyncPackage sp = getMainDB().getSyncPackage();
 			File backsync  = backup.getBackUpFile(SYNC_BACKUP);
 			BackupManager.writeObjectToFile(backsync, sp);
+			details.put("chaindb", backsync.getAbsolutePath());
+			
+			//respond..
+			InputHandler.endResponse(zMessage, true, "Full Backup Performed");
 			
 			//Do we shut down..
 			if(shutdown) {
@@ -177,6 +184,9 @@ public class ConsensusBackup extends ConsensusProcessor {
 				if(txpow.getBlockNumber().isEqual(sp.getCascadeNode())) {
 					getMainDB().hardSetCascadeNode(node);
 				}
+				
+				//Store it..
+				getBackup().backupTxpow(txpow);
 			}
 			
 			//Reset weights
@@ -191,20 +201,20 @@ public class ConsensusBackup extends ConsensusProcessor {
 				//Get the Block
 				TxPoW txpow = treenode.getTxPow();
 				
-				//Store it..
-				getBackup().backupTxpow(txpow);
-				
 				//What Block
 				MiniNumber block = txpow.getBlockNumber();
+				
+				//Set the main chain details..
+				TxPOWDBRow blockrow = getMainDB().getTxPowDB().findTxPOWDBRow(txpow.getTxPowID());
+				blockrow.setInBlockNumber(block);
+				blockrow.setOnChainBlock(true);
+				blockrow.setIsInBlock(true);
 				
 				//Now the Txns..
 				ArrayList<MiniData> txpowlist = txpow.getBlockTransactions();
 				for(MiniData txid : txpowlist) {
 					TxPOWDBRow trow = getMainDB().getTxPowDB().findTxPOWDBRow(txid);
 					if(trow!=null) {
-						//Store it..
-						getBackup().backupTxpow(trow.getTxPOW());
-						
 						//Set that it is in this block
 						trow.setOnChainBlock(false);
 						trow.setIsInBlock(true);
