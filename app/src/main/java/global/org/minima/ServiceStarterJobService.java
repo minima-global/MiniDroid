@@ -12,7 +12,6 @@ public class ServiceStarterJobService extends JobIntentService {
     public static final int JOB_ID = 0x01;
 
     public static void enqueueWork(Context context, Intent work) {
-        MinimaLogger.log("MINIMA ENQUEUE");
         enqueueWork(context, ServiceStarterJobService.class, JOB_ID, work);
     }
 

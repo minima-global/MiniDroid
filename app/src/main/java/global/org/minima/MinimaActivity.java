@@ -53,6 +53,10 @@ public class MinimaActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:21000/"));
                 startActivity(intent);
+
+                  //start Minima node Foreground Service
+//                Intent intent = new Intent(getBaseContext(), MinimaService.class);
+//                stopService(intent);
             }
         });
 

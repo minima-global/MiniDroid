@@ -6,7 +6,6 @@ import org.minima.objects.base.MiniNumber;
 import org.minima.system.backup.BackupManager;
 import org.minima.system.brains.ConsensusBackup;
 import org.minima.system.brains.ConsensusHandler;
-import org.minima.system.input.CommandFunction;
 import org.minima.system.input.InputHandler;
 import org.minima.system.network.NetworkHandler;
 import org.minima.system.txpow.TxPoWMiner;
@@ -22,8 +21,6 @@ public class Main extends MessageProcessor {
 	
 	public static final String SYSTEM_SHUTDOWN 		= "SYSTEM_SHUTDOWN";
 	public static final String SYSTEM_FULLSHUTDOWN 	= "SYSTEM_FULLSHUTDOWN";
-	
-	public static final String SYSTEM_ALLSTOP 		= "SYSTEM_ALLSTOP";
 	
 	public static final String SYSTEM_EVENT 		= "SYSTEM_EVENT";
 		
@@ -138,10 +135,6 @@ public class Main extends MessageProcessor {
 		return mNodeStartTime;
 	}
 	
-	public void SystemShutDown() {
-		PostMessage(SYSTEM_SHUTDOWN);
-	}
-		
 	public void setTrace(boolean zTraceON) {
 		setLOG(zTraceON);
 		
@@ -238,10 +231,16 @@ public class Main extends MessageProcessor {
 			Message backshut = new Message(ConsensusBackup.CONSENSUSBACKUP_BACKUP);
 			backshut.addBoolean("shutdown", true);
 			
+			//Keep the response message
+			InputHandler.addResponseMesage(backshut, zMessage);
+			
 			//Save all the user details..
 			getConsensusHandler().PostMessage(backshut);
 			
 		}else if ( zMessage.isMessageType(SYSTEM_FULLSHUTDOWN) ) {
+			
+			//Notify Listeners..
+			mConsensus.updateListeners(new Message(ConsensusHandler.CONSENSUS_NOTIFY_QUIT));
 			
 			//Gracefull shutdown..
 			mNetwork.PostMessage(NetworkHandler.NETWORK_SHUTDOWN);
@@ -252,31 +251,15 @@ public class Main extends MessageProcessor {
 			mConsensus.stopMessageProcessor();
 			mBackup.stopMessageProcessor();
 			
-			//Wait..
+			//Wait a second..
 			Thread.sleep(1000);
 			
 			//And shut this down too..
 			stopMessageProcessor();
 			
-			//Notify Listeners..
-			mConsensus.updateListeners(new Message(ConsensusHandler.CONSENSUS_NOTIFY_QUIT));
-			
-			//All done..
-			MinimaLogger.log("Minima Stopped. Bye Bye..");
-			
-		}else if ( zMessage.isMessageType(SYSTEM_ALLSTOP) ) {
-			
-			//Stop mining..
-			String[] input= {"minetrans","off"};
-			
-			//Get the function..
-			CommandFunction minetrans = CommandFunction.getFunction("minetrans");
-			minetrans.setMainHandler(getConsensusHandler().getMainHandler());
-			minetrans.doFunction(input);
-
-			//Send.. 
-			getNetworkHandler().PostMessage(new Message(NetworkHandler.NETWORK_ALLSTOP));
-			
+			//It's over..
+			InputHandler.endResponse(zMessage, true, "Minima Stopped. Bye Bye..");
+					
 		}else {
 			//Unknown Message..
 			MinimaLogger.log("Unknown Message sent to main handler "+zMessage);

@@ -117,8 +117,7 @@ public class MinimaService extends Service {
 
         //Set the Alarm..
         mAlarm = new Alarm();
-        //Cancel an old alarm..
-        mAlarm.cancelAlarm(this);
+
         //Start a new one..
         mAlarm.setAlarm(this);
 
@@ -215,14 +214,13 @@ public class MinimaService extends Service {
             ResponseStream resp = new ResponseStream();
 
             //Send a backup message!
-            InputMessage backup = new InputMessage("backup",resp);
+            InputMessage backup = new InputMessage("quit",resp);
 
-            MinimaLogger.log("Service : POST BACKUP MESSAGE");
             mStart.getServer().getInputHandler().PostMessage(backup);
 
             //Wait for it..
             resp.waitToFinish();
-            MinimaLogger.log("Service : WAIT FINISHED");
+            MinimaLogger.log("Service : "+resp.getResponse());
         }
 
         //Mention..
