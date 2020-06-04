@@ -1,5 +1,7 @@
 package org.minima.system.brains;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -21,9 +23,11 @@ import org.minima.system.SystemHandler;
 import org.minima.system.input.InputHandler;
 import org.minima.system.input.functions.gimme50;
 import org.minima.system.network.NetClient;
+import org.minima.system.network.NetClientReader;
 import org.minima.system.network.NetworkHandler;
 import org.minima.system.txpow.TxPoWChecker;
 import org.minima.system.txpow.TxPoWMiner;
+import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
@@ -396,14 +400,39 @@ public class ConsensusHandler extends SystemHandler {
 				return;
 			}
 			
+			
+			//CHECK THE SIZE
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(baos);
+			txpow.writeDataStream(dos);
+			dos.flush();
+			int txpowsize = baos.toByteArray().length;
+			dos.close();
+			baos.close();
+			
+			//Add the size..
+			resp.put("size", txpowsize);
+			resp.put("inputs", txpow.getTransaction().getAllInputs().size());
+			resp.put("outputs", txpow.getTransaction().getAllOutputs().size());
+			
+			if(txpowsize > NetClientReader.MAX_TXPOW) {
+				//Add the TxPoW
+				resp.put("transaction", txpow.getTransaction());
+				
+				//ITS TOO BIG!
+				InputHandler.endResponse(zMessage, false, "YOUR TXPOW TRANSACTION IS TOO BIG! MAX SIZE : "+NetClientReader.MAX_TXPOW);
+				
+				return;
+			}
+					
 			//Add to the list of Mined Coins!
 			getMainDB().addMiningTransaction(txpow.getTransaction());
 			
 			//Send it to the Miner.. This is the ONLY place this happens..
 			Message mine = new Message(TxPoWMiner.TXMINER_MINETXPOW).addObject("txpow", txpow);
-			InputHandler.addResponseMesage(mine, zMessage);
 			getMainHandler().getMiner().PostMessage(mine);
 		
+			//Add the TxPoW
 			resp.put("txpow", txpow);
 			
 			InputHandler.endResponse(zMessage, true, "Send Success");
@@ -521,7 +550,7 @@ public class ConsensusHandler extends SystemHandler {
 			getMainDB().remeoveMiningTransaction(txpow.getTransaction());
 			
 			//And now forward the message to the single entry point..
-			Message msg = new Message(ConsensusNet.CONSENSUS_NET_TXPOW).addObject("txpow", txpow);
+			Message msg = new Message(ConsensusNet.CONSENSUS_NET_CHECKSIZE_TXPOW).addObject("txpow", txpow);
 			PostMessage(msg);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_GIMME50)) {
@@ -537,9 +566,6 @@ public class ConsensusHandler extends SystemHandler {
 			//construct a special transaction that pays 50 mini to an address this user controls..
 			Address addr1 = getMainDB().getUserDB().newSimpleAddress();
 			Address addr2 = getMainDB().getUserDB().newSimpleAddress();
-			Address addr3 = getMainDB().getUserDB().newSimpleAddress();
-			Address addr4 = getMainDB().getUserDB().newSimpleAddress();
-			Address addr5 = getMainDB().getUserDB().newSimpleAddress();
 			
 			//Now create a transaction that always pays out..
 			Transaction trans = new Transaction();
@@ -555,11 +581,8 @@ public class ConsensusHandler extends SystemHandler {
 			wit.addScript(Address.TRUE_ADDRESS.getScript(), in.getAddress().getLength()*8);
 			
 			//And send to the new addresses
-			trans.addOutput(new Coin(Coin.COINID_OUTPUT,addr1.getAddressData(),new MiniNumber("10"), Coin.MINIMA_TOKENID));
-			trans.addOutput(new Coin(Coin.COINID_OUTPUT,addr2.getAddressData(),new MiniNumber("10"), Coin.MINIMA_TOKENID));
-			trans.addOutput(new Coin(Coin.COINID_OUTPUT,addr3.getAddressData(),new MiniNumber("10"), Coin.MINIMA_TOKENID));
-			trans.addOutput(new Coin(Coin.COINID_OUTPUT,addr4.getAddressData(),new MiniNumber("10"), Coin.MINIMA_TOKENID));
-			trans.addOutput(new Coin(Coin.COINID_OUTPUT,addr5.getAddressData(),new MiniNumber("10"), Coin.MINIMA_TOKENID));
+			trans.addOutput(new Coin(Coin.COINID_OUTPUT,addr1.getAddressData(),new MiniNumber("25"), Coin.MINIMA_TOKENID));
+			trans.addOutput(new Coin(Coin.COINID_OUTPUT,addr2.getAddressData(),new MiniNumber("25"), Coin.MINIMA_TOKENID));
 			
 			//Now send it..
 			Message mine = new Message(ConsensusHandler.CONSENSUS_SENDTRANS)

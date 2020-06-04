@@ -77,17 +77,11 @@ public class JavaDB implements TxPowDB{
 				newRows.add(row);
 			
 			}else {
-//				if(!row.isInBlock()) {
-//					System.out.println("UNUSED TXPoW Removed.. too old "
-//						+row.getTxPOW().getBlockNumber()+" "+minblock+" "+row.getTxPOW().toJSON());	
-//				}
-				
 				//Remove it..
 				removed.add(row);
 				
 				//Add to the deleted rows
-				row.deleteRow();
-				mDeletedRows.add(row);
+				deleteRow(row);
 			}
 		}
 		
@@ -99,6 +93,11 @@ public class JavaDB implements TxPowDB{
 		
 		//Return the removed..
 		return removed;
+	}
+	
+	private void deleteRow(JavaDBRow zRow) {
+		zRow.deleteRow();
+		mDeletedRows.add(zRow);
 	}
 
 	private ArrayList<TxPOWDBRow> removeDeleted() {
@@ -146,13 +145,18 @@ public class JavaDB implements TxPowDB{
 	public void removeTxPOW(MiniData zTxPOWID) {
 		ArrayList<JavaDBRow> newRows = new ArrayList<>();
 		
+		boolean found = false;
 		for(JavaDBRow row : mRows) {
-			if( !row.getTxPOW().getTxPowID().isEqual(zTxPOWID)) {
-				newRows.add(row);
+			if( !found && row.getTxPOW().getTxPowID().isEqual(zTxPOWID) ) {
+				//There can be only one as the TxPoWID is unique
+				found = true;
 				
 				//Add to the deleted rows..
-				row.deleteRow();
-				mDeletedRows.add(row);
+				deleteRow(row);
+				
+			}else{
+				//Keep it..
+				newRows.add(row);
 			}
 		}
 		

@@ -3,14 +3,20 @@ package org.minima.system.network;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.IOException;
+import java.net.SocketException;
 
 import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniByte;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
+import org.minima.objects.greet.Greeting;
+import org.minima.objects.greet.HashNumber;
+import org.minima.objects.greet.TxPoWList;
 import org.minima.system.backup.SyncPackage;
 import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.brains.ConsensusNet;
+import org.minima.system.brains.ConsensusPrint;
 import org.minima.utils.Crypto;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.ProtocolException;
@@ -26,7 +32,7 @@ public class NetClientReader implements Runnable {
 	public static final int MAX_INTRO = 1024 * 1000 * 10;
 	
 	//10 KB MAX MESSAGE
-	public static final int MAX_TXPOW = 1024 * 10;
+	public static final int MAX_TXPOW = 1024 * 20;
 			
 	//The Length of a TxPoWID message 64 + 4 byte int
 	public static final int TXPOWID_LEN = Crypto.MINIMA_DEFAULT_MAX_HASH_LENGTH + 4;
@@ -54,6 +60,22 @@ public class NetClientReader implements Runnable {
 	 */
 	public static final MiniByte NETMESSAGE_TXPOW			= new MiniByte(3);
 	
+	/**
+	 * Greeting message that tells what Net Protocol this peer speaks, and a complete block chain header list. Any Blocks 
+	 * the peer doesn't have he can request. Both peers send this to each other when they connect.
+	 */
+	public static final MiniByte NETMESSAGE_GREETING		= new MiniByte(6);
+	
+	/**
+	 * Request the full details of a list of TxPow. You only send the top TxPoW 
+	 * and a number for the parents required
+	 */
+	public static final MiniByte NETMESSAGE_TXPOWLIST_REQUEST = new MiniByte(4);
+	
+	/**
+	 * A list of TxPoW details
+	 */
+	public static final MiniByte NETMESSAGE_TXPOWLIST	      = new MiniByte(5);
 	
 	/**
 	 * Netclient owner
@@ -118,6 +140,9 @@ public class NetClientReader implements Runnable {
 				
 				//What kind of message is it..
 				if(msgtype.isEqual(NETMESSAGE_INTRO)) {
+					//tell us how big the sync was..
+					MinimaLogger.log("Initial Sync Message : "+ConsensusPrint.formatSize(len));
+					
 					//Read in the SyncPackage
 					SyncPackage sp = new SyncPackage();
 					sp.readDataStream(inputstream);
@@ -127,8 +152,7 @@ public class NetClientReader implements Runnable {
 					
 				}else if(msgtype.isEqual(NETMESSAGE_TXPOWID)) {
 					//Peer now has this TXPOW - if you don't you can request the full version
-					MiniData hash  = new MiniData();
-					hash.readDataStream(inputstream);
+					MiniData hash  = MiniData.ReadFromStream(inputstream);
 					
 					//Add this ID
 					rec.addObject("txpowid", hash);
@@ -143,12 +167,35 @@ public class NetClientReader implements Runnable {
 					
 				}else if(msgtype.isEqual(NETMESSAGE_TXPOW_REQUEST)) {
 					//Requesting a TxPOW
-					MiniData hash  = new MiniData();
-					hash.readDataStream(inputstream);
+					MiniData hash  = MiniData.ReadFromStream(inputstream);
 					
 					//Add this ID
 					rec.addObject("txpowid", hash);
 				
+				}else if(msgtype.isEqual(NETMESSAGE_GREETING)) {
+					//Get the Greeting
+					Greeting greet = Greeting.ReadFromStream(inputstream);
+					
+					//Add this ID
+					rec.addObject("greeting", greet);
+				
+				}else if(msgtype.isEqual(NETMESSAGE_TXPOWLIST_REQUEST)) {
+					//A list of Required TxPoW messages..
+					HashNumber hashnum = HashNumber.ReadFromStream(inputstream);
+					
+					//Add this ID
+					rec.addObject("hashnumber", hashnum);
+					
+				}else if(msgtype.isEqual(NETMESSAGE_TXPOWLIST)) {
+					//tell us how big the sync was..
+					MinimaLogger.log("Initial Sync Message : "+ConsensusPrint.formatSize(len));
+					
+					TxPoWList txplist = new TxPoWList();
+					txplist.readDataStream(inputstream);
+					
+					//Add this ID
+					rec.addObject("txpowlist", txplist);
+					
 				}else {
 					throw new Exception("Invalid message on network : "+rec);
 				}
@@ -171,12 +218,13 @@ public class NetClientReader implements Runnable {
 //		}catch(SocketException exc) {
 //			//Network error.. reset and reconnect..
 //		}catch(IOException exc) {
-//			//Network error.. reset and reconnect..
+			//Network error.. reset and reconnect..
 //		}catch(ProtocolException exc) {
 			//Protocol exception..
 		}catch(Exception exc) {
 			//General Exception	
 			MinimaLogger.log("NetClientReader closed UID "+mNetClient.getUID()+" exc:"+exc);
+//			exc.printStackTrace();
 		}
 		
 		//Tell the network Handler
