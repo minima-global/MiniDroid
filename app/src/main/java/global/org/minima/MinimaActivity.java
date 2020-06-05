@@ -163,4 +163,9 @@ public class MinimaActivity extends AppCompatActivity {
         //Update..
         runOnUiThread(uiupdate);
     }
+
+    @Override
+    public void onBackPressed() {
+        moveTaskToBack(true);
+    }
 }
