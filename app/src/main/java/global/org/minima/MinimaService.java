@@ -5,8 +5,11 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.wifi.WifiManager;
+import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.Build;
@@ -25,6 +28,7 @@ import org.minima.system.NativeListener;
 import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.input.InputMessage;
 import org.minima.system.network.minidapps.DAPPManager;
+import org.minima.system.network.rpc.RPCClient;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.ResponseStream;
 import org.minima.utils.messages.Message;
@@ -73,11 +77,18 @@ public class MinimaService extends Service {
 
     boolean mListenerAdded;
 
+    //The Last time some action happened..
+    long mLastActionTime = 0;
+    boolean mStopQuitter = false;
+
     @Override
     public void onCreate() {
         super.onCreate();
 
         MinimaLogger.log("Service : onCreate");
+        mListenerAdded  = false;
+        mLastActionTime = System.currentTimeMillis();
+        mStopQuitter    = false;
 
         //Power
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
@@ -117,13 +128,56 @@ public class MinimaService extends Service {
 
         //Set the Alarm..
         mAlarm = new Alarm();
-
-        //Start a new one..
+        mAlarm.cancelAlarm(this);
         mAlarm.setAlarm(this);
 
         mService = this;
 
-        mListenerAdded = false;
+        startQuitter();
+    }
+
+    /**
+     * A loop thread that shuts down the service if NOT on power and nothing has happened for 5 minutes..
+     *
+     * Will be restarted by the ALARM..
+     */
+    public void startQuitter(){
+        Runnable quitter = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    while(!mStopQuitter){
+                        //Wait a minute and check again..
+                        Thread.sleep(1000 * 10);
+
+                        long timenow = System.currentTimeMillis();
+                        long diff = timenow - mLastActionTime;
+
+                        boolean onPower = isPlugged(MinimaService.this);
+
+                        if(diff > (5 * 60  * 1000) && !onPower){
+//                      if(diff > (1 * 60  * 1000)){
+                            MinimaLogger.log("AUTO QUITTER START");
+                            //Shut down cleanly..
+                            String result = RPCClient.sendGET("http://127.0.0.1:8999/quit");
+                            MinimaLogger.log("AUTO QUITTER : "+result);
+
+                            //Stop the service
+                            Intent intent = new Intent(getBaseContext(), MinimaService.class);
+                            stopService(intent);
+
+                            mStopQuitter = true;
+                        }
+                    }
+                } catch (Exception e) {
+                    MinimaLogger.log(e.toString());
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        Thread tt = new Thread(quitter);
+        tt.start();
     }
 
     public Notification createNotification(String zText){
@@ -139,7 +193,9 @@ public class MinimaService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        MinimaLogger.log("Service : OnStartCommand "+startId);
+        MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
+
+        MinimaLogger.log("AC Plugged in : "+isPlugged(this));
 
         //Only do this once..
         if(!mListenerAdded){
@@ -171,6 +227,7 @@ public class MinimaService extends Service {
                 mStart.getServer().getConsensusHandler().addListener(new NativeListener() {
                     @Override
                     public void processMessage(Message zMessage) {
+//                        MinimaLogger.log(zMessage.toString());
                         if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_NEWBLOCK)) {
                             //Gewt the TxPoW
                             mTxPow = (TxPoW) zMessage.getObject("txpow");
@@ -190,6 +247,11 @@ public class MinimaService extends Service {
                                     Toast.makeText(MinimaService.this,"Minima : Your balance has changed!",Toast.LENGTH_SHORT).show();
                                 }
                             });
+
+                        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_ACTION)) {
+                            //Something happening.. don;t shut down for five monutes if not on power..
+                            mLastActionTime = System.currentTimeMillis();
+                            MinimaLogger.log("ACTION on MINIMA");
                         }
                     }
                 });
@@ -209,7 +271,9 @@ public class MinimaService extends Service {
         MinimaLogger.log("Service : onDestroy");
 
         //Post It..
-        if(mStart != null){
+        if(mStart != null && mStart.getServer().isRunning()){
+            MinimaLogger.log("Service : SAVE ONDESTROY");
+
             //Create a response stream
             ResponseStream resp = new ResponseStream();
 
@@ -223,6 +287,12 @@ public class MinimaService extends Service {
             MinimaLogger.log("Service : "+resp.getResponse());
         }
 
+        //Shut the channel..
+        mNotificationManager.deleteNotificationChannel(CHANNEL_ID);
+
+        //Stop the Quitter threa..
+        mStopQuitter = true;
+
         //Mention..
         Toast.makeText(this, "Minima Service Stopped", Toast.LENGTH_SHORT).show();
 
@@ -234,6 +304,15 @@ public class MinimaService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return mBinder;
+    }
+
+    public static boolean isPlugged(Context context) {
+        boolean isPlugged= false;
+        Intent intent = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+        isPlugged = plugged == BatteryManager.BATTERY_PLUGGED_AC || plugged == BatteryManager.BATTERY_PLUGGED_USB || plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;
+
+        return isPlugged;
     }
 
 }

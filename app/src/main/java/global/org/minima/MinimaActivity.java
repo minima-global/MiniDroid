@@ -13,8 +13,10 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import org.minima.system.network.rpc.RPCClient;
 import org.minima.utils.MinimaLogger;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -53,10 +55,6 @@ public class MinimaActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:21000/"));
                 startActivity(intent);
-
-                  //start Minima node Foreground Service
-//                Intent intent = new Intent(getBaseContext(), MinimaService.class);
-//                stopService(intent);
             }
         });
 
@@ -64,7 +62,7 @@ public class MinimaActivity extends AppCompatActivity {
 
         //The TEXT that shows the current IP
         mTextIP = findViewById(R.id.iptext_minidapp);
-        mTextIP.setText("Synchronising network.. \n\nPlease wait.. 10 seconds");
+        mTextIP.setText("Synchronising.. please wait..");
 
         //start Minima node Foreground Service
         Intent intent = new Intent(getBaseContext(), MinimaService.class);
@@ -75,7 +73,6 @@ public class MinimaActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {Thread.sleep(10000);} catch (InterruptedException e) {}
-
                 setPostSyncDetails();
             }
         });
@@ -165,10 +162,5 @@ public class MinimaActivity extends AppCompatActivity {
 
         //Update..
         runOnUiThread(uiupdate);
-    }
-
-    @Override
-    public void onBackPressed() {
-        moveTaskToBack(true);
     }
 }
