@@ -133,7 +133,7 @@ public class MinimaService extends Service {
 
         mService = this;
 
-        startQuitter();
+//        startQuitter();
     }
 
     /**
@@ -156,7 +156,6 @@ public class MinimaService extends Service {
                         boolean onPower = isPlugged(MinimaService.this);
 
                         if(diff > (5 * 60  * 1000) && !onPower){
-//                      if(diff > (1 * 60  * 1000)){
                             MinimaLogger.log("AUTO QUITTER START");
                             //Shut down cleanly..
                             String result = RPCClient.sendGET("http://127.0.0.1:8999/quit");
