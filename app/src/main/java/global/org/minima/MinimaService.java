@@ -219,6 +219,7 @@ public class MinimaService extends Service {
                 is.close();
 
                 //Post them to Minima..
+                MinimaLogger.log("Install MiniWallet MiniDAPP");
                 MiniData dapp = new MiniData(fileBytes);
                 msg.addObject("minidapp", dapp);
                 mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(msg);
