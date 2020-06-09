@@ -251,7 +251,7 @@ public class MinimaService extends Service {
                         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_ACTION)) {
                             //Something happening.. don;t shut down for five monutes if not on power..
                             mLastActionTime = System.currentTimeMillis();
-                            MinimaLogger.log("ACTION on MINIMA");
+//                            MinimaLogger.log("ACTION on MINIMA");
                         }
                     }
                 });
