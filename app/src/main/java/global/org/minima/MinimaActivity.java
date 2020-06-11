@@ -72,7 +72,7 @@ public class MinimaActivity extends AppCompatActivity {
         Thread updater = new Thread(new Runnable() {
             @Override
             public void run() {
-                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+                try {Thread.sleep(15000);} catch (InterruptedException e) {}
                 setPostSyncDetails();
             }
         });

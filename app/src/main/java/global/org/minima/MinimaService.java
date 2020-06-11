@@ -194,7 +194,7 @@ public class MinimaService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
 
-        MinimaLogger.log("AC Plugged in : "+isPlugged(this));
+//        MinimaLogger.log("AC Plugged in : "+isPlugged(this));
 
         //Only do this once..
         if(!mListenerAdded){
@@ -203,13 +203,14 @@ public class MinimaService extends Service {
             //Set the default message
             startForeground(1, createNotification("Syncing.."));
 
+            MinimaLogger.log("Service : Initialise begin..");
+
             try {
                 //Wait for Minima to start..
                 while(mStart == null){ Thread.sleep(500);}
                 while(mStart.getServer() == null){Thread.sleep(500);}
                 while(mStart.getServer().getNetworkHandler() == null){Thread.sleep(500);}
                 while(mStart.getServer().getNetworkHandler().getDAPPManager() == null){Thread.sleep(500);}
-
                 Message msg = new Message(DAPPManager.DAPP_INSTALL);
                 msg.addObject("overwrite", false);
 
@@ -256,6 +257,8 @@ public class MinimaService extends Service {
                     }
                 });
 
+                MinimaLogger.log("Service : Initialise end.. ");
+
             } catch (Exception e) {
                 MinimaLogger.log("Start Service Exception "+e);
             }
@@ -271,7 +274,7 @@ public class MinimaService extends Service {
         MinimaLogger.log("Service : onDestroy");
 
         //Post It..
-        if(mStart != null && mStart.getServer().isRunning()){
+        if(mStart != null && mStart.getServer()!=null && mStart.getServer().isRunning()){
             MinimaLogger.log("Service : SAVE ONDESTROY");
 
             //Create a response stream

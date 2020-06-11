@@ -49,6 +49,8 @@ public class ConsensusNet extends ConsensusProcessor {
 	public static final String CONSENSUS_NET_TXPOWLIST_REQUEST	= CONSENSUS_PREFIX+"NET_MESSAGE_"+NetClientReader.NETMESSAGE_TXPOWLIST_REQUEST.getValue();
 	public static final String CONSENSUS_NET_TXPOWLIST 			= CONSENSUS_PREFIX+"NET_MESSAGE_"+NetClientReader.NETMESSAGE_TXPOWLIST.getValue();
 	
+	public static final String CONSENSUS_NET_PING 			= CONSENSUS_PREFIX+"NET_MESSAGE_"+NetClientReader.NETMESSAGE_PING.getValue();
+	
 	/**
 	 * Will we switch to a heavier chain - DEBUG mode for -private
 	 */
@@ -358,7 +360,7 @@ public class ConsensusNet extends ConsensusProcessor {
 			//Cycle through and add as a normal message - extra transactions will be requested as normal
 			ArrayList<TxPoW> txps = txplist.getList();
 			for(TxPoW txp : txps) {
-				Message msg = new Message(CONSENSUS_NET_CHECKSIZE_TXPOW);
+				Message msg = new Message(CONSENSUS_NET_TXPOW);
 				msg.addObject("txpow", txp);
 				msg.addObject("netclient", client);
 				getConsensusHandler().PostMessage(msg);
@@ -399,6 +401,11 @@ public class ConsensusNet extends ConsensusProcessor {
 				client.PostMessage(tx);
 			}
 		
+		}else if(zMessage.isMessageType(CONSENSUS_NET_PING)) {
+			//Send it on to the netwclient..
+			NetClient client = (NetClient) zMessage.getObject("netclient");
+			client.PostMessage(new Message(NetClient.NETCLIENT_PING));
+			
 		}else if(zMessage.isMessageType(CONSENSUS_NET_CHECKSIZE_TXPOW)) {
 			//Internal message sent from you..
 			TxPoW txpow = (TxPoW)zMessage.getObject("txpow");
@@ -423,7 +430,7 @@ public class ConsensusNet extends ConsensusProcessor {
 			baos.close();
 			
 			if(txpowsize > NetClientReader.MAX_TXPOW) {
-				MinimaLogger.log("You've Mined A TxPoW that is too BIG! "+txpowsize+" / "+NetClientReader.MAX_TXPOW);
+				MinimaLogger.log("ERROR - You've Mined A TxPoW that is too BIG! "+txpowsize+" / "+NetClientReader.MAX_TXPOW);
 				return;
 			}
 			

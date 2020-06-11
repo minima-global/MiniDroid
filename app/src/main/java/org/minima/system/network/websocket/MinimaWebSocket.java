@@ -13,20 +13,29 @@ public class MinimaWebSocket extends WebSocket {
 
 	WebSocketManager mManager;
 	
-	String UID;
+	//UNIQUE CLient ID
+	String mWebClientUID = MiniData.getRandomData(20).to0xString();
+	
+	//This is the MiniDAPP ID set by the MiniDAPP!
+	String mMiniDAPP_UID = "0x00";
 	
 	public MinimaWebSocket(IHTTPSession zHTTPSession, WebSocketManager zManager) {
 		super(zHTTPSession);
 		
 		//When connection closed can notify
 		mManager = zManager;
-		
-		//A Unique ID
-		UID = MiniData.getRandomData(32).to0xString();
 	}
 	
-	public String getUID() {
-		return UID;
+	public String getClientUID() {
+		return mWebClientUID;
+	}
+	
+	public void setMiniDAPPUID(String zUID) {
+		mMiniDAPP_UID=zUID;
+	}
+	
+	public String getMiniDAPPUID() {
+		return mMiniDAPP_UID;
 	}
 	
 	@Override

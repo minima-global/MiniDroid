@@ -80,6 +80,11 @@ public class NetClientReader implements Runnable {
 	public static final MiniByte NETMESSAGE_GREETING		= new MiniByte(6);
 	
 	/**
+	 * PING PONG
+	 */
+	public static final MiniByte NETMESSAGE_PING		    = new MiniByte(7);
+	
+	/**
 	 * Netclient owner
 	 */
 	NetClient 		mNetClient;
@@ -115,31 +120,27 @@ public class NetClientReader implements Runnable {
 				//Check within acceptable parameters - this should be set in TxPoW header.. for now fixed
 				if( msgtype.isEqual(NETMESSAGE_TXPOWID) || 
 					msgtype.isEqual(NETMESSAGE_TXPOW_REQUEST)) {
-					
 					if(len > TXPOWID_LEN) {
 						throw new ProtocolException("Receive Invalid Message length for TXPOWID type:"+msgtype+" len:"+len);
 					}
-					
 				}else if(msgtype.isEqual(NETMESSAGE_INTRO) || 
 						 msgtype.isEqual(NETMESSAGE_GREETING) || 
 						 msgtype.isEqual(NETMESSAGE_TXPOWLIST)) {
-					
 					if(len > MAX_INTRO) {
 						throw new ProtocolException("Receive Invalid Message length for TXPOW_INTRO type:"+msgtype+" len:"+len);
 					}
-					
 				}else if(msgtype.isEqual(NETMESSAGE_TXPOW)) {
-					
 					if(len > MAX_TXPOW) {
 						throw new ProtocolException("Receive Invalid Message length for TXPOW type:"+msgtype+" len:"+len);
 					}
-					
 				}else if(msgtype.isEqual(NETMESSAGE_TXPOWLIST_REQUEST)) {
-					
 					if(len > MAX_TXPOW_LIST_REQ) {
 						throw new ProtocolException("Receive Invalid Message length for MAX_TXPOW_LIST_REQ type:"+msgtype+" len:"+len);
 					}
-					
+				}else if(msgtype.isEqual(NETMESSAGE_PING)) {
+					if(len > 1) {
+						throw new ProtocolException("Receive Invalid Message length for PING message type:"+msgtype+" len:"+len);
+					}
 				}
 			
 				//Now read in the full message
@@ -213,6 +214,12 @@ public class NetClientReader implements Runnable {
 					//Add this ID
 					rec.addObject("txpowlist", txplist);
 					
+				}else if(msgtype.isEqual(NETMESSAGE_PING)) {
+					MiniByte mb = MiniByte.ReadFromStream(inputstream);
+					
+					//Add this ID
+					rec.addObject("sent", mb);
+					
 				}else {
 					throw new Exception("Invalid message on network : "+rec);
 				}
@@ -234,15 +241,18 @@ public class NetClientReader implements Runnable {
 		
 		}catch(SocketException exc) {
 			//Network error.. reset and reconnect..
+			
 		}catch(IOException exc) {
 			//Network error.. reset and reconnect..
-		
+//			MinimaLogger.log("IOEXC.. "+exc);
+//			exc.printStackTrace();
+			
 		}catch(ProtocolException exc) {
-			MinimaLogger.log("PROTOCOL ERROR..");
+			MinimaLogger.log("PROTOCOL ERROR.. "+exc);
 			exc.printStackTrace();
 			
 		}catch(OutOfMemoryError exc) {
-			MinimaLogger.log("MEMORY ERROR..");
+			MinimaLogger.log("MEMORY ERROR.. "+exc);
 			exc.printStackTrace();
 			
 			//DRASTIC ACTION.. Use ONLY if bash script in place to restart on Exit
@@ -250,7 +260,7 @@ public class NetClientReader implements Runnable {
 			
 		}catch(Exception exc) {
 			//General Exception	
-			MinimaLogger.log("NETCLIENTREADER ERROR..");
+			MinimaLogger.log("NETCLIENTREADER ERROR.. "+exc);
 			exc.printStackTrace();
 		
 		}
