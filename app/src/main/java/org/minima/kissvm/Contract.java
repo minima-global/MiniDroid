@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.minima.kissvm.exceptions.ExecutionException;
-import org.minima.kissvm.exceptions.MinimaParseException;
 import org.minima.kissvm.functions.MinimaFunction;
 import org.minima.kissvm.statements.StatementBlock;
 import org.minima.kissvm.statements.StatementParser;
@@ -180,10 +179,9 @@ public class Contract {
 			traceLog("Script token parse OK.");
 			mParseOK = true;
 			
-		} catch (MinimaParseException e) {
-//			e.printStackTrace();
+		} catch (Exception e) {
 			mException  = true;
-			mExceptionString = e.getMessage();
+			mExceptionString = e.toString();
 			
 			traceLog("PARSE ERROR : "+mExceptionString);
 		}

@@ -25,7 +25,7 @@
         <service
             android:name=".MinimaService"
             android:enabled="true"
-            android:process="org.mimina.service"
+            android:process="org.minima.service"
             android:exported="true">
         </service>
 

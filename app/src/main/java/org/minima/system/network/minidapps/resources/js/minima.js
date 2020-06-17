@@ -188,6 +188,7 @@ var Minima = {
 				len = responses.length;
 				for(i=0;i<len;i++){
 					if(responses[i].status != true){
+						alert(responses[i].message+"\n\nERROR @ "+responses[i].minifunc);
 						Minimalog("ERROR in Multi-Command ["+i+"] "+JSON.stringify(responses[i],null,2));
 						return false;
 					}
@@ -208,33 +209,15 @@ var Minima = {
 				return null;
 			},
 			
-			notify : function(message){
-				if(!Minima.showmining){
-					return;
-				}
+			notify : function(message,bgcolor){
+				//Log it..
+				Minimalog("Notify : "+message);
 				
-				//Do we support notifications
-				if (!("Notification" in window)) {
-					Minimalog("This browser does not support notifications");
-					return;
-				}
-				
-				var options = {
-				      body: message
-				  }
-			
-				//Do we already have permissions..
-				if (Notification.permission === "granted") {
-				    // If it's okay let's create a notification
-				    var notification = new Notification("Minima",options);
+				//Show a little popup across the screen..
+				if(bgcolor){
+					createMinimaNotification(message,bgcolor);
 				}else{
-					//if (Notification.permission !== "denied")
-				    Notification.requestPermission().then(function (permission) {
-				      // If the user accepts, let's create a notification
-				      if (permission === "granted") {
-				    	  var notification = new Notification("Minima",options);
-				      }
-				    });
+					createMinimaNotification(message);	
 				}
 			},
 			
@@ -479,12 +462,10 @@ function startWebSocketListener(){
 			Minimalog("REPLY CALLBACK NOT FOUND "+JSON.stringify(jmsg));
 			
 		}else if(jmsg.event == "txpowstart"){
-			Minimalog("Transaction Mining Start..");
-			Minima.util.notify("Mining Transaction Started..");	
+			Minima.util.notify("Mining Transaction Started..","#55DD55");	
 			
 		}else if(jmsg.event == "txpowend"){
-			Minimalog("Transaction Mining Finished");
-			Minima.util.notify("Mining Transaction Finished");
+			Minima.util.notify("Mining Transaction Finished","#DD5555");
 		}
 	};
 		
@@ -835,6 +816,74 @@ function Minimalog(info){
 	console.log("Minima @ "+new Date().toLocaleString()+"\n"+info);
 }
 
+/**
+ * Notification Div
+ */
+var TOTAL_NOTIFICATIONS     = 0;
+var TOTAL_NOTIFICATIONS_MAX = 0;
+function createMinimaNotification(text, bgcolor){
+	//First add the total overlay div
+	var notifydiv = document.createElement('div');
+	
+	//Create a random ID for this DIV..
+	var notifyid = Math.floor(Math.random()*1000000000);
+	
+	//Details..
+	notifydiv.id  = notifyid;
+	notifydiv.style.position 	 = "absolute";
+	
+	notifydiv.style.top 		 = 20 + TOTAL_NOTIFICATIONS_MAX * 110;
+	TOTAL_NOTIFICATIONS++;
+	TOTAL_NOTIFICATIONS_MAX++;
+	
+	notifydiv.style.right 		 = "0";
+	notifydiv.style.width 	     = "400";
+	notifydiv.style.height 	     = "90";
+	
+	//Regular or specific color
+	if(bgcolor){
+		notifydiv.style.background   = bgcolor;
+	}else{
+		notifydiv.style.background   = "#777777";	
+	}
+	
+	notifydiv.style.opacity 	 = "0";
+	notifydiv.style.borderRadius = "10px";
+	
+	//Add it to the Page
+	document.body.appendChild(notifydiv);
+	
+	//Create an HTML window
+	var notifytext = "<table border=0 width=100% height=100%><tr>" +
+			"<td style='font-size:16px;font-family:monospace;color:black;text-align:center;vertical-align:middle;'>"+text+"</td></tr></table>";
+	
+	//Now get that element
+	var elem = document.getElementById(notifyid);
+	
+	//Set the Text..
+	elem.innerHTML = notifytext;
+	
+	//Fade in..
+	elem.style.transition = "all 1s";
+	
+	// reflow
+	elem.getBoundingClientRect();
+
+	// it transitions!
+	elem.style.opacity = 0.8;
+	elem.style.right   = 40;
+	
+	//And create a timer to shut it down..
+	setTimeout(function() {
+		TOTAL_NOTIFICATIONS--;
+		if(TOTAL_NOTIFICATIONS<=0){
+			TOTAL_NOTIFICATIONS=0;
+			TOTAL_NOTIFICATIONS_MAX=0;
+		}
+		
+		document.getElementById(notifyid).style.display = "none";  
+	 }, 4000);
+}
 
 /**
  * Utility function for GET request
