@@ -13,6 +13,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import org.minima.GlobalParams;
 import org.minima.system.network.rpc.RPCClient;
 import org.minima.utils.MinimaLogger;
 
@@ -109,10 +110,9 @@ public class MinimaActivity extends AppCompatActivity {
         //Set the IP - it may change..
         if (mSynced) {
             mIP = getIP();
-            mTextIP.setText("\nConnect to Minima from your Desktop\n\n" +
+            mTextIP.setText("\nConnect to Minima v"+ GlobalParams.MINIMA_VERSION +" from your Desktop\n\n" +
                     "Open a browser and go to\n\n" +
-                    "http://" + mIP + ":21000/\n\n" +
-                    "The best experience..\n\nCharge phone while using MiniDAPPs");
+                    "http://" + mIP + ":21000/");
         }
     }
 
