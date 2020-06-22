@@ -13,6 +13,7 @@ import java.util.Hashtable;
 import org.minima.GlobalParams;
 import org.minima.database.coindb.CoinDB;
 import org.minima.database.coindb.CoinDBRow;
+import org.minima.database.coindb.java.FastCoinDB;
 import org.minima.database.coindb.java.JavaCoinDB;
 import org.minima.database.mmr.MMRData;
 import org.minima.database.mmr.MMREntry;
@@ -20,6 +21,7 @@ import org.minima.database.mmr.MMRProof;
 import org.minima.database.mmr.MMRSet;
 import org.minima.database.txpowdb.TxPOWDBRow;
 import org.minima.database.txpowdb.TxPowDB;
+import org.minima.database.txpowdb.java.FastJavaDB;
 import org.minima.database.txpowdb.java.JavaDB;
 import org.minima.database.txpowtree.BlockTree;
 import org.minima.database.txpowtree.BlockTreeNode;
@@ -88,9 +90,16 @@ public class MinimaDB {
 	 * Main Constructor
 	 */
 	public MinimaDB() {
-		mTxPOWDB 	= new JavaDB();
+		//Use the new FAST TxPoWDB
+//		mTxPOWDB 	= new JavaDB();
+		mTxPOWDB 	= new FastJavaDB();
+		
 		mMainTree 	= new BlockTree();	
-		mCoinDB		= new JavaCoinDB();
+
+		//New FAST CoinDB
+//		mCoinDB		= new JavaCoinDB();
+		mCoinDB		= new FastCoinDB();
+		
 		mUserDB		= new JavaUserDB();
 	}
 	
@@ -107,14 +116,8 @@ public class MinimaDB {
 	 */ 
 	//Genesis txpow
 	public void DoGenesis() {
+		//The Gensis TxPoW
 		TxPoW gen = new GenesisTxPOW();
-		
-		//Add to the list
-		TxPOWDBRow row = mTxPOWDB.addTxPOWDBRow(gen);
-		row.setOnChainBlock(true);
-		row.setInBlockNumber(MiniNumber.ZERO);
-		row.setIsInBlock(true);
-		row.setBlockState(TxPOWDBRow.TXPOWDBROW_STATE_FULL);
 		
 		//The initial MMR
 		MMRSet base = new MMRSet();
@@ -134,6 +137,13 @@ public class MinimaDB {
 		//Need to recalculate the TxPOWID
 		gen.calculateTXPOWID();
 		
+		//Add to the list now that TxPoWID is set
+		TxPOWDBRow row = mTxPOWDB.addTxPOWDBRow(gen);
+		row.setOnChainBlock(true);
+		row.setInBlockNumber(MiniNumber.ZERO);
+		row.setIsInBlock(true);
+		row.setBlockState(TxPOWDBRow.TXPOWDBROW_STATE_FULL);
+		
 		//Genesis root
 		BlockTreeNode root = new BlockTreeNode(gen);
 		root.setState(BlockTreeNode.BLOCKSTATE_VALID);
@@ -141,6 +151,8 @@ public class MinimaDB {
 		
 		//Set it..
 		root.setMMRset(base);
+		
+		MinimaLogger.log("Genesis TxPoW : "+gen.getTxPowID().to0xString());
 		
 		//Add to the Main Chain
 		mMainTree.setTreeRoot(root);
@@ -213,6 +225,9 @@ public class MinimaDB {
 			//get the current tip
 			BlockTreeNode tip = mMainTree.getChainTip();
 			
+			//Get the OLD chain..
+			ArrayList<BlockTreeNode> oldlist = mMainTree.getAsList();
+			
 			//Now calculate the states of each of the blocks in the tree.. 
 			mMainTree.sortBlockTreeNodeStates(this);
 	
@@ -227,30 +242,67 @@ public class MinimaDB {
 			}
 			
 			//Now cycle down the main chain
-			ArrayList<BlockTreeNode> list = null;
+			ArrayList<BlockTreeNode> list = new ArrayList<>();
 			
 			//Is it just one block difference
 			if(newtip.getParent().getTxPowID().isEqual(tip.getTxPowID())) {
-				//Just one block difference.. no need to reset everything..
-				list = new ArrayList<>();
+				//Just one block difference.. no need to reset anything..
 				list.add(newtip);
 				
 			}else{
-				//#TODO
-				//THIS COULD BE MUCH BETTER.. Find the crossover, many optimisations
+				//Find how far back to cull..
+				BlockTreeNode currentblock = newtip;
 				
-				//Get all the blocks
-				list = mMainTree.getAsList(true);
+				MiniNumber lastblock = MiniNumber.ZERO;
+				boolean found        = false;
+				while(currentblock!=null && !found) {
+					//Add to the list
+					list.add(0,currentblock);
+					
+					//Search for a crossover
+					for(BlockTreeNode node : oldlist) {
+						if(node.getBlockNumber().isEqual(currentblock.getBlockNumber())) {
+							//Check if the same..
+							if(node.getTxPowID().isEqual(currentblock.getTxPowID())) {
+								//Found crossover
+								lastblock = currentblock.getBlockNumber();
+								found = true;
+								break;
+							}
+						}else if(node.getBlockNumber().isLess(currentblock.getBlockNumber())) {
+							//No way back..
+							break;
+						}
+					}
+					
+					//None found go deeper..
+					currentblock = currentblock.getParent();
+				}
 				
-				//Otherwise calculate which TXPOWs are being used
-				mTxPOWDB.resetAllInBlocks();
-				
-				//And Clear the CoinDB
-				mCoinDB.clearDB();
+				if(currentblock == null) {
+					//Hmm...
+					MinimaLogger.log("STRANGE REORG NULL CROSSOVER");
+					
+					//Get all the blocks
+					list = mMainTree.getAsList(true);
+					
+					//Clear which transaction are in the chain
+					mTxPOWDB.resetAllInBlocks();
+					
+					//And Clear the CoinDB
+					mCoinDB.clearDB();
+					
+				}else {
+					//Otherwise calculate which TXPOWs are being used
+					mTxPOWDB.resetBlocksFromOnwards(lastblock);
+					
+					//And Clear the CoinDB
+					mCoinDB.removeCoinsFomOnwards(lastblock);
+				}
 			}
 			
 			//Only add coins from the cascade onwards..
-			MiniNumber oldcascade = getMainTree().getCascadeNode().getTxPow().getBlockNumber();
+			MiniNumber oldcascade = getMainTree().getCascadeNode().getBlockNumber();
 			
 			//Now sort
 			for(BlockTreeNode treenode : list) {
@@ -269,7 +321,7 @@ public class MinimaDB {
 				trow.setInBlockNumber(block);
 				
 				//Take coins from the child of the cascade node onwards..
-				if(treenode.getTxPow().getBlockNumber().isMoreEqual(oldcascade)) {
+				if(treenode.getBlockNumber().isMoreEqual(oldcascade)) {
 					//Check for coins in the MMR
 					scanMMRSetForCoins(treenode.getMMRSet());
 				}
@@ -316,6 +368,7 @@ public class MinimaDB {
 				
 				//Discard.. no longer an on chain block..
 				row.setOnChainBlock(false);
+				row.setIsInBlock(false);
 				
 				//And delete / move to different folder any file backups..
 				getBackup().deleteTxpow(node.getTxPow());

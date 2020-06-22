@@ -137,7 +137,7 @@ public class JavaDB implements TxPowDB{
 	}
 
 	@Override
-	public int getCompleteSize() {
+	public int getSize() {
 		return mRows.size()+ mDeletedRows.size();
 	}
 
@@ -195,6 +195,18 @@ public class JavaDB implements TxPowDB{
 	}
 
 	@Override
+	public void resetBlocksFromOnwards(MiniNumber zFromBlock) {
+		for(TxPOWDBRow row : mRows) {
+			if(row.isInBlock()) {
+				if(row.getInBlockNumber().isMoreEqual(zFromBlock)) {
+					row.setIsInBlock(false);
+					row.setOnChainBlock(false);
+				}
+			}
+		}
+	}
+	
+	@Override
 	public ArrayList<TxPOWDBRow> getAllBlocksMissingTransactions() {
 		ArrayList<TxPOWDBRow> ret = new ArrayList<>();
 		
@@ -212,5 +224,7 @@ public class JavaDB implements TxPowDB{
 		mRows = new ArrayList<>();
 		mDeletedRows = new ArrayList<>();
 	}
+
+	
 	
 }

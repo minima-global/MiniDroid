@@ -1,5 +1,6 @@
 package org.minima.system.brains;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -124,13 +125,16 @@ public class ConsensusBackup extends ConsensusProcessor {
 			}
 			
 			//Load the user..
-			FileInputStream fis = new FileInputStream(backuser);
-			DataInputStream dis = new DataInputStream(fis);
 			JavaUserDB jdb = new JavaUserDB();
 			try {
+				//Load the file into memory first - FAST
+				byte[] userdb = BackupManager.readCompleteFile(backuser);
+				ByteArrayInputStream bais = new ByteArrayInputStream(userdb);
+				DataInputStream dis = new DataInputStream(bais);
+				
 				jdb.readDataStream(dis);
 				dis.close();
-				fis.close();
+				bais.close();
 			}catch (Exception exc) {
 				exc.printStackTrace();
 				//HMM.. not good.. file corrupted.. bug out
@@ -142,13 +146,15 @@ public class ConsensusBackup extends ConsensusProcessor {
 			getMainDB().setUserDB(jdb);
 			
 			//Load the SyncPackage
-			fis = new FileInputStream(backsync);
-			dis = new DataInputStream(fis);
 			SyncPackage sp = new SyncPackage();
 			try {
+				byte[] chaindb = BackupManager.readCompleteFile(backsync);
+				ByteArrayInputStream bais = new ByteArrayInputStream(chaindb);
+				DataInputStream dis = new DataInputStream(bais);
+				
 				sp.readDataStream(dis);
 				dis.close();
-				fis.close();
+				bais.close();
 			}catch(Exception exc) {
 				exc.printStackTrace();
 				//HMM.. not good.. file corrupted.. bug out
@@ -160,7 +166,6 @@ public class ConsensusBackup extends ConsensusProcessor {
 			MiniNumber casc = sp.getCascadeNode();
 			
 			//Drill down
-			TxPowDB txdb = getMainDB().getTxPowDB();
 			ArrayList<SyncPacket> packets = sp.getAllNodes();
 			for(SyncPacket spack : packets) {
 				TxPoW txpow     = spack.getTxPOW();
@@ -242,14 +247,20 @@ public class ConsensusBackup extends ConsensusProcessor {
 			return null;
 		}
 		
+		//The TxPOW File..
 		TxPoW txpow    = new TxPoW();
 		
 		try {
-			FileInputStream fis = new FileInputStream(zTxpowFile);
-			DataInputStream dis = new DataInputStream(fis);
+			//Load the complete file first..
+			byte[] txfile = BackupManager.readCompleteFile(zTxpowFile);
+			
+			//Now load from memory..
+			ByteArrayInputStream bais = new ByteArrayInputStream(txfile);
+			DataInputStream dis = new DataInputStream(bais);
 			txpow.readDataStream(dis);
 			dis.close();
-			fis.close();
+			bais.close();
+			
 		} catch (Exception e) {
 			MinimaLogger.log("ERROR loading TxPOW "+zTxpowFile.getName());
 			
