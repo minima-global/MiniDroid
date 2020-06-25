@@ -171,7 +171,7 @@ public class MultiLevelCascadeTree {
 		mCascadeTree.hardAddNode(fullkeep, true);
 		
 		//Find the old tip.. makes the reset weight 1000x faster..
-		mCascadeTree.mTip = mCascadeTree.findNode(oldtiptxpowid);
+		mCascadeTree.mTip = mCascadeTree.findNode(oldtiptxpowid,true);
 		
 		//And sort the weights
 		mCascadeTree.resetWeights();

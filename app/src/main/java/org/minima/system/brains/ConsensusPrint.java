@@ -117,6 +117,7 @@ public class ConsensusPrint extends ConsensusProcessor {
 			}
 			
 			if(tree) {
+//				SimpleBlockTreePrinter treeprint = new SimpleBlockTreePrinter(getMainDB().getMainTree());
 				SimpleBlockTreePrinter treeprint = new SimpleBlockTreePrinter(getMainDB().getMainTree());
 				String treeinfo    = treeprint.printtree();
 				BlockTree maintree = getMainDB().getMainTree();
@@ -857,14 +858,32 @@ public class ConsensusPrint extends ConsensusProcessor {
 			String txpow = zMessage.getString("txpow");
 			MiniData txp = new MiniData(txpow);
 			
-			TxPoW pow = getMainDB().getTxPOW(txp);
+			//Get the row in the database..
+			TxPOWDBRow row = getMainDB().getTxPOWRow(txp);
 			
-			if(pow == null) {
+			if(row == null) {
 				InputHandler.endResponse(zMessage, false, "No TxPOW found for "+txpow);
 			}else {
-				InputHandler.getResponseJSON(zMessage).put("txpow", pow.toJSON());
+				JSONObject resp = InputHandler.getResponseJSON(zMessage);
+				
+				//Add details..
+				resp.put("txpow", row.getTxPOW().toJSON());
+				resp.put("istransaction", row.getTxPOW().isTransaction());
+				resp.put("isblock", row.getTxPOW().isBlock());
+				resp.put("ischainblock", row.isOnChainBlock());
+				resp.put("isinblock", row.isInBlock());
+				resp.put("inblock", row.getInBlockNumber().toString());
+				
 				InputHandler.endResponse(zMessage, true, "");
 			}
+			
+//			TxPoW pow = getMainDB().getTxPOW(txp);
+//			if(pow == null) {
+//				InputHandler.endResponse(zMessage, false, "No TxPOW found for "+txpow);
+//			}else {
+//				InputHandler.getResponseJSON(zMessage).put("txpow", pow.toJSON());
+//				InputHandler.endResponse(zMessage, true, "");
+//			}
 		
 		}else if(zMessage.isMessageType(CONSENSUS_ADDRESSES)){
 			//Addresses
