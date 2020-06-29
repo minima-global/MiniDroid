@@ -123,6 +123,11 @@ public class ConsensusHandler extends SystemHandler {
 	ArrayList<NativeListener> mListeners;
 	
 	/**
+	 * FLUSH counter 
+	 */
+	int mFlushCounter = 0;
+	
+	/**
 	 * The Last Gimme50..
 	 */
 	long mLastGimme = 0;
@@ -207,7 +212,7 @@ public class ConsensusHandler extends SystemHandler {
 	@Override
 	protected void processMessage(Message zMessage) throws Exception {
 		/**
-		 * Main processing function.. can be called recursively..
+		 * Main processing function.. 
 		 */
 		if ( zMessage.isMessageType(CONSENSUS_PROCESSTXPOW) ) {
 			//A TXPOW - that has been checked already and added to the DB
@@ -228,14 +233,22 @@ public class ConsensusHandler extends SystemHandler {
 				updateListeners(new Message(CONSENSUS_NOTIFY_NEWBLOCK).addObject("txpow", newtip));
 			
 				//Update the web listeners..
-				PostMessage(ConsensusPrint.CONSENSUS_STATUS);
+				Message statusupdate = new Message(ConsensusPrint.CONSENSUS_STATUS).addBoolean("hard", true);
+				PostMessage(statusupdate);
 				
 				//Do the balance.. Update listeners if changed..
-				PostMessage(ConsensusPrint.CONSENSUS_BALANCE);
-				
-				//MEMPOOL - can get one message stuck that invalidates new messages.. 
-				if(newtip.getBlockNumber().modulo(MiniNumber.THIRTYTWO).isEqual(MiniNumber.ZERO)) {
-					PostMessage(new Message(ConsensusUser.CONSENSUS_FLUSHMEMPOOL));	
+				Message balanceupdate = new Message(ConsensusPrint.CONSENSUS_BALANCE).addBoolean("hard", true);
+				PostMessage(balanceupdate);
+			}
+			
+			//MemPool Flush Counter... 
+			if(txpow.isBlock()) {
+				//Every 5 minutes or so check if you have all the parents and txns in blocks..
+				if(mFlushCounter++ > 16) {
+					mFlushCounter = 0;
+					
+					//Post a flush message.. could be stuck missing a block..
+					PostMessage(new Message(ConsensusUser.CONSENSUS_FLUSHMEMPOOL));
 				}
 			}
 			
@@ -285,7 +298,8 @@ public class ConsensusHandler extends SystemHandler {
 				updateListeners(new Message(CONSENSUS_NOTIFY_BALANCE));
 				
 				//Do the balance.. Update listeners if changed..
-				PostMessage(ConsensusPrint.CONSENSUS_BALANCE);
+				Message balanceupdate = new Message(ConsensusPrint.CONSENSUS_BALANCE).addBoolean("hard", true);
+				PostMessage(balanceupdate);
 			}
 			
 			//Message for ALL the clients
