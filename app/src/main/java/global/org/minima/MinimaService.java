@@ -213,7 +213,7 @@ public class MinimaService extends Service {
                 while(mStart.getServer().getNetworkHandler().getDAPPManager() == null){Thread.sleep(500);}
 
                 //Install all the MiniDAPPS..
-                loadMiniDapp("wallet.minidapp");
+                //loadMiniDapp("wallet.minidapp");
                 loadMiniDapp("coinflip.minidapp");
                 loadMiniDapp("dexxed.minidapp");
                 loadMiniDapp("terminal.minidapp");
@@ -237,7 +237,7 @@ public class MinimaService extends Service {
                 mStart.getServer().getConsensusHandler().addListener(new NativeListener() {
                     @Override
                     public void processMessage(Message zMessage) {
-//                        MinimaLogger.log(zMessage.toString());
+                        MinimaLogger.log(zMessage.toString());
                         if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_NEWBLOCK)) {
                             //Gewt the TxPoW
                             mTxPow = (TxPoW) zMessage.getObject("txpow");
@@ -277,9 +277,6 @@ public class MinimaService extends Service {
     }
 
     public void loadMiniDapp(String zMiniDapp) throws Exception {
-        Message msg = new Message(DAPPManager.DAPP_INSTALL);
-        msg.addObject("overwrite", false);
-
         InputStream is=getAssets().open(zMiniDapp);
         byte[] fileBytes=new byte[is.available()];
         is.read( fileBytes);
@@ -288,7 +285,13 @@ public class MinimaService extends Service {
         //Post them to Minima..
         MinimaLogger.log("Installing MiniDAPP : "+zMiniDapp);
         MiniData dapp = new MiniData(fileBytes);
+
+        //The Install message
+        Message msg = new Message(DAPPManager.DAPP_INSTALL);
+        msg.addObject("overwrite", false);
         msg.addObject("minidapp", dapp);
+        msg.addString("filename", zMiniDapp);
+
         mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(msg);
     }
 

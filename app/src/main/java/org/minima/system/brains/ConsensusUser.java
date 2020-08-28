@@ -38,9 +38,8 @@ import org.minima.objects.base.MiniString;
 import org.minima.objects.proofs.ScriptProof;
 import org.minima.objects.proofs.TokenProof;
 import org.minima.system.input.InputHandler;
-import org.minima.system.network.NetClient;
+import org.minima.system.network.MinimaClient;
 import org.minima.system.network.NetworkHandler;
-import org.minima.system.txpow.TxPoWChecker;
 import org.minima.utils.Crypto;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONArray;
@@ -514,23 +513,29 @@ public class ConsensusUser extends ConsensusProcessor {
 				hard = zMessage.getBoolean("hard");	
 			}
 			
+			NetworkHandler nethandler = getNetworkHandler();
+			
+			//Clear the current Requested Transactions.. this should ask for them all anyway..
+			nethandler.clearAllrequestedTxPow();
+			
+			//JSON response..
 			JSONObject resp = InputHandler.getResponseJSON(zMessage);
 			resp.put("hard", hard);
 			
 			//TxPOW DB
 			TxPowDB tdb = getMainDB().getTxPowDB();
 			
-			NetworkHandler nethandler = getConsensusHandler().getMainHandler().getNetworkHandler();
-			
 			//Check the MEMPOOL transactions..
 			ArrayList<TxPOWDBRow> unused = tdb.getAllUnusedTxPOW();
 			int tested = unused.size();
 			ArrayList<MiniData> remove = new ArrayList<>();
+			JSONArray found     = new JSONArray();
 			JSONArray requested = new JSONArray();
 			
 			//Check them all..
 			for(TxPOWDBRow txrow : unused) {
 				TxPoW txpow    = txrow.getTxPOW();
+				found.add(txpow.getTxPowID().to0xString());
 				
 				//Do we just remove them all.. ?
 				if(hard) {
@@ -538,23 +543,21 @@ public class ConsensusUser extends ConsensusProcessor {
 					remove.add(txpow.getTxPowID());
 				}else{
 					//Check it..
-					boolean sigsok = true;
-					boolean trxok  = true;
-					if(txpow.isTransaction()) {
-						sigsok = TxPoWChecker.checkSigs(txpow);
-						trxok  = TxPoWChecker.checkTransactionMMR(txpow, getMainDB());	
-					}
-						
-					//Check the basics..
-					if(!sigsok || !trxok) {
-						remove.add(txpow.getTxPowID());
-					}
+//					boolean trxok  = true;
+//					if(txpow.isTransaction()) {
+//						trxok  = TxPoWChecker.checkTransactionMMR(txpow, getMainDB());	
+//					}
+//						
+//					//Check the basics..
+//					if(!trxok) {
+//						remove.add(txpow.getTxPowID());
+//					}
 					
 					//Check All..
 					if(txpow.isBlock()) {
 						MiniData parent = txpow.getParentID();
 						if(tdb.findTxPOWDBRow(parent) == null) {
-							Message msg  = new Message(NetClient.NETCLIENT_SENDTXPOWREQ)
+							Message msg  = new Message(MinimaClient.NETCLIENT_SENDTXPOWREQ)
 												.addObject("txpowid", parent);
 							Message netw = new Message(NetworkHandler.NETWORK_SENDALL)
 												.addObject("message", msg);
@@ -570,7 +573,7 @@ public class ConsensusUser extends ConsensusProcessor {
 						ArrayList<MiniData> txns = txpow.getBlockTransactions();
 						for(MiniData txn : txns) {
 							if(tdb.findTxPOWDBRow(txn) == null) {
-								Message msg  = new Message(NetClient.NETCLIENT_SENDTXPOWREQ)
+								Message msg  = new Message(MinimaClient.NETCLIENT_SENDTXPOWREQ)
 										.addObject("txpowid", txn);
 								Message netw = new Message(NetworkHandler.NETWORK_SENDALL)
 										.addObject("message", msg);
@@ -594,7 +597,8 @@ public class ConsensusUser extends ConsensusProcessor {
 			}
 			
 			//Now you have the proof..
-			resp.put("found", tested);
+			resp.put("number", tested);
+			resp.put("found", found);
 			resp.put("removed", rem);
 			resp.put("requested", requested);
 			InputHandler.endResponse(zMessage, true, "Mempool Flushed");

@@ -13,11 +13,11 @@ import org.minima.database.userdb.java.JavaUserDB;
 import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
+import org.minima.objects.greet.SyncPackage;
+import org.minima.objects.greet.SyncPacket;
 import org.minima.system.Main;
-import org.minima.system.backup.BackupManager;
-import org.minima.system.backup.SyncPackage;
-import org.minima.system.backup.SyncPacket;
 import org.minima.system.input.InputHandler;
+import org.minima.utils.MiniFile;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
@@ -55,7 +55,7 @@ public class ConsensusBackup extends ConsensusProcessor {
 			//First backup the UserDB..
 			JavaUserDB userdb = (JavaUserDB) getMainDB().getUserDB();
 			File backuser     = backup.getBackUpFile(USERDB_BACKUP);
-			backup.writeObjectToFile(backuser, userdb);
+			MiniFile.writeObjectToFile(backuser, userdb);
 			
 		}else if(zMessage.isMessageType(CONSENSUSBACKUP_BACKUP)) {
 			//Return details..
@@ -74,13 +74,13 @@ public class ConsensusBackup extends ConsensusProcessor {
 			try {
 				JavaUserDB userdb = (JavaUserDB) getMainDB().getUserDB();
 				File backuser     = backup.getBackUpFile(USERDB_BACKUP);
-				BackupManager.writeObjectToFile(backuser, userdb);
+				MiniFile.writeObjectToFile(backuser, userdb);
 				details.put("userdb", backuser.getAbsolutePath());
 				
 				//Now the complete SyncPackage..
 				SyncPackage sp = getMainDB().getSyncPackage();
 				File backsync  = backup.getBackUpFile(SYNC_BACKUP);
-				BackupManager.writeObjectToFile(backsync, sp);
+				MiniFile.writeObjectToFile(backsync, sp);
 				details.put("chaindb", backsync.getAbsolutePath());
 				
 			}catch(Exception exc) {
@@ -126,7 +126,7 @@ public class ConsensusBackup extends ConsensusProcessor {
 			JavaUserDB jdb = new JavaUserDB();
 			try {
 				//Load the file into memory first - FAST
-				byte[] userdb = BackupManager.readCompleteFile(backuser);
+				byte[] userdb = MiniFile.readCompleteFile(backuser);
 				ByteArrayInputStream bais = new ByteArrayInputStream(userdb);
 				DataInputStream dis = new DataInputStream(bais);
 				
@@ -144,9 +144,10 @@ public class ConsensusBackup extends ConsensusProcessor {
 			getMainDB().setUserDB(jdb);
 			
 			//Load the SyncPackage
+			MinimaLogger.log("Loading DB.. please wait..");
 			SyncPackage sp = new SyncPackage();
 			try {
-				byte[] chaindb = BackupManager.readCompleteFile(backsync);
+				byte[] chaindb = MiniFile.readCompleteFile(backsync);
 				ByteArrayInputStream bais = new ByteArrayInputStream(chaindb);
 				DataInputStream dis = new DataInputStream(bais);
 				
@@ -165,7 +166,17 @@ public class ConsensusBackup extends ConsensusProcessor {
 			
 			//Drill down
 			ArrayList<SyncPacket> packets = sp.getAllNodes();
+			float syncsize = packets.size();
+			float tot = 0;
+			int lastprint=-1;
 			for(SyncPacket spack : packets) {
+				//Print some stuff..
+				int curr   = (int)( (tot++/syncsize) *10);
+				if(curr != lastprint) {
+					lastprint = curr;
+					MinimaLogger.log("Checking DB.."+(lastprint*10)+"%");
+				}
+				
 				TxPoW txpow     = spack.getTxPOW();
 				MMRSet mmrset   = spack.getMMRSet();
 				boolean cascade = spack.isCascade();
@@ -199,6 +210,7 @@ public class ConsensusBackup extends ConsensusProcessor {
 				//Store it..
 				getBackup().backupTxpow(txpow);
 			}
+			MinimaLogger.log("Checking DB.. 100%");
 			
 			//Reset weights
 			getMainDB().hardResetChain();
@@ -208,7 +220,17 @@ public class ConsensusBackup extends ConsensusProcessor {
 			getMainDB().getTxPowDB().resetAllInBlocks();
 			
 			//Now sort
+			syncsize = list.size();
+			tot = 0;
+			lastprint=-1;
 			for(BlockTreeNode treenode : list) {
+				//Print some stuff..
+				int curr   = (int)( (tot++/syncsize) *10);
+				if(curr != lastprint) {
+					lastprint = curr;
+					MinimaLogger.log("Restoring DB.."+(lastprint*10)+"%");
+				}
+				
 				//Get the Block
 				TxPoW txpow = treenode.getTxPow();
 				
@@ -218,7 +240,7 @@ public class ConsensusBackup extends ConsensusProcessor {
 				//Set the main chain details..
 				TxPOWDBRow blockrow = getMainDB().getTxPowDB().findTxPOWDBRow(txpow.getTxPowID());
 				blockrow.setInBlockNumber(block);
-				blockrow.setOnChainBlock(true);
+				blockrow.setMainChainBlock(true);
 				blockrow.setIsInBlock(true);
 				
 				//Now the Txns..
@@ -227,12 +249,22 @@ public class ConsensusBackup extends ConsensusProcessor {
 					TxPOWDBRow trow = getMainDB().getTxPowDB().findTxPOWDBRow(txid);
 					if(trow!=null) {
 						//Set that it is in this block
-						trow.setOnChainBlock(false);
+						trow.setMainChainBlock(false);
 						trow.setIsInBlock(true);
 						trow.setInBlockNumber(block);
+						
+						//Is it a block ?
+						TxPoW tpow = trow.getTxPOW();
+						if(tpow.isBlock()) {
+							//Add all the children
+							if(getMainDB().getMainTree().addNode(new BlockTreeNode(tpow))) {
+								getMainDB().addTreeChildren(tpow.getTxPowID());
+							}
+						}
 					}
 				}
 			}
+			MinimaLogger.log("DB.. 100%");
 			
 			//Get on with it..
 			getConsensusHandler().getMainHandler().PostMessage(Main.SYSTEM_INIT);
@@ -241,7 +273,7 @@ public class ConsensusBackup extends ConsensusProcessor {
 	
 	public static TxPoW loadTxPOW(File zTxpowFile) {
 		if(!zTxpowFile.exists()) {
-			MinimaLogger.log("Load TxPOW Doesn't exist! "+zTxpowFile.getName());
+			//MinimaLogger.log("Load TxPOW Doesn't exist! "+zTxpowFile.getName());
 			return null;
 		}
 		
@@ -250,7 +282,7 @@ public class ConsensusBackup extends ConsensusProcessor {
 		
 		try {
 			//Load the complete file first..
-			byte[] txfile = BackupManager.readCompleteFile(zTxpowFile);
+			byte[] txfile = MiniFile.readCompleteFile(zTxpowFile);
 			
 			//Now load from memory..
 			ByteArrayInputStream bais = new ByteArrayInputStream(txfile);

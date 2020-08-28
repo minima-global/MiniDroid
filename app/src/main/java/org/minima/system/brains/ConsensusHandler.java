@@ -1,7 +1,5 @@
 package org.minima.system.brains;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -22,9 +20,10 @@ import org.minima.system.NativeListener;
 import org.minima.system.SystemHandler;
 import org.minima.system.input.InputHandler;
 import org.minima.system.input.functions.gimme50;
-import org.minima.system.network.NetClient;
-import org.minima.system.network.NetClientReader;
+import org.minima.system.network.MinimaClient;
+import org.minima.system.network.MinimaReader;
 import org.minima.system.network.NetworkHandler;
+import org.minima.system.network.minidapps.DAPPManager;
 import org.minima.system.txpow.TxPoWChecker;
 import org.minima.system.txpow.TxPoWMiner;
 import org.minima.utils.json.JSONArray;
@@ -198,15 +197,15 @@ public class ConsensusHandler extends SystemHandler {
 	 * @param zHardResetAllowed
 	 */
 	public void setHardResetAllowed(boolean zHardResetAllowed){
-		mConsensusNet.setHardResest(zHardResetAllowed);
+		mConsensusNet.setAllowHardResest(zHardResetAllowed);
 	}
 	
 	private MinimaDB getMainDB() {
 		return mMainDB;
 	}
 	
-	public boolean isInitialSyncComplete() {
-		return mConsensusNet.mInitialSync;
+	public void setInitialSyncComplete() {
+		mConsensusNet.initialSyncComplete();
 	}
 	
 	@Override
@@ -243,8 +242,8 @@ public class ConsensusHandler extends SystemHandler {
 			
 			//MemPool Flush Counter... 
 			if(txpow.isBlock()) {
-				//Every 5 minutes or so check if you have all the parents and txns in blocks..
-				if(mFlushCounter++ > 16) {
+				//Every 10 minutes or so check if you have all the parents and txns in blocks..
+				if(mFlushCounter++ > 32) {
 					mFlushCounter = 0;
 					
 					//Post a flush message.. could be stuck missing a block..
@@ -269,13 +268,9 @@ public class ConsensusHandler extends SystemHandler {
 			getMainHandler().getBackupManager().backupTxpow(txpow);
 			
 			//Notify the WebSocket Listeners
-			JSONObject newtrans = new JSONObject();
-			newtrans.put("event","newtransaction");
-			newtrans.put("txpow",txpow.toJSON());
-			
-			Message msg = new Message(NetworkHandler.NETWORK_WS_NOTIFY);
-			msg.addString("message", newtrans.toString());
-			getMainHandler().getNetworkHandler().PostMessage(msg);
+			if(txpow.isTransaction()) {
+				
+			}
 			
 			//Process it
 			PostMessage(new Message(ConsensusHandler.CONSENSUS_PROCESSTXPOW).addObject("txpow", txpow));
@@ -283,6 +278,13 @@ public class ConsensusHandler extends SystemHandler {
 			//Only do this once..
 			boolean relevant = false;
 			if(txpow.isTransaction()) {
+				//Notify everyone..
+				JSONObject newtrans = new JSONObject();
+				newtrans.put("event","newtransaction");
+				newtrans.put("txpow",txpow.toJSON());
+				PostDAPPJSONMessage(newtrans);
+				
+				//Is it relevant to us..
 				relevant = getMainDB().getUserDB().isTransactionRelevant(txpow.getTransaction());
 			}
 			
@@ -303,7 +305,7 @@ public class ConsensusHandler extends SystemHandler {
 			}
 			
 			//Message for ALL the clients
-			Message netmsg  = new Message(NetClient.NETCLIENT_SENDTXPOWID).addObject("txpowid", txpow.getTxPowID());
+			Message netmsg  = new Message(MinimaClient.NETCLIENT_SENDTXPOWID).addObject("txpowid", txpow.getTxPowID());
 			Message netw    = new Message(NetworkHandler.NETWORK_SENDALL).addObject("message", netmsg);
 			
 			//Post It..
@@ -357,12 +359,16 @@ public class ConsensusHandler extends SystemHandler {
 			resp.put("automining", mining);			
 			InputHandler.endResponse(zMessage, true, "");
 		
+			//Boot-Strap Mining  
 		}else if ( zMessage.isMessageType(CONSENSUS_MINEBLOCK) ) {
 			//DEBUG MODE - only mine a block when you make a transction..
 			if(GlobalParams.MINIMA_ZERO_DIFF_BLK) {return;}
-				
+			
+			//Are we ready..
+			boolean syncdone = mConsensusNet.isInitialSyncComplete();
+			
 			//Are we Mining..
-			if(!getMainHandler().getMiner().isAutoMining()) {
+			if(!syncdone || !getMainHandler().getMiner().isAutoMining()) {
 				PostTimerMessage(new TimerMessage(10000, CONSENSUS_MINEBLOCK));
 				return;
 			}
@@ -431,27 +437,17 @@ public class ConsensusHandler extends SystemHandler {
 				return;
 			}
 			
-			
-			//CHECK THE SIZE
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			DataOutputStream dos = new DataOutputStream(baos);
-			txpow.writeDataStream(dos);
-			dos.flush();
-			int txpowsize = baos.toByteArray().length;
-			dos.close();
-			baos.close();
-			
 			//Add the size..
-			resp.put("size", txpowsize);
+			resp.put("size", txpow.getSizeinBytes());
 			resp.put("inputs", txpow.getTransaction().getAllInputs().size());
 			resp.put("outputs", txpow.getTransaction().getAllOutputs().size());
 			
-			if(txpowsize > NetClientReader.MAX_TXPOW) {
+			if(txpow.getSizeinBytes() > MinimaReader.MAX_TXPOW) {
 				//Add the TxPoW
 				resp.put("transaction", txpow.getTransaction());
 				
 				//ITS TOO BIG!
-				InputHandler.endResponse(zMessage, false, "YOUR TXPOW TRANSACTION IS TOO BIG! MAX SIZE : "+NetClientReader.MAX_TXPOW);
+				InputHandler.endResponse(zMessage, false, "YOUR TXPOW TRANSACTION IS TOO BIG! MAX SIZE : "+MinimaReader.MAX_TXPOW);
 				
 				return;
 			}
@@ -463,9 +459,7 @@ public class ConsensusHandler extends SystemHandler {
 				JSONObject mining = new JSONObject();
 				mining.put("event","txpowstart");
 				mining.put("transaction",txpow.getTransaction().toJSON().toString());
-				
-				Message wsmsg = new Message(NetworkHandler.NETWORK_WS_NOTIFY).addString("message", mining.toString());
-				getMainHandler().getNetworkHandler().PostMessage(wsmsg);
+				PostDAPPJSONMessage(mining);
 			}
 			
 			//Send it to the Miner.. This is the ONLY place this happens..
@@ -597,9 +591,7 @@ public class ConsensusHandler extends SystemHandler {
 			JSONObject mining = new JSONObject();
 			mining.put("event","txpowend");
 			mining.put("transaction",txpow.getTransaction().toJSON().toString());
-			
-			Message wsmsg = new Message(NetworkHandler.NETWORK_WS_NOTIFY).addString("message", mining.toString());
-			getMainHandler().getNetworkHandler().PostMessage(wsmsg);
+			PostDAPPJSONMessage(mining);
 			
 		}else if(zMessage.isMessageType(CONSENSUS_GIMME50)) {
 			//Check time
@@ -807,6 +799,14 @@ public class ConsensusHandler extends SystemHandler {
 				PostMessage(ret);
 			}
 		}
-		
 	}	
+	
+	/**
+	 * Post a message to all the MiniDAPPs
+	 * @param zJSON
+	 */
+	public void PostDAPPJSONMessage(JSONObject zJSON) {
+		Message wsmsg = new Message(DAPPManager.DAPP_MINIDAPP_POSTALL).addObject("message", zJSON);
+		getMainHandler().getNetworkHandler().getDAPPManager().PostMessage(wsmsg);
+	}
 }

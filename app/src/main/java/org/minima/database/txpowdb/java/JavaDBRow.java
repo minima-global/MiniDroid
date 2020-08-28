@@ -9,7 +9,7 @@ public class JavaDBRow implements TxPOWDBRow {
 
 	private TxPoW mTxPOW;
 
-	private boolean mIsOnChainBlock;
+	private boolean mIsMainChainBlock;
 	
 	private boolean mIsInBlock;
 	
@@ -21,14 +21,17 @@ public class JavaDBRow implements TxPOWDBRow {
 	
 	private long mAddedTime;
 	
+	private boolean mMonotonic;
+	
 	public JavaDBRow(TxPoW zTxPOW) {
 		mTxPOW 				= zTxPOW;
 		mIsInBlock 			= false;
-		mIsOnChainBlock     = false;
+		mIsMainChainBlock     = false;
 		mBlockState         = TXPOWDBROW_STATE_BASIC;
 		mDeleteTime         = 0;
 		mAddedTime          = System.currentTimeMillis();
 		mInBlocknumber      = MiniNumber.ZERO;
+		mMonotonic          = false;
 	}
 
 	@Override
@@ -36,10 +39,11 @@ public class JavaDBRow implements TxPOWDBRow {
 		JSONObject ret = new JSONObject();
 		
 		ret.put("txpow",mTxPOW.toJSON());
-		ret.put("isonchainblock",mIsOnChainBlock);
+		ret.put("isonchainblock",mIsMainChainBlock);
 		ret.put("isinblock",mIsInBlock);
 		ret.put("inblock",mInBlocknumber.toString());
 		ret.put("blockstate",getStatusAsString());
+		ret.put("monotonic",mMonotonic);
 		ret.put("deleted",mDeleteTime);
 		
 		return ret;
@@ -87,13 +91,13 @@ public class JavaDBRow implements TxPOWDBRow {
 	}
 	
 	@Override
-	public boolean isOnChainBlock(){
-		return mIsOnChainBlock;
+	public boolean isMainChainBlock(){
+		return mIsMainChainBlock;
 	}
 	
 	@Override
-	public void setOnChainBlock(boolean zOnChain) {
-		mIsOnChainBlock = zOnChain;
+	public void setMainChainBlock(boolean zMainChain) {
+		mIsMainChainBlock = zMainChain;
 	}
 
 	@Override
@@ -122,5 +126,15 @@ public class JavaDBRow implements TxPOWDBRow {
 	public long getAddedTime() {
 		return mAddedTime;
 		
+	}
+
+	@Override
+	public boolean isMonoTonic() {
+		return mMonotonic;
+	}
+
+	@Override
+	public void setMonotonic(boolean zMonotonic) {
+		mMonotonic = zMonotonic;
 	}
 }

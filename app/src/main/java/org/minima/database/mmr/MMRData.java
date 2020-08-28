@@ -30,7 +30,7 @@ public class MMRData implements Streamable{
 	Coin mCoin;
 	
 	/**
-	 * The Blocknumber that this output was created in - OP_CSV 
+	 * The Block number that this output was created in - OP_CSV 
 	 */
 	MiniNumber mBlockNumber;
 	
@@ -84,9 +84,11 @@ public class MMRData implements Streamable{
 		mCoin 		 = zCoin;
 		mBlockNumber = zInBlock;
 		
-		//Copy the state
+		//Copy the state - only keep the keepers..
 		for(StateVariable sv : zState) {
-			mPrevState.add(sv);
+			if(sv.isKeepMMR()) {
+				mPrevState.add(sv);
+			}
 		}
 		
 		//Full  Data

@@ -17,6 +17,7 @@ import org.minima.objects.base.MiniNumber;
 import org.minima.objects.proofs.Proof.ProofChunk;
 import org.minima.utils.Crypto;
 import org.minima.utils.MinimaLogger;
+import org.minima.utils.ObjectStack;
 import org.minima.utils.Streamable;
 import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
@@ -71,7 +72,7 @@ public class MMRSet implements Streamable {
 	ArrayList<MMREntry> mFinalizedPeaks;
 	ArrayList<MMREntry> mFinalizedZeroRow;
 	
-	//HASH Function bit length.. ALWYS 512 except when used in chainsha function
+	//HASH Function bit length.. ALWAYS 512 except when used in chainsha function
 	int MMR_HASH_BITS=512;
 	
 	/**
@@ -1014,28 +1015,29 @@ public class MMRSet implements Streamable {
 
 	/**
 	 * Recursively copy the parents..
-	 * 
-	 * @param zCascade
-	 * @param zNode
 	 */
-	public void recurseParentMMR(MiniNumber zCascade) {
-		if(!getBlockTime().isEqual(zCascade)) {
-			_recurseParentMMR(zCascade, this);	
-		}
-	}
-	
-	private void _recurseParentMMR(MiniNumber zCascade, MMRSet zNode) {
-		if(zNode.getBlockTime().isMore(zCascade)) {
-			//Do all the parents
-			if(zNode.getParent() == null) {
-				MinimaLogger.log("ERROR - RECURSE TREE NULL PARENT : CASC:"+zCascade+" BLKTIME:"+zNode.getBlockTime());	
-			}else {
-				_recurseParentMMR(zCascade, zNode.getParent());	
-			}
-		}
+	public void copyAllParentKeepers(MiniNumber zCascade) {
+		//Start at this point..
+		MMRSet curr = this;
+		
+		//Store all the pparents..
+		ObjectStack stack = new ObjectStack();
+		while(curr.getBlockTime().isMore(zCascade)) {
+			//Add to the stack..
+			stack.push(curr);
 			
-		//The you do it..
-		zNode.copyParentKeepers();
+			//Get the parent..
+			curr = curr.getParent();
+		}
+		
+		//Now run through the stack..
+		while(!stack.isEmpty()) {
+			//Get the parent MMR..
+			MMRSet mmr = (MMRSet) stack.pop();
+			
+			//Copy the parents MMR keepers..
+			mmr.copyParentKeepers();
+		}
 	}
 	
 	/**
@@ -1048,17 +1050,15 @@ public class MMRSet implements Streamable {
 			if(current.getBlockTime().isEqual(zTime)) {
 				return current;
 			}
+			
+			//Too far.. only goes back in time further..
+			if(current.getBlockTime().isLess(zTime)) {
+				return null;
+			}
+			
 			current = current.getParent();
 		}
-		
-//		if(mBlockTime.isEqual(zTime)) {
-//			return this;
-//		}
-//		
-//		if(mParent != null) {
-//			return mParent.getParentAtTime(zTime);
-//		}
-		
+
 		return null;
 	}
 	
@@ -1076,7 +1076,6 @@ public class MMRSet implements Streamable {
 		mEntryNumber.writeDataStream(zOut);
 		
 		//How many..
-//		int len = mEntries.size();
 		int len = mSetEntries.size();
 		zOut.writeInt(len);
 		
@@ -1086,9 +1085,6 @@ public class MMRSet implements Streamable {
 			MMREntry entry = entries.nextElement();
 			entry.writeDataStream(zOut);
 		}
-//		for(MMREntry entry : mEntries) {
-//			entry.writeDataStream(zOut);
-//		}
 	}
 
 	@Override

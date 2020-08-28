@@ -54,7 +54,7 @@ public class MinimaActivity extends AppCompatActivity {
         btnMini.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:21000/"));
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:9004/"));
                 startActivity(intent);
             }
         });
@@ -112,7 +112,7 @@ public class MinimaActivity extends AppCompatActivity {
             mIP = getIP();
             mTextIP.setText("\nConnect to Minima v"+ GlobalParams.MINIMA_VERSION +" from your Desktop\n\n" +
                     "Open a browser and go to\n\n" +
-                    "http://" + mIP + ":21000/");
+                    "http://" + mIP + ":9004/");
         }
     }
 

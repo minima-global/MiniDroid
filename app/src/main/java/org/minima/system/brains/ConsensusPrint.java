@@ -29,11 +29,11 @@ import org.minima.objects.base.MiniNumber;
 import org.minima.objects.proofs.TokenProof;
 import org.minima.system.Main;
 import org.minima.system.input.InputHandler;
-import org.minima.system.network.NetClient;
-import org.minima.system.network.NetworkHandler;
+import org.minima.system.network.MinimaClient;
 import org.minima.system.network.minidapps.DAPPManager;
 import org.minima.system.network.rpc.RPCClient;
 import org.minima.utils.Maths;
+import org.minima.utils.MiniFormat;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
@@ -72,12 +72,13 @@ public class ConsensusPrint extends ConsensusProcessor {
 	/**
 	 * The Old Balance that was sent to the listeners..
 	 */
-	String mOldWebSocketBalance = "";
+	String mOldBalance = "";
+	JSONObject mOldBalanceJSON = null;
 	
 	/**
 	 * The Old Status that was sent to the listeners..
 	 */
-	String mOldWebSocketStatus = "";
+	String mOldStatus = "";
 	String mOldIBD = "";
 	
 	public ConsensusPrint(MinimaDB zDB, ConsensusHandler zHandler) {
@@ -117,7 +118,6 @@ public class ConsensusPrint extends ConsensusProcessor {
 			}
 			
 			if(tree) {
-//				SimpleBlockTreePrinter treeprint = new SimpleBlockTreePrinter(getMainDB().getMainTree());
 				BlockTreePrinter treeprint = new BlockTreePrinter(getMainDB().getMainTree());
 				String treeinfo    = treeprint.printtree();
 				BlockTree maintree = getMainDB().getMainTree();
@@ -154,33 +154,26 @@ public class ConsensusPrint extends ConsensusProcessor {
 			String treeinfo = treeprint.printtree();
 	
 			BlockTree tree = getMainDB().getMainTree();
+	
+			//Now check whether they are unspent..
+			JSONObject dets = InputHandler.getResponseJSON(zMessage);
+			dets.put("tree", treeinfo);
+			dets.put("root", "( "+tree.getChainRoot().getTxPow().getBlockNumber()+" ) "+tree.getChainRoot().getTxPow().getTxPowID().to0xString());
+			dets.put("cascade", "( "+tree.getCascadeNode().getTxPow().getBlockNumber()+" ) "+tree.getCascadeNode().getTxPow().getTxPowID().to0xString());
+			dets.put("tip", "( "+tree.getChainTip().getTxPow().getBlockNumber()+" ) "+tree.getChainTip().getTxPow().getTxPowID().to0xString());
+			dets.put("length", tree.getAsList().size());
+			dets.put("speed", tree.getChainSpeed());
+			dets.put("difficulty", tree.getChainTip().getTxPow().getBlockDifficulty().to0xString());
+			dets.put("weight", tree.getChainRoot().getTotalWeight());
 			
 			//DEBUGGING
 			if(zMessage.exists("systemout")) {
-				treeinfo += "\n\nroot               : ( "+tree.getChainRoot().getTxPow().getBlockNumber()+" ) "+tree.getChainRoot().getTxPow().getTxPowID().to0xString();
-				treeinfo += "\ncascade            : ( "+tree.getCascadeNode().getTxPow().getBlockNumber()+" ) "+tree.getCascadeNode().getTxPow().getTxPowID().to0xString();
-				treeinfo += "\ntip                : ( "+tree.getChainTip().getTxPow().getBlockNumber()+" ) "+tree.getChainTip().getTxPow().getTxPowID().to0xString();
-				treeinfo += "\nlength             : "+tree.getAsList().size();
-				treeinfo += "\nSpeed              : "+tree.getChainSpeed()+" blocks / sec";
-				treeinfo += "\nCurrent Difficulty : "+tree.getChainTip().getTxPow().getBlockDifficulty().to0xString();
-				treeinfo += "\nTotal Weight       : "+tree.getChainRoot().getTotalWeight();
-
-				MinimaLogger.log(treeinfo+"\n");
-			
-			}else {
-				//Now check whether they are unspent..
-				JSONObject dets = InputHandler.getResponseJSON(zMessage);
-				dets.put("tree", treeinfo);
-				dets.put("root", "( "+tree.getChainRoot().getTxPow().getBlockNumber()+" ) "+tree.getChainRoot().getTxPow().getTxPowID().to0xString());
-				dets.put("cascade", "( "+tree.getCascadeNode().getTxPow().getBlockNumber()+" ) "+tree.getCascadeNode().getTxPow().getTxPowID().to0xString());
-				dets.put("tip", "( "+tree.getChainTip().getTxPow().getBlockNumber()+" ) "+tree.getChainTip().getTxPow().getTxPowID().to0xString());
-				dets.put("length", tree.getAsList().size());
-				dets.put("speed", tree.getChainSpeed());
-				dets.put("difficulty", tree.getChainTip().getTxPow().getBlockDifficulty().to0xString());
-				dets.put("weight", tree.getChainRoot().getTotalWeight());
-				InputHandler.endResponse(zMessage, true, "");	
+				String pretty = MiniFormat.JSONPretty(dets.toString());
+				MinimaLogger.log(pretty);
 			}
-		
+			
+			InputHandler.endResponse(zMessage, true, "");	
+			
 		}else if(zMessage.isMessageType(CONSENSUS_TXPOWSEARCH)){
 			String inputaddr   = zMessage.getString("input");
 			String outputaddr  = zMessage.getString("output");
@@ -446,6 +439,13 @@ public class ConsensusPrint extends ConsensusProcessor {
 			InputHandler.endResponse(zMessage, true, "");
 			
 		}else if(zMessage.isMessageType(CONSENSUS_BALANCE)){
+			//Is this a HARD reset..
+			if(!zMessage.exists("hard") && mOldBalanceJSON != null) {
+				InputHandler.setFullResponse(zMessage, mOldBalanceJSON);
+				InputHandler.endResponse(zMessage, true, "");
+				return;
+			}
+			
 			//Is this for a single address
 			String onlyaddress = "";
 			if(zMessage.exists("address")) {
@@ -675,6 +675,9 @@ public class ConsensusPrint extends ConsensusProcessor {
 			//Add it to all ball
 			allbal.put("balance",totbal);
 			
+			//Store for later
+			mOldBalanceJSON = allbal;
+					
 			//All good
 			InputHandler.endResponse(zMessage, true, "");
 	
@@ -684,20 +687,17 @@ public class ConsensusPrint extends ConsensusProcessor {
 			//Is this a notification message for the listeners.. only if is the total Balance..
 			if(onlyaddress.equals("")) {
 				//Same as the old ?
-				if(!balancestring.equals(mOldWebSocketBalance)) {
+				if(!balancestring.equals(mOldBalance)) {
 					//Store for later.. 
-					mOldWebSocketBalance = balancestring;
+					mOldBalance = balancestring;
 					
-					MinimaLogger.log("NEW BALANCE : "+mOldWebSocketBalance);
+					MinimaLogger.log("NEW BALANCE : "+mOldBalance);
 					
 					//Send this to the WebSocket..
 					JSONObject newbalance = new JSONObject();
 					newbalance.put("event","newbalance");
 					newbalance.put("balance",totbal);
-					
-					Message msg = new Message(NetworkHandler.NETWORK_WS_NOTIFY);
-					msg.addString("message", newbalance.toString());
-					getConsensusHandler().getMainHandler().getNetworkHandler().PostMessage(msg);
+					getConsensusHandler().PostDAPPJSONMessage(newbalance);
 				}
 			}
 			
@@ -881,7 +881,7 @@ public class ConsensusPrint extends ConsensusProcessor {
 				
 				//Add details..
 				resp.put("txpow", row.getTxPOW().toJSON());
-				resp.put("ischainblock", row.isOnChainBlock());
+				resp.put("ischainblock", row.isMainChainBlock());
 				resp.put("isinblock", row.isInBlock());
 				resp.put("inblock", row.getInBlockNumber().toString());
 				
@@ -918,6 +918,9 @@ public class ConsensusPrint extends ConsensusProcessor {
 			InputHandler.endResponse(zMessage, true, "");
 			
 		}else if(zMessage.isMessageType(CONSENSUS_STATUS)){
+			//Do a FULL status ( with IBD and folder sizes..)
+			boolean fullstatus = zMessage.getBoolean("full");
+			
 			//Main Handler
 			Main main = getConsensusHandler().getMainHandler();
 			
@@ -930,7 +933,6 @@ public class ConsensusPrint extends ConsensusProcessor {
 			//What block are we on
 			BlockTreeNode tip  		= getMainDB().getMainTree().getChainTip();
 			BlockTreeNode root 		= getMainDB().getMainTree().getChainRoot();
-			MiniNumber lastblock 	= tip.getTxPow().getBlockNumber();
 			
 			//Get the response JSON
 			JSONObject status = InputHandler.getResponseJSON(zMessage);
@@ -945,9 +947,11 @@ public class ConsensusPrint extends ConsensusProcessor {
 
 			status.put("uptime", uptime);
 			status.put("conf", main.getBackupManager().getRootFolder().getAbsolutePath());
-			status.put("host", main.getNetworkHandler().getDAPPManager().getHostIP());
-			status.put("port", main.getNetworkHandler().getServer().getPort());
-			status.put("rpcport", main.getNetworkHandler().getRPCServer().getPort());
+			status.put("host", main.getNetworkHandler().getBaseHost());
+			status.put("minimaport", main.getNetworkHandler().getMinimaServer().getPort());
+			status.put("rpcport", main.getNetworkHandler().getRPCPort());
+			status.put("websocketport", main.getNetworkHandler().getWSPort());
+			status.put("minidappserver", main.getNetworkHandler().getMiniDAPPServerPort());
 			
 			status.put("automine", main.getMiner().isAutoMining());
 			
@@ -957,7 +961,6 @@ public class ConsensusPrint extends ConsensusProcessor {
 			
 			status.put("lastblock", tip.getTxPow().getBlockNumber().toString());
 			status.put("lasttime", new Date(new Long(tip.getTxPow().getTimeMilli()+"")).toString());
-			
 			status.put("cascade", getMainDB().getMainTree().getCascadeNode().getTxPow().getBlockNumber().toString());
 			
 			status.put("difficulty", tip.getTxPow().getBlockDifficulty().to0xString());
@@ -969,61 +972,58 @@ public class ConsensusPrint extends ConsensusProcessor {
 			status.put("txpowdb", getMainDB().getTxPowDB().getSize());
 			
 			//Size of the TXPOW DB folder..
-			File[] txpows = getConsensusHandler().getMainHandler().getBackupManager().getTxPOWFolder().listFiles();
-			long totallen = 0;
-			int totnum    = 0;
-			if(txpows!=null) {
-				for(File txf : txpows) {
-					totallen += txf.length();
+			if(fullstatus) {
+				File[] txpows = getConsensusHandler().getMainHandler().getBackupManager().getTxPOWFolder().listFiles();
+				long totallen = 0;
+				int totnum    = 0;
+				if(txpows!=null) {
+					for(File txf : txpows) {
+						totallen += txf.length();
+					}
+					totnum = txpows.length;
 				}
-				totnum = txpows.length;
+				status.put("txpowfiles", totnum);
+				status.put("txpowfolder", MiniFormat.formatSize(totallen));
 			}
-			status.put("txpowfiles", totnum);
-			status.put("txpowfolder", formatSize(totallen));
 			
 			//MemPool
 			ArrayList<TxPOWDBRow> unused = getMainDB().getTxPowDB().getAllUnusedTxPOW();
 			status.put("mempooltxn", unused.size());
 			status.put("mempoolcoins", getMainDB().getMempoolCoins().size());
 			
-			//Chain details..
-			status.put("chainlength", getMainDB().getMainTree().getAsList().size());
+			//The block used for speed calculation..
 			status.put("chainspeed", getMainDB().getMainTree().getChainSpeed());
+			status.put("chainlength", getMainDB().getMainTree().getAsList().size());
 			status.put("chainweight", root.getTotalWeight().toString());
 			
 			//Use the cached Version  - this is a slow operation
-			if(!mOldIBD.equals("") && !zMessage.exists("hard")) {
-				status.put("IBD", mOldIBD);
-			}else {
+			if(fullstatus) {
 				int ibd = getMainDB().getIntroSyncSize();
-				mOldIBD = formatSize(ibd);
+				mOldIBD = MiniFormat.formatSize(ibd);
 				status.put("IBD", mOldIBD);	
 			}
 			
 			//Add the network connections
-			ArrayList<NetClient> nets = main.getNetworkHandler().getNetClients();
+			ArrayList<MinimaClient> nets = main.getNetworkHandler().getNetClients();
 			status.put("connections", nets.size());
 			
 			//Add it to the output
 			InputHandler.endResponse(zMessage, true, "");
 		
-			//Do we notify..
-			String statusstring = status.toString();
+			//Do we notify.. Has the tip changed..
+			String statusstring = tip.getTxPowID().to0xString();
 			
 			//Is this a notification message for the listeners..
-			if(!statusstring.equals(mOldWebSocketStatus)) {
+			if(!statusstring.equals(mOldStatus)) {
 				//Store for later.. 
-				mOldWebSocketStatus = statusstring;
+				mOldStatus = statusstring;
 				
 				//Send this to the WebSocket..
 				JSONObject newblock = new JSONObject();
 				newblock.put("event","newblock");
 				newblock.put("status",status);
-				newblock.put("txpow",tip.getTxPow());
-				
-				Message msg = new Message(NetworkHandler.NETWORK_WS_NOTIFY);
-				msg.addString("message", newblock.toString());
-				getConsensusHandler().getMainHandler().getNetworkHandler().PostMessage(msg);
+				newblock.put("txpow",tip.getTxPow().toJSON());
+				getConsensusHandler().PostDAPPJSONMessage(newblock);
 			}
 			
 		}else if(zMessage.isMessageType(CONSENSUS_NETWORK)){
@@ -1031,12 +1031,12 @@ public class ConsensusPrint extends ConsensusProcessor {
 			JSONObject network = InputHandler.getResponseJSON(zMessage);
 			
 			//Add the network connections
-			ArrayList<NetClient> nets = getConsensusHandler().getMainHandler().getNetworkHandler().getNetClients();
+			ArrayList<MinimaClient> nets = getConsensusHandler().getMainHandler().getNetworkHandler().getNetClients();
 			network.put("connections", nets.size());
 			
 			JSONArray netarr = new JSONArray();
 			if(nets.size()>0) {
-				for(NetClient net : nets) {
+				for(MinimaClient net : nets) {
 					netarr.add(net.toJSON());
 				}
 				
@@ -1047,19 +1047,32 @@ public class ConsensusPrint extends ConsensusProcessor {
 			InputHandler.endResponse(zMessage, true, "");
 		
 		}else if(zMessage.isMessageType(CONSENSUS_MINIDAPPS)){
-			String name = ""; 
-			if(zMessage.exists("name")) {
-				name = zMessage.getString("name");
-			}
-			
-			//Search..
+			//Current crop
 			DAPPManager dapps = getConsensusHandler().getMainHandler().getNetworkHandler().getDAPPManager();
 			JSONArray minis   = dapps.getMiniDAPPS();
 			
 			//Get the response JSON
 			JSONObject mdapps = InputHandler.getResponseJSON(zMessage);
 			
-			if(!name.equals("")) {
+			//Which action..
+			String action = zMessage.getString("action"); 
+			if(action.equals("list")) {
+				mdapps.put("cwd", new File("").getAbsolutePath());
+				mdapps.put("count", minis.size());
+				mdapps.put("minidapps", minis);
+				InputHandler.endResponse(zMessage, true, "");
+			
+			}else if(action.equals("reload")) {
+				//Reload the MiniDAPPs..
+				Message reload = new Message(DAPPManager.DAPP_RELOAD);
+				InputHandler.addResponseMesage(reload, zMessage);
+				
+				//Post it..
+				dapps.PostMessage(reload);
+				
+			}else if(action.equals("search")) {
+				String name = zMessage.getString("name");
+				
 				for(Object mdapp : minis) {
 					JSONObject jobj = (JSONObject)mdapp;
 					if(jobj.get("name").toString().equalsIgnoreCase(name)) {
@@ -1070,33 +1083,7 @@ public class ConsensusPrint extends ConsensusProcessor {
 				}
 				
 				InputHandler.endResponse(zMessage, false, "MiniDAPP "+name+" not found");
-				
-			}else {
-				mdapps.put("count", minis.size());
-				mdapps.put("minidapps", minis);
-				
-				InputHandler.endResponse(zMessage, true, "");	
 			}
 		}
 	}
-	
-	public static String formatSize(long v) {
-	    if (v < 1024) return v + " bytes";
-	    int z = (63 - Long.numberOfLeadingZeros(v)) / 10;
-	    return String.format("%.1f %sB", (double)v / (1L << (z*10)), " KMGTPE".charAt(z));
-	}
-	
-//	private MiniNumber getIfExists(Hashtable<MiniData, MiniNumber> zHashTable, MiniData zToken) {
-//		Enumeration<MiniData> keys = zHashTable.keys();
-//		
-//		while(keys.hasMoreElements()) {
-//			MiniData key = keys.nextElement();
-//			if(key.isExactlyEqual(zToken)) {
-//				return zHashTable.get(key);	
-//			}
-//		}
-//		
-//		return null;
-//	}
-	
 }

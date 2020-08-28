@@ -38,8 +38,8 @@ public interface TxPOWDBRow {
 	/**
 	 * Is this a block on the main 
 	 */
-	public boolean isOnChainBlock();
-	public void setOnChainBlock(boolean zOnChainBlock);
+	public boolean isMainChainBlock();
+	public void setMainChainBlock(boolean zOnChainBlock);
 	
 	/**
 	 * What state is this in
@@ -56,4 +56,10 @@ public interface TxPOWDBRow {
 	public JSONObject toJSON();
 	
 	public long getAddedTime();
+	
+	/**
+	 * Is this TxPoW Monotonic - do we need to recheck the Transaction Script given a different block..
+	 */
+	public boolean isMonoTonic();
+	public void setMonotonic(boolean zMonotonic);
 }

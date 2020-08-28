@@ -3,6 +3,8 @@
  */
 package org.minima.objects.base;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -57,6 +59,10 @@ public class MiniNumber implements Streamable {
 	public static final MiniNumber BILLION      = new MiniNumber("1000000000");
 	
 	public static final MiniNumber MINUSONE 	= new MiniNumber("-1");
+	
+	public static final MiniNumber POINTONE 	= new MiniNumber("0.1");
+	public static final MiniNumber ONEPOINTONE 	= new MiniNumber("1.1");
+	public static final MiniNumber POINTNINE 	= new MiniNumber("0.9");
 	
 	/**
 	 * The number representation
@@ -217,7 +223,7 @@ public class MiniNumber implements Streamable {
 		
 		//Read in the byte array for unscaled BigInteger
 		int len = zIn.readInt();
-		if(len > 64 || len<1) {
+		if(len > 20 || len<1) {
 			//Something wrong..
 			throw new IOException("ERROR reading MiniNumber - input too large or negative "+len);
 		}
@@ -235,4 +241,31 @@ public class MiniNumber implements Streamable {
 		data.readDataStream(zIn);
 		return data;
 	}
+	
+	public static void main(String[] zargs) {
+		MiniNumber num = new MiniNumber("100300000.040060012");
+		
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(baos);
+		
+		try {
+			num.writeDataStream(dos);
+		
+			dos.flush();
+			baos.flush();
+		
+			ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+			DataInputStream dis = new DataInputStream(bais);
+			
+			MiniNumber test = MiniNumber.ReadFromStream(dis);
+			
+			System.out.println("Number : "+test);
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	
 }

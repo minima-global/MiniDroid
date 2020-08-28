@@ -27,46 +27,50 @@ public class CascadeTree {
 		return mRemovals;
 	}
 	
-	public ArrayList<BlockTreeNode> cascadedTree() {
+	public void cascadedTree() {
 		//Reset the removals
 		mRemovals = new ArrayList<>();
 		
-		//The final cascaded tree
-		mCascadeTree = new BlockTree();
+		//At worst
+		mCascadeTree = mMainTree;
 		
-		//Is it empty..
-		BlockTreeNode oldtip      = mMainTree.getChainTip();
+		//Get the Old Tip
+		BlockTreeNode oldtip = mMainTree.getChainTip();
 		if(oldtip == null) {
-			return mRemovals;
+			return;
+		}
+		
+		//Are we long enough..
+		BlockTreeNode cascadenode = mMainTree.getCascadeNode();
+		MiniNumber totlength = oldtip.getBlockNumber().sub(cascadenode.getBlockNumber());
+		if(totlength.isLess(GlobalParams.MINIMA_CASCADE_START_DEPTH)) {
+			return;
 		}
 		
 		//Store this..
 		MiniData oldtiptxpowid = oldtip.getTxPowID();
 		
-		//Get the current block 1 above the cascade
-		MiniNumber cascinc = mMainTree.getCascadeNode().getTxPow().getBlockNumber().increment();
-		
-		//First get the block PRE_CASCADE_CHAIN_LENGTH back..
-		int counter=0;
-		while(  (oldtip!=null) && 
-				(counter<GlobalParams.MINIMA_CASCADE_START_DEPTH) && 
-				(oldtip.getTxPow().getBlockNumber().isMore(cascinc)) ) {
+		//Get the new cascade node..
+		BlockTreeNode newfulltree = oldtip;
+		int counter = 1;
+		int max = GlobalParams.MINIMA_CASCADE_START_DEPTH.getAsInt();
+		while(counter < max) {
+			newfulltree = newfulltree.getParent();
 			counter++;
-			oldtip = oldtip.getParent();
 		}
 		
-		//Tree is not long enough to cascade
-		if(oldtip == null) {
-			mCascadeTree = mMainTree;
-			return mRemovals;
-		}
-		
+		//The final cascaded tree - going to be new
+		mCascadeTree = new BlockTree();
+				
 		//All this we keep
-		BlockTreeNode fullkeep = BlockTree.copyTreeNode(oldtip);
+		BlockTreeNode fullkeep = BlockTree.copyTreeNode(newfulltree);
 		
 		//The rest of the tree.. that we CAN cascade
-		BlockTreeNode newcascade  = oldtip.getParent();
-				
+		BlockTreeNode newcascade  = newfulltree.getParent();
+		
+		//Now copy all the MMR data to the old cascade..
+		newcascade.getMMRSet().copyAllParentKeepers(cascadenode.getBlockNumber());
+		
 		//Now add all that
 		ArrayList<BlockTreeNode> cascnodes = new ArrayList<>();
 		while(newcascade != null) {
@@ -86,9 +90,8 @@ public class CascadeTree {
 		ArrayList<BlockTreeNode> finalnodes = new ArrayList<>();
 		
 		//Now cycle through the nodes removing a higher level if enough of the lower levels are there..
-		int casclevel=0;
-		int totlevel = 0;
-		boolean moveup = false;
+		int casclevel = 0;
+		int totlevel  = 0;
 		for(BlockTreeNode node : cascnodes) {
 			int superlev = node.getSuperBlockLevel();
 			
@@ -110,43 +113,6 @@ public class CascadeTree {
 						//..
 					}
 				}
-				
-				//METHOD2 - slightly better
-//				node.setCurrentLevel(casclevel);
-//				finalnodes.add(0,node);
-//				totlevel++;
-//				
-//				//Keep at least this many at each level..
-//				if(totlevel>=GlobalParams.MINIMA_MINUMUM_CASCADE_LEVEL) {
-//					moveup = true;
-//				}
-//				
-//				//Are we going up a level..
-//				if(moveup && (superlev >= casclevel+1)) {
-//					//Allow Move up a level.. when you hit the next valid node..
-//					casclevel++;
-//					totlevel = 0;
-//					moveup   = false;	
-//				}
-				
-//				//METHOD3 - wait for a higher level block before removing the old..
-//				node.setCurrentLevel(casclevel);
-//				finalnodes.add(0,node);
-//				totlevel++;
-//				
-//				//Keep at least this many at each level..
-//				if(totlevel>GlobalParams.MINIMA_MINUMUM_CASCADE_LEVEL_NODES) {
-//					moveup = true;
-//				}
-//				
-//				//Are we going up a level..
-//				if(moveup && (superlev > casclevel)) {
-//					//Allow Move up a level.. when you hit the next valid node..
-//					casclevel++;
-//					node.setCurrentLevel(casclevel);
-//					totlevel = 1;
-//					moveup   = false;	
-//				}
 				
 			}else{
 				//Add to the removals..
@@ -175,6 +141,7 @@ public class CascadeTree {
 		//And sort the weights
 		mCascadeTree.resetWeights();
 		
-		return mRemovals;
+		//And clear it out..
+		mCascadeTree.clearCascadeBody();
 	}
 }

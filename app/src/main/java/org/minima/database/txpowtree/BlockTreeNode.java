@@ -58,11 +58,6 @@ public class BlockTreeNode implements Comparable<BlockTreeNode> {
 	MMRSet mMMRSet = new MMRSet();
 	
 	/**
-	 * When Traversing.. remeber which child was used last
-	 */
-	public int mTraversedChild = 0;
-	
-	/**
 	 * When calculating the cascade weight.. has this node been used.. 1000x speed boost..
 	 */
 	public boolean mCascadeWeighted = false;
@@ -245,6 +240,22 @@ public class BlockTreeNode implements Comparable<BlockTreeNode> {
 	@Override
 	public String toString() {
 		return "["+getCurrentLevel()+"/"+getSuperBlockLevel()+"] casc:"+isCascade()+" state:"+getState()+" "+mTXPOW.toString();
+	}
+	
+	public boolean checkForTxpow(MiniData zTxPoWID) {
+		if(getTxPow().getTxPowID().isEqual(zTxPoWID)) {
+			return true;
+		}
+		
+		//Check the Block Txns..
+		ArrayList<MiniData> txns = getTxPow().getBlockTransactions();
+		for(MiniData txn : txns) {
+			if(txn.isEqual(zTxPoWID)) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 	
 }

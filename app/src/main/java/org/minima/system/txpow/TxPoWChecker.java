@@ -134,6 +134,11 @@ public class TxPoWChecker {
 	public static boolean checkTransactionMMR(Transaction zTrans, Witness zWit, MinimaDB zDB, 
 			TxPoW zBlock, MiniNumber zTransNumber, MMRSet zMMRSet, boolean zTouchMMR, JSONArray zContractLog) {
 		
+		//Empty Transaction passes..
+		if(zTrans.isEmpty()) {
+			return true;
+		}
+		
 		//get some extra variables..
 		MiniNumber tBlockNumber = zBlock.getBlockNumber();
 		MiniNumber tBlockTime   = zBlock.getTimeSecs();
@@ -286,8 +291,11 @@ public class TxPoWChecker {
 				//set the environment
 				cc.setGlobalVariable("@BLKNUM", new NumberValue(tBlockNumber));
 				cc.setGlobalVariable("@BLKTIME", new NumberValue(tBlockTime));
-				cc.setGlobalVariable("@INBLKNUM", new NumberValue(proof.getMMRData().getInBlock()));
 				cc.setGlobalVariable("@BLKDIFF", new NumberValue(tBlockNumber.sub(proof.getMMRData().getInBlock())));
+				cc.setGlobalVariable("@PREVBLKHASH", new HEXValue(zBlock.getParentID()));
+				cc.setGlobalVariable("@PRNG", new HEXValue(prng));
+				
+				cc.setGlobalVariable("@INBLKNUM", new NumberValue(proof.getMMRData().getInBlock()));
 				cc.setGlobalVariable("@INPUT", new NumberValue(i));
 				cc.setGlobalVariable("@AMOUNT", new NumberValue(input.getAmount().mult(tokenscale)));
 				cc.setGlobalVariable("@ADDRESS", new HEXValue(input.getAddress()));
@@ -299,8 +307,6 @@ public class TxPoWChecker {
 				cc.setGlobalVariable("@FLOATING", new BooleanValue(input.isFloating()));
 				cc.setGlobalVariable("@TOTIN", new NumberValue(trans.getAllInputs().size()));
 				cc.setGlobalVariable("@TOTOUT", new NumberValue(trans.getAllOutputs().size()));
-				cc.setGlobalVariable("@PREVBLKHASH", new HEXValue(zBlock.getParentID()));
-				cc.setGlobalVariable("@PRNG", new HEXValue(prng));
 									
 				//Is it a floating coin..
 				cc.setFloating(input.isFloating());
