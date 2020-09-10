@@ -24,7 +24,6 @@ import androidx.core.app.NotificationCompat;
 import org.minima.Start;
 import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniData;
-import org.minima.system.NativeListener;
 import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.input.InputMessage;
 import org.minima.system.network.minidapps.DAPPManager;
@@ -32,6 +31,7 @@ import org.minima.system.network.rpc.RPCClient;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.ResponseStream;
 import org.minima.utils.messages.Message;
+import org.minima.utils.messages.MessageListener;
 
 import java.io.InputStream;
 import java.util.Date;
@@ -234,7 +234,7 @@ public class MinimaService extends Service {
 //                msg.addObject("minidapp", dapp);
 //                mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(msg);
 
-                mStart.getServer().getConsensusHandler().addListener(new NativeListener() {
+                mStart.getServer().getConsensusHandler().addListener(new MessageListener() {
                     @Override
                     public void processMessage(Message zMessage) {
                         MinimaLogger.log(zMessage.toString());

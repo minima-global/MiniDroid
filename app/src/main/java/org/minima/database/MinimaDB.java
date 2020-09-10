@@ -793,18 +793,20 @@ public class MinimaDB {
 			}
 		}
 		
-		//Which MMRSet to use.. use the same one for the wholetransaction
+		//Which MMRSet to use.. use the same one for the whole transaction
 		MiniNumber howdeep = currentblock.sub(recent);
 		
-		//MAX 64 blocks in the past should be fine.. so reorgs won't invalidate it..
-		if(howdeep.isMore(MiniNumber.SIXTYFOUR)) {
-			howdeep = MiniNumber.SIXTYFOUR;
+		//MAX 256 blocks in the past 'should' be fine.. so re-orgs won't invalidate it..
+		if(howdeep.isMore(GlobalParams.MINIMA_MMR_PROOF_HISTORY)) {
+			howdeep = GlobalParams.MINIMA_MMR_PROOF_HISTORY;
 		}
 		
 		//DEBUG..
-//		if(howdeep.isMore(MiniNumber.TWO)) {
-//			howdeep = MiniNumber.TWO;
-//		}
+		if(GlobalParams.SHORT_CHAIN_DEBUG_MODE) {
+			if(howdeep.isMore(MiniNumber.EIGHT)) {
+				howdeep = MiniNumber.EIGHT;
+			}
+		}
 	
 		//The Actual MMR block we will use..
 		MMRSet proofmmr = basemmr.getParentAtTime(currentblock.sub(howdeep));

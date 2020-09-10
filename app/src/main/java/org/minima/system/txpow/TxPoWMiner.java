@@ -5,7 +5,6 @@ import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniInteger;
 import org.minima.objects.base.MiniNumber;
 import org.minima.system.Main;
-import org.minima.system.SystemHandler;
 import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.brains.ConsensusNet;
 import org.minima.system.input.InputHandler;
@@ -13,8 +12,9 @@ import org.minima.utils.Crypto;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
+import org.minima.utils.messages.MessageProcessor;
 
-public class TxPoWMiner extends SystemHandler{
+public class TxPoWMiner extends MessageProcessor {
 	
 	public static final MiniData BASE_TXN 	= Crypto.MEGA_HASH;
 //	public static final MiniData BASE_TXN 	= Crypto.MAX_HASH;
@@ -27,14 +27,16 @@ public class TxPoWMiner extends SystemHandler{
 	//Mine a single Block
 	public static final String TXMINER_DEBUGBLOCK   = "MINE_DEBUGBLOCK";
 	
-	private static final long MINE_CONSECUTIVE_MAX = 4000;
+	/**
+	 * Mine continuously for 2000 milliseconds before recreating your txpow.. 
+	 */
+	private static final long MINE_CONSECUTIVE_MAX = 2000;
 	
-	boolean mAutoMining = false;
-	
+	boolean mAutoMining    = false;
 	boolean mShowTXPOWMine = true;
 	
-	public TxPoWMiner(Main zMain) {
-		super(zMain,"TXMINER");
+	public TxPoWMiner() {
+		super("TXMINER");
 	}
 	
 	public void setAutoMining(boolean zMining) {
@@ -107,7 +109,7 @@ public class TxPoWMiner extends SystemHandler{
 										.addObject("witness", txpow.getWitness());
 
 				//Send it..
-				getMainHandler().getConsensusHandler().PostMessage(sametr);
+				Main.getMainHandler().getConsensusHandler().PostMessage(sametr);
 				
 			}else {
 				if(mShowTXPOWMine) {
@@ -119,7 +121,7 @@ public class TxPoWMiner extends SystemHandler{
 				
 				//We have a valid TX-POW..
 				Message msg = new Message(ConsensusHandler.CONSENSUS_FINISHED_MINE).addObject("txpow", txpow);
-				getMainHandler().getConsensusHandler().PostMessage(msg);
+				Main.getMainHandler().getConsensusHandler().PostMessage(msg);
 			}
 			
 		}else if(zMessage.isMessageType(TXMINER_MEGAMINER)) {
@@ -166,14 +168,14 @@ public class TxPoWMiner extends SystemHandler{
 			
 			if(txpow.isBlock()) {
 				Message msg = new Message(ConsensusNet.CONSENSUS_NET_CHECKSIZE_TXPOW).addObject("txpow", txpow);
-				getMainHandler().getConsensusHandler().PostMessage(msg);
+				Main.getMainHandler().getConsensusHandler().PostMessage(msg);
 			}
 			
 			//Pause for breath
-			Thread.sleep(200);
+			Thread.sleep(500);
 			
 			//And start the whole Mining thing again..
-			getMainHandler().getConsensusHandler().PostMessage(ConsensusHandler.CONSENSUS_MINEBLOCK);
+			Main.getMainHandler().getConsensusHandler().PostMessage(ConsensusHandler.CONSENSUS_MINEBLOCK);
 			
 		}else if(zMessage.isMessageType(TXMINER_DEBUGBLOCK)) {
 			//Get TXPOW..
@@ -222,7 +224,7 @@ public class TxPoWMiner extends SystemHandler{
 				InputHandler.endResponse(zMessage, true, "Block Mined");
 				
 				Message msg = new Message(ConsensusNet.CONSENSUS_NET_CHECKSIZE_TXPOW).addObject("txpow", txpow);
-				getMainHandler().getConsensusHandler().PostMessage(msg);
+				Main.getMainHandler().getConsensusHandler().PostMessage(msg);
 			}else {
 				InputHandler.endResponse(zMessage, false, "ERROR - debug miner failed to find a block..");
 			}

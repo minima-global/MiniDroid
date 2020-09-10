@@ -1,15 +1,14 @@
 package org.minima.system.input;
 
 import org.minima.system.Main;
-import org.minima.system.SystemHandler;
 import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.input.functions.intro;
-import org.minima.utils.MinimaLogger;
 import org.minima.utils.ResponseStream;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
+import org.minima.utils.messages.MessageProcessor;
 
-public class InputHandler extends SystemHandler{
+public class InputHandler extends MessageProcessor {
 	
 	/**
 	 * Message type for input messages
@@ -32,7 +31,7 @@ public class InputHandler extends SystemHandler{
 	 * @param zMain
 	 */
 	public InputHandler(Main zMain) {
-		super(zMain,"INPUT");
+		super("INPUT");
 		
 		//And run the intro..
 		new intro().doFunction(new String[0]);
@@ -48,7 +47,7 @@ public class InputHandler extends SystemHandler{
 			//Notify something happening..
 			Message action = new Message(ConsensusHandler.CONSENSUS_NOTIFY_ACTION);
 			action.addString("action", input);
-			getMainHandler().getConsensusHandler().updateListeners(action);
+			Main.getMainHandler().getConsensusHandler().updateListeners(action);
 			
 			//Get the response Stream
 			ResponseStream output = (ResponseStream) zMessage.getObject(INPUT_RESPONSE);
@@ -74,7 +73,7 @@ public class InputHandler extends SystemHandler{
 					found.setResponseStream(output);
 					
 					//Set the Main handler..
-					found.setMainHandler(getMainHandler());
+					found.setMainHandler(Main.getMainHandler());
 					
 					//Do it..
 					found.doFunction(inputs);	

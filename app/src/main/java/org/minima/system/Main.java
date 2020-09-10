@@ -17,7 +17,7 @@ import org.minima.utils.messages.MessageProcessor;
 public class Main extends MessageProcessor {
 
 	/**
-	 * Retrieve the input handler.. used by the MiniLibs..
+	 * Retrieve the Main handler.. from where you can retrieve everything else..
 	 */
 	private static Main mMainHandler;
 	public static Main getMainHandler() {
@@ -69,16 +69,13 @@ public class Main extends MessageProcessor {
 	public boolean mAutoConnect        = false;
 	ArrayList<String> mAutoConnectList = new ArrayList<>();
 	
-//	public String mAutoHost 	= "";
-//	public int mAutoPort    	= 0;
-	
 	/**
 	 * When did this node start up..
 	 */
 	long mNodeStartTime;
 	
 	/**
-	 * Main COnstructor
+	 * Main Constructor
 	 * @param zPort
 	 * @param zGenesis
 	 */
@@ -102,7 +99,7 @@ public class Main extends MessageProcessor {
 		MinimaLogger.log("**********************************************");
 		
 		//Backup manager
-		mBackup     = new BackupManager(this,zConfFolder);
+		mBackup     = new BackupManager(zConfFolder);
 
 		//Set the TeMP folder
 		System.setProperty("java.io.tmpdir",BackupManager.getTempFolder().getAbsolutePath());
@@ -110,8 +107,10 @@ public class Main extends MessageProcessor {
 		//The guts..
 		mInput 		= new InputHandler(this);
 		mNetwork 	= new NetworkHandler(this, zHost, zPort);
-		mTXMiner 	= new TxPoWMiner(this);
+		mTXMiner 	= new TxPoWMiner();
 		mConsensus  = new ConsensusHandler(this);
+		
+		//mConsensus.setLOG(true);
 		
 		//Are we the genesis
 		mGenesis 	= zGenesis;

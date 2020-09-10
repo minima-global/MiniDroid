@@ -16,8 +16,6 @@ import org.minima.objects.base.MiniNumber;
 import org.minima.objects.base.MiniString;
 import org.minima.objects.proofs.TokenProof;
 import org.minima.system.Main;
-import org.minima.system.NativeListener;
-import org.minima.system.SystemHandler;
 import org.minima.system.input.InputHandler;
 import org.minima.system.input.functions.gimme50;
 import org.minima.system.network.MinimaClient;
@@ -29,9 +27,11 @@ import org.minima.system.txpow.TxPoWMiner;
 import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
+import org.minima.utils.messages.MessageListener;
+import org.minima.utils.messages.MessageProcessor;
 import org.minima.utils.messages.TimerMessage;
 
-public class ConsensusHandler extends SystemHandler {
+public class ConsensusHandler extends MessageProcessor {
 
 	/**
 	 * Main processing loop for a txpow message
@@ -119,7 +119,7 @@ public class ConsensusHandler extends SystemHandler {
 	/**
 	 * A list of Listeners.. for important messages..
 	 */
-	ArrayList<NativeListener> mListeners;
+	ArrayList<MessageListener> mListeners;
 	
 	/**
 	 * FLUSH counter 
@@ -137,7 +137,7 @@ public class ConsensusHandler extends SystemHandler {
 	 * @param zMain
 	 */
 	public ConsensusHandler(Main zMain) {
-		super(zMain, "CONSENSUS");
+		super("CONSENSUS");
 		
 		//Create a database..
 		mMainDB = new MinimaDB();
@@ -160,7 +160,7 @@ public class ConsensusHandler extends SystemHandler {
 	}
 	
 	public void setBackUpManager() {
-		getMainDB().setBackupManager(getMainHandler().getBackupManager());
+		getMainDB().setBackupManager(Main.getMainHandler().getBackupManager());
 	}
 	
 	/**
@@ -170,16 +170,16 @@ public class ConsensusHandler extends SystemHandler {
 		mListeners.clear();
 	}
 	
-	public void addListener(NativeListener zListen) {
+	public void addListener(MessageListener zListen) {
 		mListeners.add(zListen);
 	}
 	
-	public void removeListener(NativeListener zListen) {
+	public void removeListener(MessageListener zListen) {
 		mListeners.remove(zListen);
 	}
 	
 	public void updateListeners(Message zMessage) {
-		for(NativeListener listen : mListeners) {
+		for(MessageListener listen : mListeners) {
 			listen.processMessage(zMessage);
 		}
 	}
@@ -238,25 +238,14 @@ public class ConsensusHandler extends SystemHandler {
 				//Do the balance.. Update listeners if changed..
 				Message balanceupdate = new Message(ConsensusPrint.CONSENSUS_BALANCE).addBoolean("hard", true);
 				PostMessage(balanceupdate);
-			}
 			
-			//MemPool Flush Counter... 
-			if(txpow.isBlock()) {
-				//Every 10 minutes or so check if you have all the parents and txns in blocks..
-				if(mFlushCounter++ > 32) {
-					mFlushCounter = 0;
-					
-					//Post a flush message.. could be stuck missing a block..
-					PostMessage(new Message(ConsensusUser.CONSENSUS_FLUSHMEMPOOL));
+				//Print the tree..
+				if(mPrintChain) {
+					Message print = new Message(ConsensusPrint.CONSENSUS_PRINTCHAIN_TREE).addBoolean("systemout", true);
+					PostMessage(print);
 				}
 			}
-			
-			//Print the tree..
-			if(mPrintChain) {
-				Message print = new Message(ConsensusPrint.CONSENSUS_PRINTCHAIN_TREE).addBoolean("systemout", true);
-				PostMessage(print);
-			}
-						
+									
 			/**
 			 * One time run the first time you see a txpow..
 			 */
@@ -265,7 +254,7 @@ public class ConsensusHandler extends SystemHandler {
 			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
 			
 			//Back it up!
-			getMainHandler().getBackupManager().backupTxpow(txpow);
+			Main.getMainHandler().getBackupManager().backupTxpow(txpow);
 			
 			//Notify the WebSocket Listeners
 			if(txpow.isTransaction()) {
@@ -309,7 +298,7 @@ public class ConsensusHandler extends SystemHandler {
 			Message netw    = new Message(NetworkHandler.NETWORK_SENDALL).addObject("message", netmsg);
 			
 			//Post It..
-			getMainHandler().getNetworkHandler().PostMessage(netw);
+			Main.getMainHandler().getNetworkHandler().PostMessage(netw);
 			
 		}else if ( zMessage.isMessageType(CONSENSUS_AUTOBACKUP) ) {
 			//Backup the system..
@@ -317,6 +306,9 @@ public class ConsensusHandler extends SystemHandler {
 			
 			//Redo every 10 minutes..
 			PostTimerMessage(new TimerMessage(10 * 60 * 1000, CONSENSUS_AUTOBACKUP));
+			
+			//And flush the mempool
+			PostMessage(new Message(ConsensusUser.CONSENSUS_FLUSHMEMPOOL));
 			
 		/**
 		 * Network Messages
@@ -353,7 +345,7 @@ public class ConsensusHandler extends SystemHandler {
 		 */
 		}else if ( zMessage.isMessageType(CONSENSUS_ACTIVATEMINE) ) {
 			boolean mining = zMessage.getBoolean("automining");
-			getMainHandler().getMiner().setAutoMining(mining);
+			Main.getMainHandler().getMiner().setAutoMining(mining);
 			
 			JSONObject resp = InputHandler.getResponseJSON(zMessage);
 			resp.put("automining", mining);			
@@ -368,8 +360,8 @@ public class ConsensusHandler extends SystemHandler {
 			boolean syncdone = mConsensusNet.isInitialSyncComplete();
 			
 			//Are we Mining..
-			if(!syncdone || !getMainHandler().getMiner().isAutoMining()) {
-				PostTimerMessage(new TimerMessage(10000, CONSENSUS_MINEBLOCK));
+			if(!syncdone || !Main.getMainHandler().getMiner().isAutoMining()) {
+				PostTimerMessage(new TimerMessage(20000, CONSENSUS_MINEBLOCK));
 				return;
 			}
 			
@@ -380,7 +372,7 @@ public class ConsensusHandler extends SystemHandler {
 			Message mine = new Message(TxPoWMiner.TXMINER_MEGAMINER).addObject("txpow", txpow);
 			
 			//Post to the Miner
-			getMainHandler().getMiner().PostMessage(mine);
+			Main.getMainHandler().getMiner().PostMessage(mine);
 		
 		}else if ( zMessage.isMessageType(CONSENSUS_DEBUGMINE) ) {
 			//Mine one single block.. 
@@ -393,7 +385,7 @@ public class ConsensusHandler extends SystemHandler {
 			InputHandler.addResponseMesage(mine, zMessage);
 			
 			//Post to the Miner
-			getMainHandler().getMiner().PostMessage(mine);
+			Main.getMainHandler().getMiner().PostMessage(mine);
 			
 		/**
 		 * Transaction management
@@ -464,7 +456,7 @@ public class ConsensusHandler extends SystemHandler {
 			
 			//Send it to the Miner.. This is the ONLY place this happens..
 			Message mine = new Message(TxPoWMiner.TXMINER_MINETXPOW).addObject("txpow", txpow);
-			getMainHandler().getMiner().PostMessage(mine);
+			Main.getMainHandler().getMiner().PostMessage(mine);
 		
 			//Add the TxPoW
 			resp.put("txpow", txpow);
@@ -807,6 +799,6 @@ public class ConsensusHandler extends SystemHandler {
 	 */
 	public void PostDAPPJSONMessage(JSONObject zJSON) {
 		Message wsmsg = new Message(DAPPManager.DAPP_MINIDAPP_POSTALL).addObject("message", zJSON);
-		getMainHandler().getNetworkHandler().getDAPPManager().PostMessage(wsmsg);
+		Main.getMainHandler().getNetworkHandler().getDAPPManager().PostMessage(wsmsg);
 	}
 }
