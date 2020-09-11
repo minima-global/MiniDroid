@@ -213,12 +213,12 @@ public class MinimaService extends Service {
                 while(mStart.getServer().getNetworkHandler().getDAPPManager() == null){Thread.sleep(500);}
 
                 //Install all the MiniDAPPS..
-                //loadMiniDapp("wallet.minidapp");
-                loadMiniDapp("coinflip.minidapp");
-                loadMiniDapp("dexxed.minidapp");
+                //loadMiniDapp("walletv97.0.minidapp");
+                //loadMiniDapp("coinflip.minidapp");
+                //loadMiniDapp("dexxed.minidapp");
                 loadMiniDapp("terminal.minidapp");
-                loadMiniDapp("scriptide.minidapp");
-                loadMiniDapp("futurecash.minidapp");
+                //loadMiniDapp("scriptide.minidapp");
+                //loadMiniDapp("futurecash.minidapp");
 
 //                Message msg = new Message(DAPPManager.DAPP_INSTALL);
 //                msg.addObject("overwrite", false);
@@ -288,7 +288,7 @@ public class MinimaService extends Service {
 
         //The Install message
         Message msg = new Message(DAPPManager.DAPP_INSTALL);
-        msg.addObject("overwrite", false);
+        msg.addObject("overwrite", true);
         msg.addObject("minidapp", dapp);
         msg.addString("filename", zMiniDapp);
 
