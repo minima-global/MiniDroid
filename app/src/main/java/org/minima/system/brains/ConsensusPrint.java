@@ -48,6 +48,7 @@ public class ConsensusPrint extends ConsensusProcessor {
 	public static final String CONSENSUS_COINS 				= CONSENSUS_PREFIX+"COINS";
 	public static final String CONSENSUS_COINSIMPLE 		= CONSENSUS_PREFIX+"COINSIMPLE";
 	
+	public static final String CONSENSUS_TOPBLOCK 			= CONSENSUS_PREFIX+"TOPBLOCK";
 	public static final String CONSENSUS_TXPOW 				= CONSENSUS_PREFIX+"TXPOW";
 	public static final String CONSENSUS_KEYS 				= CONSENSUS_PREFIX+"KEYS";
 	public static final String CONSENSUS_ADDRESSES 			= CONSENSUS_PREFIX+"ADDRESSES";
@@ -447,7 +448,10 @@ public class ConsensusPrint extends ConsensusProcessor {
 			}
 			
 			//Current top block
-			MiniNumber top = getMainDB().getTopBlock();
+			MiniNumber top = MiniNumber.ZERO;
+			if(getMainDB().getMainTree().getChainRoot() != null) {
+				top = getMainDB().getTopBlock();
+			}
 			
 			//A complete details of the TokenID..
 			Hashtable<String, JSONObject> full_details = new Hashtable<>();
@@ -859,6 +863,22 @@ public class ConsensusPrint extends ConsensusProcessor {
 			allbal.put("history",totbal);
 			
 			//All good
+			InputHandler.endResponse(zMessage, true, "");
+		
+		}else if(zMessage.isMessageType(CONSENSUS_TOPBLOCK)){
+			//Are we starting up..
+			TxPoW top = null;
+			if(getMainDB().getMainTree().getChainRoot() == null) {
+				top = new TxPoW();
+			}else {
+				top = getMainDB().getTopTxPoW();
+			}
+			
+			JSONObject resp = InputHandler.getResponseJSON(zMessage);
+			
+			//Add details..
+			resp.put("txpow", top);
+			
 			InputHandler.endResponse(zMessage, true, "");
 		
 		}else if(zMessage.isMessageType(CONSENSUS_TXPOW)){

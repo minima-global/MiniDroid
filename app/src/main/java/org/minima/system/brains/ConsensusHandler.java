@@ -38,7 +38,6 @@ public class ConsensusHandler extends MessageProcessor {
 	 * Main processing loop for a txpow message
 	 */
 	public static final String CONSENSUS_PROCESSTXPOW 		   = "CONSENSUS_PROCESSTXPOW";
-//	public static final String CONSENSUS_PRE_PROCESSTXPOW 	   = "CONSENSUS_PREPROCESSTXPOW";
 	
 	/**
 	 * Auto backup every 10 minutes..
@@ -154,7 +153,7 @@ public class ConsensusHandler extends MessageProcessor {
 		mConsensusBackup = new ConsensusBackup(mMainDB, this);
 		
 		//Are we HARD mining.. debugging / private chain
-		PostTimerMessage(new TimerMessage(2000, CONSENSUS_MINEBLOCK));
+		PostTimerMessage(new TimerMessage(1000, CONSENSUS_MINEBLOCK));
 	
 		//Redo every 10 minutes..
 		PostTimerMessage(new TimerMessage(10 * 60 * 1000, CONSENSUS_AUTOBACKUP));
@@ -206,7 +205,11 @@ public class ConsensusHandler extends MessageProcessor {
 	}
 	
 	public void setInitialSyncComplete() {
-		mConsensusNet.initialSyncComplete();
+		mConsensusNet.setInitialSyncComplete();
+	}
+	
+	public boolean isInitialSyncComplete() {
+		return mConsensusNet.isInitialSyncComplete();
 	}
 	
 	@Override
@@ -217,6 +220,12 @@ public class ConsensusHandler extends MessageProcessor {
 		if ( zMessage.isMessageType(CONSENSUS_PROCESSTXPOW) ) {
 			//A TXPOW - that has been checked already and added to the DB
 			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
+			
+			//Send a message to all about a new TxPoW (may or may not be a transaction or a block..)
+			JSONObject newtxpow = new JSONObject();
+			newtxpow.put("event","newtxpow");
+			newtxpow.put("txpow",txpow.toJSON());
+			PostDAPPJSONMessage(newtxpow);
 			
 			//Back it up!
 			Main.getMainHandler().getBackupManager().backupTxpow(txpow);
@@ -233,14 +242,15 @@ public class ConsensusHandler extends MessageProcessor {
 			//Only do this once..
 			boolean relevant = false;
 			if(txpow.isTransaction()) {
+				//Is it relevant to us..
+				relevant = getMainDB().getUserDB().isTransactionRelevant(txpow.getTransaction());
+				
 				//Notify everyone..
 				JSONObject newtrans = new JSONObject();
 				newtrans.put("event","newtransaction");
 				newtrans.put("txpow",txpow.toJSON());
+				newtrans.put("relevant",relevant);
 				PostDAPPJSONMessage(newtrans);
-				
-				//Is it relevant to us..
-				relevant = getMainDB().getUserDB().isTransactionRelevant(txpow.getTransaction());
 			}
 			
 			//Has there been a change
@@ -347,11 +357,8 @@ public class ConsensusHandler extends MessageProcessor {
 			//DEBUG MODE - only mine a block when you make a transction..
 			if(GlobalParams.MINIMA_ZERO_DIFF_BLK) {return;}
 			
-			//Are we ready..
-			boolean syncdone = mConsensusNet.isInitialSyncComplete();
-			
 			//Are we Mining..
-			if(!syncdone || !Main.getMainHandler().getMiner().isAutoMining()) {
+			if(!isInitialSyncComplete() || !Main.getMainHandler().getMiner().isAutoMining()) {
 				PostTimerMessage(new TimerMessage(20000, CONSENSUS_MINEBLOCK));
 				return;
 			}
