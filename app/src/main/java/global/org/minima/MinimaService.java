@@ -136,6 +136,10 @@ public class MinimaService extends Service {
 //        startQuitter();
     }
 
+    public Start getMinima(){
+        return mStart;
+    }
+
     /**
      * A loop thread that shuts down the service if NOT on power and nothing has happened for 5 minutes..
      *
@@ -194,8 +198,6 @@ public class MinimaService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
 
-//        MinimaLogger.log("AC Plugged in : "+isPlugged(this));
-
         //Only do this once..
         if(!mListenerAdded){
             mListenerAdded = true;
@@ -203,75 +205,81 @@ public class MinimaService extends Service {
             //Set the default message
             startForeground(1, createNotification("Syncing.."));
 
-            MinimaLogger.log("Service : Initialise begin..");
+            Thread installer = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    MinimaLogger.log("Service : Initialise begin..");
 
-            try {
-                //Wait for Minima to start..
-                while(mStart == null){ Thread.sleep(500);}
-                while(mStart.getServer() == null){Thread.sleep(500);}
-                while(mStart.getServer().getNetworkHandler() == null){Thread.sleep(500);}
-                while(mStart.getServer().getNetworkHandler().getDAPPManager() == null){Thread.sleep(500);}
+                    try {
+                        //Wait for Minima to start..
+                        while(mStart == null){ Thread.sleep(100);}
+                        while(mStart.getServer() == null){Thread.sleep(100);}
+                        while(mStart.getServer().getConsensusHandler() == null){Thread.sleep(100);}
 
-                //Install all the MiniDAPPS..
-                loadMiniDapp("walletv98.02.minidapp");
-                loadMiniDapp("blockv1.3.3.minidapp");
-                loadMiniDapp("coinflip.minidapp");
-                loadMiniDapp("dexxed.minidapp");
-                loadMiniDapp("terminal.minidapp");
-                loadMiniDapp("scriptide.minidapp");
-                loadMiniDapp("futurecash.minidapp");
+                        //Install all the MiniDAPPS..
+        //                loadMiniDapp("walletv98.02.minidapp");
+        //                loadMiniDapp("blockv1.3.3.minidapp");
 
-//                Message msg = new Message(DAPPManager.DAPP_INSTALL);
-//                msg.addObject("overwrite", false);
-//
-//                InputStream is=getAssets().open("wallet.minidapp");
-//                byte[] fileBytes=new byte[is.available()];
-//                is.read( fileBytes);
-//                is.close();
-//
-//                //Post them to Minima..
-//                MinimaLogger.log("Install MiniWallet MiniDAPP");
-//                MiniData dapp = new MiniData(fileBytes);
-//                msg.addObject("minidapp", dapp);
-//                mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(msg);
+                        mStart.getServer().getConsensusHandler().addListener(new MessageListener() {
+                            @Override
+                            public void processMessage(Message zMessage) {
+                                if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_NEWBLOCK)) {
+                                    //Gewt the TxPoW
+                                    mTxPow = (TxPoW) zMessage.getObject("txpow");
 
-                mStart.getServer().getConsensusHandler().addListener(new MessageListener() {
-                    @Override
-                    public void processMessage(Message zMessage) {
-                        MinimaLogger.log(zMessage.toString());
-                        if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_NEWBLOCK)) {
-                            //Gewt the TxPoW
-                            mTxPow = (TxPoW) zMessage.getObject("txpow");
+                                    //Show a notification
+                                    mHandler.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            startForeground(1, createNotification("Block "+mTxPow.getBlockNumber()+" @ "+new Date(mTxPow.getTimeMilli().getAsLong())));
+                                        }
+                                    });
 
-                            //Show a notification
-                            mHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    startForeground(1, createNotification("Block "+mTxPow.getBlockNumber()+" @ "+new Date(mTxPow.getTimeMilli().getAsLong())));
+                                }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
+                                    Thread mini_install = new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            try {
+                                                loadMiniDapp("coinflip.minidapp");
+                                                loadMiniDapp("dexxed.minidapp");
+                                                loadMiniDapp("terminal.minidapp");
+                                                loadMiniDapp("scriptide.minidapp");
+                                                loadMiniDapp("futurecash.minidapp");
+
+                                            } catch (Exception e) {
+                                                e.printStackTrace();
+                                            }
+
+                                            //And reload the lot..
+                                            mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(DAPPManager.DAPP_RELOAD);
+                                        }
+                                    });
+                                    mini_install.start();
+
+                                }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_BALANCE)) {
+                                    mHandler.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Toast.makeText(MinimaService.this,"Minima : Your balance has changed!",Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+
+                                }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_ACTION)) {
+                                    //Something happening.. don't shut down for five monutes if not on power..
+                                    mLastActionTime = System.currentTimeMillis();
                                 }
-                            });
+                            }
+                        });
 
-                        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_BALANCE)) {
-                            mHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Toast.makeText(MinimaService.this,"Minima : Your balance has changed!",Toast.LENGTH_SHORT).show();
-                                }
-                            });
+                        MinimaLogger.log("Service : Initialise end.. ");
 
-                        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_ACTION)) {
-                            //Something happening.. don;t shut down for five monutes if not on power..
-                            mLastActionTime = System.currentTimeMillis();
-//                            MinimaLogger.log("ACTION on MINIMA");
-                        }
+                    } catch (Exception e) {
+                        MinimaLogger.log("Start Service Exception "+e);
                     }
-                });
+                }
+            });
 
-                MinimaLogger.log("Service : Initialise end.. ");
-
-            } catch (Exception e) {
-                MinimaLogger.log("Start Service Exception "+e);
-            }
+            installer.start();
         }
 
         return START_STICKY;
@@ -290,6 +298,7 @@ public class MinimaService extends Service {
         //The Install message
         Message msg = new Message(DAPPManager.DAPP_INSTALL);
         msg.addObject("overwrite", false);
+        msg.addObject("reload", false);
         msg.addObject("minidapp", dapp);
         msg.addString("filename", zMiniDapp);
 

@@ -14,8 +14,11 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import org.minima.GlobalParams;
+import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.network.rpc.RPCClient;
 import org.minima.utils.MinimaLogger;
+import org.minima.utils.messages.Message;
+import org.minima.utils.messages.MessageListener;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -23,7 +26,7 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
 
-public class MinimaActivity extends AppCompatActivity {
+public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
 
     //The Help Button
     Button btnMini;
@@ -35,7 +38,7 @@ public class MinimaActivity extends AppCompatActivity {
     String mIP;
 
     //The Service..
-    MinimaService mMinima;
+    MinimaService mMinima = null;
 
     boolean mSynced = false;
 
@@ -66,18 +69,10 @@ public class MinimaActivity extends AppCompatActivity {
         mTextIP.setText("Synchronising.. please wait..");
 
         //start Minima node Foreground Service
-        Intent intent = new Intent(getBaseContext(), MinimaService.class);
-        startForegroundService(intent);
+        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+        startForegroundService(minimaintent);
 
-        //Start thread and wait 10 seconds..
-        Thread updater = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {Thread.sleep(15000);} catch (InterruptedException e) {}
-                setPostSyncDetails();
-            }
-        });
-        updater.start();
+        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -96,7 +91,6 @@ public class MinimaActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         MinimaLogger.log("Activity : onResume");
-
         setIPText();
     }
 
@@ -104,6 +98,13 @@ public class MinimaActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         MinimaLogger.log("Activity : onDestroy");
+        if(mMinima != null){
+            mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
+        }
+
+        //Clean Unbind
+        unbindService(this);
+
     }
 
     public void setIPText() {
@@ -164,8 +165,40 @@ public class MinimaActivity extends AppCompatActivity {
         runOnUiThread(uiupdate);
     }
 
+//    @Override
+//    public void onBackPressed() {
+//        moveTaskToBack(true);
+//    }
+
     @Override
-    public void onBackPressed() {
-        moveTaskToBack(true);
+    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+        MinimaLogger.log("CONNECTED TO SERVICE");
+        MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
+        mMinima = binder.getService();
+
+        if(mMinima.getMinima().getServer().getConsensusHandler().isInitialSyncComplete()){
+            MinimaLogger.log("INITIAL SYNC COMPLETE!");
+            setPostSyncDetails();
+        }else{
+            MinimaLogger.log("ACTIVITY LISTEN FOR SYNC COMPLETE..");
+            //Listen for messages..
+            mMinima.getMinima().getServer().getConsensusHandler().addListener(this);
+        }
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName componentName) {
+        MinimaLogger.log("DISCONNECTED TO SERVICE");
+    }
+
+    @Override
+    public void processMessage(Message zMessage) {
+        if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
+            MinimaLogger.log("ACTIVITY SYNC COMPLETE : " + zMessage);
+            setPostSyncDetails();
+
+        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_LOG)) {
+            String log = zMessage.getString("msg");
+        }
     }
 }

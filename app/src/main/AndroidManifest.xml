@@ -25,9 +25,9 @@
         <service
             android:name=".MinimaService"
             android:enabled="true"
-            android:process="org.minima.service"
             android:exported="true">
         </service>
+        <!--android:process="org.minima.service" -->
 
         <service android:name=".ServiceStarterJobService" android:permission="android.permission.BIND_JOB_SERVICE"/>
 

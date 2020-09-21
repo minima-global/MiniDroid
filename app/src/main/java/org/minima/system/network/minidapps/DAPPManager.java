@@ -22,6 +22,7 @@ import java.util.zip.ZipInputStream;
 import org.minima.objects.base.MiniData;
 import org.minima.system.Main;
 import org.minima.system.brains.BackupManager;
+import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.input.InputHandler;
 import org.minima.system.network.NetworkHandler;
 import org.minima.system.network.minidapps.comms.CommsManager;
@@ -80,7 +81,7 @@ public class DAPPManager extends MessageProcessor {
 	Hashtable<String, Message> mReplyMessage;
 	long mLastReplyUsed = 0; 
 		
-	public DAPPManager(Main zMain) {
+	public DAPPManager() {
 		super("DAPPMAnager");
 		
 		//Need access to this
@@ -243,7 +244,7 @@ public class DAPPManager extends MessageProcessor {
 							MinimaLogger.log("BackEndJS create for "+minidappid);
 							
 						} catch (Exception e) {
-							MinimaLogger.log("Error loading service.js for "+backend.getAbsolutePath());
+							MinimaLogger.log("Error loading service.js for "+backend.getAbsolutePath()+" "+e);
 						} 
 					}
 					
@@ -296,6 +297,9 @@ public class DAPPManager extends MessageProcessor {
 			//Calculate the current MiniDAPPS
 			recalculateMiniDAPPS();
 			
+			//We HAVE LIFT OFF!
+			Main.getMainHandler().getConsensusHandler().updateListeners(new Message(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC));
+			
 			//Create the MiniDAPP server
 			mDAPPServer = new DAPPServer(mNetwork.getMiniDAPPServerPort(), this);
 			try {
@@ -305,7 +309,7 @@ public class DAPPManager extends MessageProcessor {
 			} catch (IOException e) {
 				MinimaLogger.log("MiniDAPP server error "+ e.toString());
 			}
-		
+			
 		}else if(zMessage.getMessageType().equals(DAPP_RELOAD)) {
 			//Recalculate the MINIDAPPS
 			recalculateMiniDAPPS();
@@ -328,6 +332,11 @@ public class DAPPManager extends MessageProcessor {
 			if(zMessage.exists("overwrite")){
 				overwrite = zMessage.getBoolean("overwrite");
 			}
+			
+			boolean reload = true;
+			if(zMessage.exists("reload")){
+				overwrite = zMessage.getBoolean("reload");
+			}
 
 			//Hash it..
 			MiniData hash     = Crypto.getInstance().hashObject(data, 160);
@@ -340,7 +349,7 @@ public class DAPPManager extends MessageProcessor {
 			//And the actual folder...
 			File dapp  = new File(alldapps,hash.to0xString());
 			if(dapp.exists() && !overwrite){
-				InputHandler.endResponse(zMessage, true, "MiniDAPP ALLREADY installed..");
+				InputHandler.endResponse(zMessage, true, "MiniDAPP already installed..");
 				return;
 			}
 			
@@ -422,8 +431,10 @@ public class DAPPManager extends MessageProcessor {
 	        MiniFile.writeDataToFile(download, data.getData());
 	        
 	        //It's done!
-			recalculateMiniDAPPS();
-			
+	        if(reload) {
+				recalculateMiniDAPPS();
+	        }
+	        
 			InputHandler.endResponse(zMessage, true, "MiniDAPP installed..");
 			
 		}else if(zMessage.getMessageType().equals(DAPP_UNINSTALL)) {
