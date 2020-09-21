@@ -13,14 +13,14 @@ public class Alarm extends BroadcastReceiver
 {
     @Override
     public void onReceive(Context context, Intent intent){
-        MinimaLogger.log("ALARM RECEIVED");
+//        MinimaLogger.log("ALARM RECEIVED");
 
         //Send a start service JOB
         ServiceStarterJobService.enqueueWork(context, new Intent());
     }
 
     public void setAlarm(Context context){
-        MinimaLogger.log("ALARM SET");
+//        MinimaLogger.log("ALARM SET");
 
         AlarmManager am =( AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
         Intent i = new Intent(context, Alarm.class);
@@ -30,7 +30,7 @@ public class Alarm extends BroadcastReceiver
     }
 
     public void cancelAlarm(Context context){
-        MinimaLogger.log("ALARM CANCELLED");
+//        MinimaLogger.log("ALARM CANCELLED");
 
         Intent intent = new Intent(context, Alarm.class);
         PendingIntent sender = PendingIntent.getBroadcast(context, 0, intent, 0);

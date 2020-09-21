@@ -85,7 +85,7 @@ public class MinimaService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        MinimaLogger.log("Service : onCreate");
+//        MinimaLogger.log("Service : onCreate");
         mListenerAdded  = false;
         mLastActionTime = System.currentTimeMillis();
         mStopQuitter    = false;
@@ -196,7 +196,7 @@ public class MinimaService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
+        //MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
 
         //Only do this once..
         if(!mListenerAdded){
@@ -208,7 +208,7 @@ public class MinimaService extends Service {
             Thread installer = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    MinimaLogger.log("Service : Initialise begin..");
+//                    MinimaLogger.log("Service : Initialise begin..");
 
                     try {
                         //Wait for Minima to start..

@@ -22,6 +22,8 @@
 
         </activity>
 
+        <activity android:name=".MinimaLogs" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"></activity>
+
         <service
             android:name=".MinimaService"
             android:enabled="true"
