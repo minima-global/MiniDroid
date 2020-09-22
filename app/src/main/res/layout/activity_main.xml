@@ -19,15 +19,34 @@
         android:paddingBottom="80px"
         />
 
-    <Button
-        android:id="@+id/btn_minidapp"
+    <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#FFFFFF"
-        android:textSize="16dip"
-        android:background="@drawable/roundbutton"
-        android:padding="20dip"
-        android:text="@string/btn_text"/>
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_minidapp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="16dip"
+            android:background="@drawable/roundbutton"
+            android:padding="20dip"
+            android:text="@string/btn_text"/>
+
+        <Button
+            android:id="@+id/btn_logs"
+            android:layout_marginLeft="10dip"
+            android:text="LOGS"
+            android:textColor="#FFFFFF"
+            android:textSize="16dip"
+            android:background="@drawable/roundbutton"
+            android:padding="20dip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
 
     <TextView
         android:id="@+id/iptext_minidapp"

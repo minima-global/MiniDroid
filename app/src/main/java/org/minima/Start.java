@@ -36,7 +36,7 @@ public class Start {
 	/**
 	 * A static link to the main server - for Android
 	 */
-	public static Main mMainServer;
+	public static Main mMainServer = null;
 	public static Main getServer() {
 		return mMainServer;
 	}
@@ -61,9 +61,7 @@ public class Start {
 				ArrayList<String> vars = new ArrayList<>();
 				
 				vars.add("-daemon");
-				vars.add("-cleanhard");
-				vars.add("-private");
-
+//				vars.add("-clean");
 //				vars.add("-port");
 //				vars.add("9001");
 //				vars.add("-connect");

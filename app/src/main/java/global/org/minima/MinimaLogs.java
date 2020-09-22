@@ -42,15 +42,14 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        MinimaLogger.log("Activity : onDestroy");
 
         //Remove the message listener.. don;t want to clog it up..
         if(mMinima != null){
             mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
-        }
 
-        //Clean Unbind
-        unbindService(this);
+            //Clean Unbind
+            unbindService(this);
+        }
     }
 
         @Override
@@ -71,7 +70,12 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
         Runnable adder = new Runnable() {
             @Override
             public void run() {
-                mText.append(zText);
+                if(zText.endsWith("\n")){
+                    mText.append(zText);
+                }else{
+                    mText.append(zText+"\n");
+                }
+
             }
         };
 

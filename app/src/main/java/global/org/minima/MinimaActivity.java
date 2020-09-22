@@ -32,6 +32,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
     //The Help Button
     Button btnMini;
+    Button btnLogs;
 
     //The IP Text..
     TextView mTextIP;
@@ -52,27 +53,29 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
         setContentView(R.layout.activity_main);
 
-
         //The Button to open the local browser
         btnMini = findViewById(R.id.btn_minidapp);
-
-        // btn open 127.0.0.1:21000 `Minidapp`
         btnMini.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:9004/"));
+                startActivity(intent);
+            }
+        });
+        btnMini.setVisibility(View.GONE);
 
-                //Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:9004/"));
+        btnLogs= findViewById(R.id.btn_logs);
+        btnLogs.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
                 Intent intent = new Intent(MinimaActivity.this, MinimaLogs.class);
-
                 startActivity(intent);
             }
         });
 
-        btnMini.setVisibility(View.INVISIBLE);
-
         //The TEXT that shows the current IP
         mTextIP = findViewById(R.id.iptext_minidapp);
-        mTextIP.setText("Synchronising.. please wait..");
+        mTextIP.setText("\nSynchronising.. please wait..");
 
         //start Minima node Foreground Service
         Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
@@ -107,7 +110,11 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
         //Remove the message listener.. don;t want to clog it up..
         if(mMinima != null){
-            mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
+            try{
+                mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
+            }catch(Exception exc){
+
+            }
 
             //Clean Unbind
             unbindService(this);
@@ -172,6 +179,18 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         runOnUiThread(uiupdate);
     }
 
+    public void setPercentInitial(final float zPerc){
+        Runnable uiupdate = new Runnable() {
+            @Override
+            public void run() {
+                mTextIP.setText("\nSynchronising.. "+(int)(zPerc)+"%");
+            }
+        };
+
+        //Update..
+        runOnUiThread(uiupdate);
+    }
+
 //    @Override
 //    public void onBackPressed() {
 //        moveTaskToBack(true);
@@ -183,14 +202,30 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
         mMinima = binder.getService();
 
-        if(mMinima.getMinima().getServer().getConsensusHandler().isInitialSyncComplete()){
-            MinimaLogger.log("INITIAL SYNC COMPLETE!");
-            setPostSyncDetails();
-        }else{
-            MinimaLogger.log("ACTIVITY LISTEN FOR SYNC COMPLETE..");
-            //Listen for messages..
-            mMinima.getMinima().getServer().getConsensusHandler().addListener(this);
-        }
+        Thread addlistener = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try{
+                    while(mMinima.getMinima() == null){Thread.sleep(250);}
+                    while(mMinima.getMinima().getServer() == null){Thread.sleep(250);}
+                    while(mMinima.getMinima().getServer().getConsensusHandler() == null){Thread.sleep(250);}
+
+                    //ready..
+                    if(mMinima.getMinima().getServer().getConsensusHandler().isInitialSyncComplete()){
+                        MinimaLogger.log("INITIAL SYNC COMPLETE!");
+                        setPostSyncDetails();
+                    }else{
+                        MinimaLogger.log("ACTIVITY LISTEN FOR SYNC COMPLETE..");
+                        //Listen for messages..
+                        mMinima.getMinima().getServer().getConsensusHandler().addListener(MinimaActivity.this);
+                    }
+                }catch(Exception exc){
+
+                }
+            }
+        });
+        addlistener.start();
+
     }
 
     @Override
@@ -203,6 +238,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
             MinimaLogger.log("ACTIVITY SYNC COMPLETE : " + zMessage);
             setPostSyncDetails();
+
+        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALPERC)) {
+            setPercentInitial(zMessage.getFloat("percent"));
 
         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_LOG)) {
             String log = zMessage.getString("msg");
