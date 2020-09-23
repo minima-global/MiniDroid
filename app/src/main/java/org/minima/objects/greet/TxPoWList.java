@@ -23,6 +23,10 @@ public class TxPoWList implements Streamable {
 		return mTxPowList;
 	}
 	
+	public int size() {
+		return mTxPowList.size();
+	}
+	
 	@Override
 	public void writeDataStream(DataOutputStream zOut) throws IOException {
 		int len = mTxPowList.size();

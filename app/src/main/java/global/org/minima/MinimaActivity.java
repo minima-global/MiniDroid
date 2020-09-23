@@ -179,11 +179,11 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         runOnUiThread(uiupdate);
     }
 
-    public void setPercentInitial(final float zPerc){
+    public void setPercentInitial(final String zMessage){
         Runnable uiupdate = new Runnable() {
             @Override
             public void run() {
-                mTextIP.setText("\nSynchronising.. "+(int)(zPerc)+"%");
+                mTextIP.setText("\n"+zMessage);
             }
         };
 
@@ -198,7 +198,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-        MinimaLogger.log("CONNECTED TO SERVICE");
+        //MinimaLogger.log("CONNECTED TO SERVICE");
         MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
         mMinima = binder.getService();
 
@@ -212,10 +212,10 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
                     //ready..
                     if(mMinima.getMinima().getServer().getConsensusHandler().isInitialSyncComplete()){
-                        MinimaLogger.log("INITIAL SYNC COMPLETE!");
+                        //MinimaLogger.log("INITIAL SYNC COMPLETE!");
                         setPostSyncDetails();
                     }else{
-                        MinimaLogger.log("ACTIVITY LISTEN FOR SYNC COMPLETE..");
+                        MinimaLogger.log("ACTIVITY : LISTENING FOR SYNC COMPLETE..");
                         //Listen for messages..
                         mMinima.getMinima().getServer().getConsensusHandler().addListener(MinimaActivity.this);
                     }
@@ -240,7 +240,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             setPostSyncDetails();
 
         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALPERC)) {
-            setPercentInitial(zMessage.getFloat("percent"));
+            setPercentInitial(zMessage.getString("info"));
 
         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_LOG)) {
             String log = zMessage.getString("msg");
