@@ -2,47 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="global.org.minima">
 
-    <application
-        android:allowBackup="true"
-        android:largeHeap="true"
-        android:persistent="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:usesCleartextTraffic="true"
-        android:supportsRtl="true"
-        android:theme="@style/AppTheme">
-
-        <activity android:name=".MinimaActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-        </activity>
-
-        <activity android:name=".MinimaLogs" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"></activity>
-
-        <service
-            android:name=".MinimaService"
-            android:enabled="true"
-            android:exported="true">
-        </service>
-        <!--android:process="org.minima.service" -->
-
-        <service android:name=".ServiceStarterJobService" android:permission="android.permission.BIND_JOB_SERVICE"/>
-
-        <receiver android:name=".BootReceiver">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED"/>
-            </intent-filter>
-        </receiver>
-
-        <receiver android:name=".Alarm"></receiver>
-
-    </application>
-
     <!-- Foreground Service allowed -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- Internet access -->
@@ -57,5 +16,45 @@
     <!-- BOOT Message -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"></uses-permission>
 
+
+    <application
+        android:allowBackup="true"
+        android:largeHeap="true"
+        android:persistent="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:usesCleartextTraffic="true"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity android:name="android.MinimaActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <activity android:name="android.MinimaLogs" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"></activity>
+
+        <service
+            android:name="android.service.MinimaService"
+            android:enabled="true"
+            android:exported="true">
+        </service>
+
+        <service android:name="android.service.ServiceStarterJobService" android:permission="android.permission.BIND_JOB_SERVICE"/>
+
+        <receiver android:name="android.boot.BootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name="android.boot.Alarm"></receiver>
+
+    </application>
 
 </manifest>

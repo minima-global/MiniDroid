@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    tools:context=".MinimaLogs">
+    tools:context="android.MinimaLogs">
 
     <HorizontalScrollView
         android:id="@+id/SCROLLER_ID"
