@@ -212,7 +212,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
                     //ready..
                     if(mMinima.getMinima().getServer().getConsensusHandler().isInitialSyncComplete()){
-                        //MinimaLogger.log("INITIAL SYNC COMPLETE!");
+                        MinimaLogger.log("ACTIVITY : INITIAL SYNC COMPLETE ON STARTUP..");
                         setPostSyncDetails();
                     }else{
                         MinimaLogger.log("ACTIVITY : LISTENING FOR SYNC COMPLETE..");
@@ -237,7 +237,33 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     public void processMessage(Message zMessage) {
         if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
             MinimaLogger.log("ACTIVITY SYNC COMPLETE : " + zMessage);
-            setPostSyncDetails();
+
+            if(!mSynced) {
+                Thread rr = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            setPercentInitial("Almost Done.. !");
+                            Thread.sleep(3000);
+
+                            setPercentInitial("Almost Done.. 3");
+                            Thread.sleep(3000);
+
+                            setPercentInitial("Almost Done.. 2");
+                            Thread.sleep(3000);
+
+                            setPercentInitial("Almost Done.. 1");
+                            Thread.sleep(3000);
+
+                        } catch (Exception exc) {
+                        }
+
+                        //Set the correct view..
+                        setPostSyncDetails();
+                    }
+                });
+                rr.start();
+            }
 
         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALPERC)) {
             setPercentInitial(zMessage.getString("info"));

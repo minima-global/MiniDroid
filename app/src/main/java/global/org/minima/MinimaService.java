@@ -280,7 +280,7 @@ public class MinimaService extends Service {
                 @Override
                 public void run() {
 
-                    loadMiniDapp("blockv1.3.8.minidapp");
+                    loadMiniDapp("block1.3.9.minidapp");
                     loadMiniDapp("walletv98.05.minidapp");
                     loadMiniDapp("coinflip.minidapp");
                     loadMiniDapp("dexxed.minidapp");
@@ -318,7 +318,7 @@ public class MinimaService extends Service {
 
             mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(msg);
         }catch(Exception Exc) {
-
+            MinimaLogger.log("ERROR install MiniDAPP : "+zMiniDapp);
         }
     }
 
