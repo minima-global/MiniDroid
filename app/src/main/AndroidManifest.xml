@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="global.org.minima">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="global.org.minima">
 
     <!-- Foreground Service allowed -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -16,7 +15,6 @@
     <!-- BOOT Message -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"></uses-permission>
 
-
     <application
         android:allowBackup="true"
         android:largeHeap="true"
@@ -28,7 +26,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name="android.MinimaActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize">
+        <!-- ACTIVITIES -->
+        <activity android:name=".MinimaActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -37,23 +36,20 @@
 
         </activity>
 
-        <activity android:name="android.MinimaLogs" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"></activity>
+        <activity android:name=".MinimaLogs" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"></activity>
 
-        <service
-            android:name="android.service.MinimaService"
-            android:enabled="true"
-            android:exported="true">
-        </service>
+        <!-- SERVICES -->
+        <service android:name="com.minima.service.MinimaService" android:enabled="true" android:exported="true"></service>
+        <service android:name="com.minima.service.ServiceStarterJobService" android:permission="android.permission.BIND_JOB_SERVICE"/>
 
-        <service android:name="android.service.ServiceStarterJobService" android:permission="android.permission.BIND_JOB_SERVICE"/>
-
-        <receiver android:name="android.boot.BootReceiver">
+        <!-- RECEIVERS -->
+        <receiver android:name="com.minima.boot.BootReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
 
-        <receiver android:name="android.boot.Alarm"></receiver>
+        <receiver android:name="com.minima.boot.Alarm"></receiver>
 
     </application>
 

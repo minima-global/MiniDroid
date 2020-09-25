@@ -61,7 +61,7 @@ public class Start {
 				ArrayList<String> vars = new ArrayList<>();
 				
 				vars.add("-daemon");
-				vars.add("-cleanhard");
+//				vars.add("-clean");
 //				vars.add("-port");
 //				vars.add("9001");
 //				vars.add("-connect");
