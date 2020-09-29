@@ -45,6 +45,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 
+        <Button
+            android:id="@+id/btn_reset"
+            android:layout_marginLeft="10dip"
+            android:text="RESTART"
+            android:textColor="#FFFFFF"
+            android:textSize="16dip"
+            android:background="@drawable/roundbutton"
+            android:padding="20dip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+
     </androidx.appcompat.widget.LinearLayoutCompat>
 
 

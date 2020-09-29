@@ -89,10 +89,11 @@ public class MinimaService extends Service {
     public void onCreate() {
         super.onCreate();
 
-//        MinimaLogger.log("Service : onCreate");
+        MinimaLogger.log("Service : onCreate");
         mListenerAdded  = false;
         mLastActionTime = System.currentTimeMillis();
         mStopQuitter    = false;
+        mFirstRun       = true;
 
         //Power
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
@@ -136,55 +137,10 @@ public class MinimaService extends Service {
         mAlarm.setAlarm(this);
 
         mService = this;
-
-//        startQuitter();
     }
 
     public Start getMinima(){
         return mStart;
-    }
-
-    /**
-     * A loop thread that shuts down the service if NOT on power and nothing has happened for 5 minutes..
-     *
-     * Will be restarted by the ALARM..
-     */
-    public void startQuitter(){
-        Runnable quitter = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    while(!mStopQuitter){
-                        //Wait a minute and check again..
-                        Thread.sleep(1000 * 10);
-
-                        long timenow = System.currentTimeMillis();
-                        long diff = timenow - mLastActionTime;
-
-                        boolean onPower = isPlugged(MinimaService.this);
-
-                        if(diff > (5 * 60  * 1000) && !onPower){
-                            MinimaLogger.log("AUTO QUITTER START");
-                            //Shut down cleanly..
-                            String result = RPCClient.sendGET("http://127.0.0.1:8999/quit");
-                            MinimaLogger.log("AUTO QUITTER : "+result);
-
-                            //Stop the service
-                            Intent intent = new Intent(getBaseContext(), MinimaService.class);
-                            stopService(intent);
-
-                            mStopQuitter = true;
-                        }
-                    }
-                } catch (Exception e) {
-                    MinimaLogger.log(e.toString());
-                    e.printStackTrace();
-                }
-            }
-        };
-
-        Thread tt = new Thread(quitter);
-        tt.start();
     }
 
     public Notification createNotification(String zText){
@@ -212,7 +168,7 @@ public class MinimaService extends Service {
             Thread installer = new Thread(new Runnable() {
                 @Override
                 public void run() {
-//                    MinimaLogger.log("Service : Initialise begin..");
+                    MinimaLogger.log("Service : Initialise begin..");
 
                     try {
                         //Wait for Minima to start..
@@ -224,7 +180,10 @@ public class MinimaService extends Service {
 
                         //Are we already up and running..
                         if(mStart.getServer().getConsensusHandler().isInitialSyncComplete()){
+                            MinimaLogger.log("Service : Initial Sync complete at start..");
                             installDappSuite();
+                        }else{
+                            MinimaLogger.log("Service : Initial Sync listen for complete..");
                         }
 
                         mStart.getServer().getConsensusHandler().addListener(new MessageListener() {
@@ -260,7 +219,7 @@ public class MinimaService extends Service {
                             }
                         });
 
-                        //MinimaLogger.log("Service : Initialise end.. ");
+                        MinimaLogger.log("Service : Initialise end.. ");
 
                     } catch (Exception e) {
                         MinimaLogger.log("Start Service Exception "+e);
@@ -276,13 +235,14 @@ public class MinimaService extends Service {
 
     public void installDappSuite(){
         if(mFirstRun) {
+            MinimaLogger.log("Service : Install all DAPPS..");
             mFirstRun = false;
 
             Thread mini_install = new Thread(new Runnable() {
                 @Override
                 public void run() {
 
-                    loadMiniDapp("block1.3.9.minidapp");
+                    loadMiniDapp("blockv1.3.10.minidapp");
                     loadMiniDapp("walletv98.05.minidapp");
                     loadMiniDapp("coinflip.minidapp");
                     loadMiniDapp("dexxed.minidapp");
@@ -297,6 +257,8 @@ public class MinimaService extends Service {
 
             //Run it..
             mini_install.start();
+        }else{
+            MinimaLogger.log("Service : Install DAPPS - not first run..");
         }
     }
 
@@ -308,7 +270,6 @@ public class MinimaService extends Service {
             is.close();
 
             //Post them to Minima..
-            MinimaLogger.log("Installing MiniDAPP : "+zMiniDapp);
             MiniData dapp = new MiniData(fileBytes);
 
             //The Install message
@@ -319,6 +280,7 @@ public class MinimaService extends Service {
             msg.addString("filename", zMiniDapp);
 
             mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(msg);
+
         }catch(Exception Exc) {
             MinimaLogger.log("ERROR install MiniDAPP : "+zMiniDapp);
         }
@@ -329,6 +291,7 @@ public class MinimaService extends Service {
         super.onDestroy();
 
         MinimaLogger.log("Service : onDestroy");
+        mListenerAdded = false;
 
         //Post It..
         if(mStart != null && mStart.getServer()!=null && mStart.getServer().isRunning()){

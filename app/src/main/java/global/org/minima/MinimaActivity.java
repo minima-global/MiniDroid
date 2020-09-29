@@ -2,6 +2,7 @@ package global.org.minima;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.Uri;
@@ -10,7 +11,9 @@ import android.os.IBinder;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import org.minima.GlobalParams;
@@ -28,9 +31,9 @@ import com.minima.service.MinimaService;
 
 public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
 
-    //The Help Button
     Button btnMini;
     Button btnLogs;
+    Button btnRestart;
 
     //The IP Text..
     TextView mTextIP;
@@ -71,6 +74,22 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             }
         });
 
+        btnRestart= findViewById(R.id.btn_reset);
+        btnRestart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new AlertDialog.Builder(MinimaActivity.this)
+                        .setTitle("Restart Minima")
+                        .setMessage("Please confirm ?")
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                restartMinima();
+                            }})
+                        .setNegativeButton(android.R.string.no, null).show();
+            }
+        });
+
         //The TEXT that shows the current IP
         mTextIP = findViewById(R.id.iptext_minidapp);
         mTextIP.setText("\nSynchronising.. please wait..");
@@ -80,6 +99,44 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         startForegroundService(minimaintent);
 
         bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+    }
+
+    public void restartMinima(){
+        //Hide the start Button..
+        btnMini.setVisibility(View.GONE);
+        mTextIP.setText("\nSynchronising.. please wait..");
+
+        Thread restart = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                toastPopUp("Disconnecting from Minima..");
+                //Disconnect..
+                disconnectFromService();
+
+                //Wait a few seconds..
+                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+
+                toastPopUp("Stopping Service..");
+                //First stop the service,,
+                Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+                stopService(minimaintent);
+
+                //Wait a few seconds..
+                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+
+                //And then restart it..
+                toastPopUp("Re-Starting Service");
+                Intent minimaintentstarter = new Intent(getBaseContext(), MinimaService.class);
+                startForegroundService(minimaintentstarter);
+
+                //Wait a few seconds..
+                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+
+                toastPopUp("Re-Binding to Minima..");
+                bindService(minimaintent, MinimaActivity.this, Context.BIND_AUTO_CREATE);
+            }
+        });
+        restart.start();
     }
 
 //    @Override
@@ -104,15 +161,16 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        //MinimaLogger.log("Activity : onDestroy");
 
         //Remove the message listener.. don;t want to clog it up..
+        disconnectFromService();
+    }
+
+    private void disconnectFromService(){
         if(mMinima != null){
             try{
                 mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
-            }catch(Exception exc){
-
-            }
+            }catch(Exception exc){}
 
             //Clean Unbind
             unbindService(this);
@@ -161,6 +219,18 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         }
 
         return mHost;
+    }
+
+    public void toastPopUp(final String zText){
+        Runnable littletoast = new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MinimaActivity.this, zText, Toast.LENGTH_LONG).show();
+            }
+        };
+
+        //Update..
+        runOnUiThread(littletoast);
     }
 
     public void setPostSyncDetails(){
@@ -215,10 +285,15 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                     if(mMinima.getMinima().getServer().getConsensusHandler().isInitialSyncComplete()){
                         MinimaLogger.log("ACTIVITY : INITIAL SYNC COMPLETE ON STARTUP..");
                         setPostSyncDetails();
+
                     }else{
                         MinimaLogger.log("ACTIVITY : LISTENING FOR SYNC COMPLETE..");
+
                         //Listen for messages..
                         mMinima.getMinima().getServer().getConsensusHandler().addListener(MinimaActivity.this);
+
+                        //And Post a message to make sure it is actually running..
+
                     }
                 }catch(Exception exc){
 
@@ -241,38 +316,12 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
             setPercentInitial("Almost Done.. Checking MiniDAPPs");
 
-//            if(!mSynced) {
-//                Thread rr = new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        try {
-//                            setPercentInitial("Almost Done.. !");
-//                            Thread.sleep(3000);
-//
-//                            setPercentInitial("Almost Done.. 3");
-//                            Thread.sleep(3000);
-//
-//                            setPercentInitial("Almost Done.. 2");
-//                            Thread.sleep(3000);
-//
-//                            setPercentInitial("Almost Done.. 1");
-//                            Thread.sleep(3000);
-//
-//                        } catch (Exception exc) {
-//                        }
-//
-//                        //Set the correct view..
-//                        setPostSyncDetails();
-//                    }
-//                });
-//                rr.start();
-//            }
-
         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALPERC)) {
             setPercentInitial(zMessage.getString("info"));
 
         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_DAPP_RELOAD)) {
             MinimaLogger.log("ACTIVITY : DAPPS LOADED");
+
             //Set the correct view..
             setPostSyncDetails();
 
