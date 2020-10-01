@@ -9,22 +9,22 @@
     android:gravity="center"
     tools:context=".MinimaLogs">
 
-    <HorizontalScrollView
-        android:id="@+id/SCROLLER_ID"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+<!--    <HorizontalScrollView-->
+<!--        android:id="@+id/SCROLLER_ID"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent"-->
+<!--        android:fillViewport="true">-->
 
         <TextView
             android:id="@+id/logstext"
             android:text=""
             android:textStyle="bold"
-            android:textSize="14dip"
+            android:textSize="10dip"
             android:scrollbars="vertical"
             android:layout_weight="1.0"
-            android:layout_width="10000dip"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"/>
 
-    </HorizontalScrollView>
+<!--    </HorizontalScrollView>-->
 
 </LinearLayout>
