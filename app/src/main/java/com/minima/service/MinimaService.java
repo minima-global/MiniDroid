@@ -242,8 +242,8 @@ public class MinimaService extends Service {
                 @Override
                 public void run() {
 
-                    loadMiniDapp("blockv1.3.17.minidapp");
-                    loadMiniDapp("walletv98.06.minidapp");
+                    loadMiniDapp("block.minidapp");
+                    loadMiniDapp("wallet.minidapp");
                     loadMiniDapp("coinflip.minidapp");
                     loadMiniDapp("dexxed.minidapp");
                     loadMiniDapp("terminal.minidapp");
