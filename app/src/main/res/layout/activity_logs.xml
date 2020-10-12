@@ -15,14 +15,19 @@
 <!--        android:layout_height="match_parent"-->
 <!--        android:fillViewport="true">-->
 
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
         <TextView
             android:id="@+id/logstext"
             android:text=""
             android:textStyle="bold"
             android:textSize="10dip"
-            android:scrollbars="vertical"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="wrap_content"/>
+
+        </ScrollView>
 
 <!--    </HorizontalScrollView>-->
 

@@ -89,6 +89,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                         .setNegativeButton(android.R.string.no, null).show();
             }
         });
+        btnRestart.setVisibility(View.GONE);
 
         //The TEXT that shows the current IP
         mTextIP = findViewById(R.id.iptext_minidapp);
@@ -97,18 +98,19 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         //start Minima node Foreground Service
         Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
         startForegroundService(minimaintent);
-
         bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
     }
 
     public void restartMinima(){
         //Hide the start Button..
         btnMini.setVisibility(View.GONE);
-        mTextIP.setText("\nSynchronising.. please wait..");
+        mTextIP.setText("\nRestarting Minima.. please wait..");
 
         Thread restart = new Thread(new Runnable() {
             @Override
             public void run() {
+                mSynced = false;
+
                 toastPopUp("Disconnecting from Minima..");
                 //Disconnect..
                 disconnectFromService();

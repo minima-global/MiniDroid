@@ -34,7 +34,6 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
 
         mText = (TextView)findViewById(R.id.logstext);
         mText.setTypeface(Typeface.MONOSPACE);
-        mText.setMovementMethod(new ScrollingMovementMethod());
 
         //Connect tp the service..
         Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
