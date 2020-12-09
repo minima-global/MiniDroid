@@ -153,10 +153,11 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 stopService(minimaintent);
 
                 //Wait a few seconds..
-                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+                try {Thread.sleep(10000);} catch (InterruptedException e) {}
 
-                //toastPopUp("Minima Shutdown Complete..");
-                //try {Thread.sleep(5000);} catch (InterruptedException e) {}
+                toastPopUp("Minima Shutdown Complete..");
+
+                try {Thread.sleep(3000);} catch (InterruptedException e) {}
 
                 MinimaActivity.this.finish();
                 System.exit(0);
