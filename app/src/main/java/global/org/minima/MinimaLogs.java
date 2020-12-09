@@ -8,7 +8,11 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.text.method.ScrollingMovementMethod;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -32,14 +36,41 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
 
         setContentView(global.org.minima.R.layout.activity_logs);
 
+        setTitle("Minima Logs");
+
         mText = (TextView)findViewById(R.id.logstext);
         mText.setTypeface(Typeface.MONOSPACE);
-
-        //Testing the branching!
 
         //Connect tp the service..
 //        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
 //        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.logoptions, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.share:
+                Intent sendIntent = new Intent();
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, MinimaLogger.getFullOutput());
+                sendIntent.setType("text/plain");
+
+                Intent shareIntent = Intent.createChooser(sendIntent, null);
+                startActivity(shareIntent);
+
+                return true;
+
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     @Override
