@@ -104,12 +104,25 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
         Runnable adder = new Runnable() {
             @Override
             public void run() {
+                //How big is it..
+                String current = mText.getText().toString();
+
+                //Check the Length
+                int len = current.length();
+                if(len>250000){
+                    //Resize in order
+                    String tt = current.substring(len-100000,len);
+
+                    //And now set it
+                    mText.setText("...(cropped)\n"+tt);
+                }
+
+                //And add the new..
                 if(zText.endsWith("\n")){
                     mText.append(zText);
                 }else{
                     mText.append(zText+"\n");
                 }
-
             }
         };
 
