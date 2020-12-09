@@ -8,6 +8,9 @@ import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -73,6 +76,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 startActivity(intent);
             }
         });
+        btnLogs.setVisibility(View.GONE);
 
         btnRestart= findViewById(R.id.btn_reset);
         btnRestart.setOnClickListener(new View.OnClickListener() {
@@ -102,7 +106,68 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
     }
 
-    public void restartMinima(){
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.titleoptions, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.minimahelp:
+                Toast.makeText(this,"HELP!!",Toast.LENGTH_SHORT).show();
+                return true;
+
+            case R.id.minimalogs:
+                Intent intent = new Intent(MinimaActivity.this, MinimaLogs.class);
+                startActivity(intent);
+                return true;
+
+            case R.id.shutdown:
+                shutdownMinima();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    public void shutdownMinima() {
+
+        Thread shutdown = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //Little message
+                toastPopUp("Disconnecting from Minima..");
+
+                disconnectFromService();
+
+                //Wait a few seconds..
+                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+
+                toastPopUp("Stopping Service..");
+
+                Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+                stopService(minimaintent);
+
+                //Wait a few seconds..
+                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+
+                //toastPopUp("Minima Shutdown Complete..");
+                //try {Thread.sleep(5000);} catch (InterruptedException e) {}
+
+                MinimaActivity.this.finish();
+                System.exit(0);
+            }
+        });
+
+        shutdown.start();
+
+    }
+
+        public void restartMinima(){
         //Hide the start Button..
         btnMini.setVisibility(View.GONE);
         mTextIP.setText("\nRestarting Minima.. please wait..");
