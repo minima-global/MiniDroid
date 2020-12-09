@@ -16,6 +16,7 @@ import org.minima.database.coindb.CoinDBRow;
 import org.minima.database.coindb.java.FastCoinDB;
 import org.minima.database.mmr.MMRData;
 import org.minima.database.mmr.MMREntry;
+import org.minima.database.mmr.MMREntryDB;
 import org.minima.database.mmr.MMRProof;
 import org.minima.database.mmr.MMRSet;
 import org.minima.database.txpowdb.TxPOWDBRow;
@@ -321,6 +322,16 @@ public class MinimaDB {
 			//Get the removals
 			ArrayList<BlockTreeNode> removals = casc.getRemoved();
 			
+			//Get all the saved blocks and store them!
+			ArrayList<BlockTreeNode> saved = casc.getSaveNodes();
+			for(BlockTreeNode snode : saved) {
+				SyncPacket pack = new SyncPacket(snode, false);
+				pack.getTxPOW().clearBody();
+				
+				//And save it to disk..
+				getBackup().backupBlock(pack);
+			}
+			
 			//Get the Tree
 			mMainTree = casc.getCascadeTree();
 			
@@ -339,6 +350,9 @@ public class MinimaDB {
 			//Remove all TXPowRows that are less than the cascade node.. they will not be used again..
 			MiniNumber cascade 	= mMainTree.getCascadeNode().getBlockNumber();
 			
+			//Update the MMREntryDB to remove unneeded MMR data..
+			MMREntryDB.getDB().cleanUpDB(cascade);
+			
 			//Which txpow have been removed..
 			ArrayList<TxPOWDBRow> remrows =  mTxPOWDB.removeTxPOWInBlockLessThan(cascade);
 			
@@ -349,6 +363,9 @@ public class MinimaDB {
 			
 			//Remove all the coins no longer needed.. SPENT
 			mCoinDB.removeOldSpentCoins(cascade);
+			
+			//Clean up..
+			System.gc();
 		}
 	}
 	
@@ -364,7 +381,7 @@ public class MinimaDB {
 				boolean spent = mmrcoin.getData().isSpent();
 				
 				//Is the address one of ours..
-				boolean rel = getUserDB().isAddressRelevant(cc.getAddress());
+				boolean rel = getUserDB().isCoinRelevant(cc);
 					
 				//Check the PREV State - could be a KEY or ADDRESS we own..
 				if(!rel) {
@@ -465,7 +482,7 @@ public class MinimaDB {
 		
 		//First check the main transaction..
 		if(nodetxp.isTransaction()) {
-			boolean inputvalid = TxPoWChecker.checkTransactionMMR(nodetxp, this, nodetxp, txncounter, zMMRSet,true);
+			boolean inputvalid = TxPoWChecker.checkTransactionMMR(nodetxp, this, nodetxp, zMMRSet,true);
 			if(!inputvalid) {
 				return false;
 			}
@@ -477,11 +494,13 @@ public class MinimaDB {
 			TxPOWDBRow row = getTxPOWRow(txn);
 			TxPoW txpow    = row.getTxPOW();
 			
-			//Check the Proof..
-			txncounter = txncounter.increment();
-			boolean inputvalid = TxPoWChecker.checkTransactionMMR(txpow, this, nodetxp, txncounter, zMMRSet,true);
-			if(!inputvalid) {
-				return false;
+			//Check the Proof.. - after a sync some txpow are assume valid..
+			if(!row.isAssumeValid()) {
+				txncounter = txncounter.increment();
+				boolean inputvalid = TxPoWChecker.checkTransactionMMR(txpow, this, nodetxp, zMMRSet,true);
+				if(!inputvalid) {
+					return false;
+				}
 			}
 			
 			//Is it a block with no transaction..
@@ -558,6 +577,45 @@ public class MinimaDB {
 		CascadeTree casc = new CascadeTree(mMainTree);
 		casc.cascadedTree();
 		mMainTree = casc.getCascadeTree();
+	}
+	
+	
+	/**
+	 * Clear the TxPoWDB so that only valid TxPOW in the main chain are kept
+	 * 
+	 * Use after a re-sync
+	 */
+	public void resetAllTxPowOnMainChain(){
+		//And Now sort the TXPOWDB
+		ArrayList<BlockTreeNode> list = getMainTree().getAsList();
+		getTxPowDB().resetAllInBlocks();
+		
+		//Now sort
+		for(BlockTreeNode treenode : list) {
+			//Get the Block
+			TxPoW txpow = treenode.getTxPow();
+			
+			//What Block
+			MiniNumber block = txpow.getBlockNumber();
+			
+			//Set the main chain details..
+			TxPOWDBRow blockrow = getTxPowDB().findTxPOWDBRow(txpow.getTxPowID());
+			blockrow.setInBlockNumber(block);
+			blockrow.setMainChainBlock(true);
+			blockrow.setIsInBlock(true);
+			
+			//Now the Txns..
+			ArrayList<MiniData> txpowlist = txpow.getBlockTransactions();
+			for(MiniData txid : txpowlist) {
+				TxPOWDBRow trow = getTxPowDB().findTxPOWDBRow(txid);
+				if(trow!=null) {
+					//Set that it is in this block
+					trow.setMainChainBlock(false);
+					trow.setIsInBlock(true);
+					trow.setInBlockNumber(block);
+				}
+			}
+		}
 	}
 	
 	/**
@@ -1082,7 +1140,7 @@ public class MinimaDB {
 		//Check the first transaction
 		MiniNumber txncounter = MiniNumber.ZERO;
 		if(!zTrans.isEmpty()) {
-			boolean valid = TxPoWChecker.checkTransactionMMR(zTrans, zWitness, this, txpow, txncounter, newset, true, zContractLogs);
+			boolean valid = TxPoWChecker.checkTransactionMMR(zTrans, zWitness, this, txpow, newset, true, zContractLogs);
 			
 			//MUST be valid.. ?
 			if(!valid) {
@@ -1108,7 +1166,7 @@ public class MinimaDB {
 			 */
 			if(txp.isTransaction()) {
 				MiniNumber txncountertest = txncounter.increment();
-				boolean valid = TxPoWChecker.checkTransactionMMR(txp, this, txpow, txncountertest, newset,true);
+				boolean valid = TxPoWChecker.checkTransactionMMR(txp, this, txpow, newset,true);
 				
 				if(valid) {
 					//Valid so added
@@ -1156,10 +1214,6 @@ public class MinimaDB {
 	}
 	
 	public SyncPackage getSyncPackage() {
-		return getSyncPackage(false);
-	}
-	
-	public SyncPackage getSyncPackage(boolean zDeepCopy) {
 		SyncPackage sp = new SyncPackage();
 		
 		//Is there anything.. ?
@@ -1180,38 +1234,43 @@ public class MinimaDB {
 			sp.getAllNodes().add(0,new SyncPacket(node, block.isLess(casc)));
 		}
 		
-		//If sending this over the network.. make a copy.. as TxPoW could change (body removed if cascade)
-		if(zDeepCopy) {
-			//Write it out..
-			try {
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				DataOutputStream dos = new DataOutputStream(baos);
-				sp.writeDataStream(dos);
-				dos.flush();
-				
-				//And read it in..
-				ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-				DataInputStream dis = new DataInputStream(bais);
-				
-				//Now read it in.. 
-				SyncPackage spdeep = new SyncPackage();
-				spdeep.readDataStream(dis);
-				
-				//Clean up
-				dos.close();
-				baos.close();
-				
-				dis.close();
-				bais.close();
-				
-				return spdeep;
-				
-			}catch(Exception exc) {
-				exc.printStackTrace();
-			}	
-		}
+		//Now create a DEEP copy
+		SyncPackage spdeep = new SyncPackage();
+		try {
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(baos);
+			sp.writeDataStream(dos);
+			dos.flush();
+			
+			//And read it in..
+			ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+			DataInputStream dis = new DataInputStream(bais);
+			
+			//Now read it in.. 
+			spdeep.readDataStream(dis);
+			
+			//Clean up
+			dos.close();
+			baos.close();
+			
+			dis.close();
+			bais.close();
+			
+		}catch(Exception exc) {
+			exc.printStackTrace();
+		}	
 		
-		return sp;
+		//Now remove all the bodies..
+		ArrayList<SyncPacket> packs = spdeep.getAllNodes();
+		for(SyncPacket pack : packs) {
+			pack.getTxPOW().clearBody();
+		}
+	
+		//Clean up after this large-ish event..
+		System.gc();
+		
+		//Return the lite sync package
+		return spdeep;
 	}
 		
 	/**

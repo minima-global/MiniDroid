@@ -34,7 +34,6 @@ import org.minima.utils.SQLHandler;
 import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.json.parser.JSONParser;
-import org.minima.utils.json.parser.ParseException;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageProcessor;
 import org.minima.utils.messages.TimerMessage;
@@ -101,8 +100,13 @@ public class DAPPManager extends MessageProcessor {
 	}
 	
 	public void stop() {
-		mDAPPServer.stop();
-		mCommsManager.shutdown();
+		if(mDAPPServer != null) {
+			mDAPPServer.stop();
+		}
+		
+		if(mCommsManager != null) {
+			mCommsManager.shutdown();
+		}
 		
 		stopMessageProcessor();
 	}
@@ -144,21 +148,18 @@ public class DAPPManager extends MessageProcessor {
 	        
 	        //And add the root folder..
 	        String root = zConf.getParent();
-	        int start = root.indexOf("/minidapps/");
-	        String webroot = root.substring(start);
-	        String approot = root.substring(start+11);
+	        int start = root.indexOf("minidapps");
+	        String uid = root.substring(start+10);
 	        
-	        ret.put("uid", approot);
-	        ret.put("root", webroot);
-	        ret.put("web", "http://"+mNetwork.getBaseHost()+":"+mNetwork.getMiniDAPPServerPort()+webroot);
+	        ret.put("uid", uid);
+	        ret.put("root", "/minidapps/"+uid);
+	        ret.put("web", "http://"+mNetwork.getBaseHost()+":"+mNetwork.getMiniDAPPServerPort()+"/minidapps/"+uid);
 	        
 	        bis.close();
 	        fis.close();
 	        
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (ParseException e) {
-			e.printStackTrace();
+		} catch (Exception e) {
+			MinimaLogger.log("Error Loading MiniDAPP conf "+zConf.getAbsolutePath(),e);
 		}
 		
 		return ret;
@@ -224,12 +225,15 @@ public class DAPPManager extends MessageProcessor {
 					}
 				}
 				
+				//Find the CONF file..
+//				File conf = findFile(app, "minidapp.conf");
+				
 				//Open it up..
-				File conf    = new File(app,"minidapp.conf");
+				File conf = new File(app,"minidapp.conf");
 				File backend = new File(app,"service.js");
 				
 				//Check it exists..
-				if(conf.exists()) {
+				if(conf!=null && conf.exists()) {
 					//Load it..
 					JSONObject confjson = loadConfFile(conf);
 					
@@ -316,7 +320,7 @@ public class DAPPManager extends MessageProcessor {
 			mDAPPServer = new DAPPServer(mNetwork.getMiniDAPPServerPort(), this);
 			try {
 				mDAPPServer.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
-				MinimaLogger.log("MiniDAPP server started on por "+mNetwork.getMiniDAPPServerPort());
+				MinimaLogger.log("MiniDAPP server started on port "+mNetwork.getMiniDAPPServerPort());
 				
 			} catch (IOException e) {
 				MinimaLogger.log("MiniDAPP server error "+ e.toString());
@@ -406,7 +410,11 @@ public class DAPPManager extends MessageProcessor {
 	        	}
 	        	
 	        	//Strip folder from name..
-	        	name = name.substring(folder.length());
+	        	if(name.startsWith(folder)) {
+	        		name = name.substring(folder.length());
+	        	}else {
+	        		MinimaLogger.log("WARNING : File outside of Main folder ["+folder+"] in MiniDAPP ["+filename+"] "+name);
+	        	}
 	        	
 	        	//Where does this file go
 	            File filePath = new File(dapp,name);
@@ -582,5 +590,27 @@ public class DAPPManager extends MessageProcessor {
 				bend.MinimaEvent(JSONEvent);
 			}
 		}	
+	}
+	
+	public File findFile(File zRootDirectory, String zFilename) {
+		File[] subs = zRootDirectory.listFiles();
+		if(subs != null) {
+			for(File app : subs) {
+				if(app.isDirectory()) {
+					File found = findFile(app, zFilename);
+					if(found!=null) {
+						return found;
+					}	
+				}
+				
+				if(app.isFile()) {
+					if(app.getName().equals(zFilename)) {
+						return app;
+					}
+				}
+			}
+		}
+		
+		return null;
 	}
 }

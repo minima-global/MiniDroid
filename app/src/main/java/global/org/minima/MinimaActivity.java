@@ -97,9 +97,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
         //start Minima node Foreground Service
         //text tweak
-        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
-        startForegroundService(minimaintent);
-        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+//        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+//        startForegroundService(minimaintent);
+//        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
     }
 
     public void restartMinima(){

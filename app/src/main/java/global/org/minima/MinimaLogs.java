@@ -35,9 +35,11 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
         mText = (TextView)findViewById(R.id.logstext);
         mText.setTypeface(Typeface.MONOSPACE);
 
+        //Testing the branching!
+
         //Connect tp the service..
-        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
-        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+//        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+//        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
     }
 
     @Override

@@ -1,4 +1,4 @@
-package org.minima.system.network;
+package org.minima.system.network.base;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.SocketException;
+import java.util.ArrayList;
 
 import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniByte;
@@ -19,6 +20,9 @@ import org.minima.objects.greet.TxPoWList;
 import org.minima.system.Main;
 import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.brains.ConsensusNet;
+import org.minima.system.network.NetworkHandler;
+import org.minima.system.txpow.TxPoWChecker;
+import org.minima.system.txpow.TxPoWMiner;
 import org.minima.utils.Crypto;
 import org.minima.utils.MiniFormat;
 import org.minima.utils.MinimaLogger;
@@ -174,18 +178,29 @@ public class MinimaReader implements Runnable {
 					//This is a MiniData Structure..
 					int datalen = mInput.readInt();
 					
+					//Buffer for reading
+					byte[] datarr = new byte[8096];
+					
 					ByteArrayOutputStream baos = new ByteArrayOutputStream(datalen);
 					long tot        = 0;
 					long lastnotify = -1;
 					while( tot < datalen ) {
-						baos.write(mInput.read());
-						tot++;
+						long remain = datalen - tot;
+						if(remain>8096) {
+							remain = 8096;
+						}
+						
+						//Read in the data..
+						int read = mInput.read(datarr,0,(int)remain);
+						baos.write(datarr,0,read);
+						tot+=read;
+						
 						//What Percent Done..
 						long newnotify = (tot*100)/datalen;
 						if(newnotify != lastnotify) {
 							lastnotify = newnotify;
 							notifyListeners("IBD download : "+lastnotify+"% of "+ibdsize);
-//							MinimaLogger.log("IBD download : "+lastnotify+"% of "+ibdsize+" tot*100:"+(tot*100)+" datalen:"+datalen);
+//							MinimaLogger.log("IBD download : "+lastnotify+"% of "+ibdsize);
 						}
 					}
 					baos.flush();
@@ -210,9 +225,6 @@ public class MinimaReader implements Runnable {
 				
 				//What kind of message is it..
 				if(msgtype.isEqual(NETMESSAGE_INTRO)) {
-					//tell us how big the sync was..
-//					MinimaLogger.log("Initial Sync Message : "+MiniFormat.formatSize(len));
-					
 					//Read in the SyncPackage
 					SyncPackage sp = new SyncPackage();
 					sp.readDataStream(inputstream);
@@ -229,11 +241,17 @@ public class MinimaReader implements Runnable {
 					
 				}else if(msgtype.isEqual(NETMESSAGE_TXPOW)) {
 					//A complete TxPOW
-					TxPoW tx = new TxPoW();
-					tx.readDataStream(inputstream);
+					TxPoW txpow = new TxPoW();
+					txpow.readDataStream(inputstream);
+					
+					//Is it even a valid TxPOW.. 
+					if(!TxPoWChecker.basicTxPowChecks(txpow)) {
+						//Hmm. something wrong..
+						throw new ProtocolException("INVALID TxPoW received : closing connection..");
+					}
 					
 					//Add this ID
-					rec.addObject("txpow", tx);
+					rec.addObject("txpow", txpow);
 					
 				}else if(msgtype.isEqual(NETMESSAGE_TXPOW_REQUEST)) {
 					//Requesting a TxPOW
@@ -262,8 +280,18 @@ public class MinimaReader implements Runnable {
 					//tell us how big the sync was..
 					MinimaLogger.log("TxPoW List Message : "+MiniFormat.formatSize(len));
 					
+					//Get the List
 					TxPoWList txplist = new TxPoWList();
 					txplist.readDataStream(inputstream);
+					
+					//Check them all..
+					ArrayList<TxPoW> txps = txplist.getList();
+					for(TxPoW txp : txps) {
+						if(!TxPoWChecker.basicTxPowChecks(txp)) {
+							//Hmm. something wrong..
+							throw new ProtocolException("INVALID TxPoW received in TxPoW List : closing connection..");
+						}
+					}
 					
 					//Add this ID
 					rec.addObject("txpowlist", txplist);
