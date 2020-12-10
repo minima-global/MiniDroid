@@ -26,6 +26,18 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="global.org.minima.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths">
+            </meta-data>
+        </provider>
+
         <!-- ACTIVITIES -->
         <activity android:name=".MinimaActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize">
 

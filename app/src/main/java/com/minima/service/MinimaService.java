@@ -242,14 +242,14 @@ public class MinimaService extends Service {
                 @Override
                 public void run() {
 
-                    loadMiniDapp("block.minidapp");
-                    loadMiniDapp("wallet.minidapp");
-                    loadMiniDapp("coinmaster.minidapp");
-                    loadMiniDapp("coinflip.minidapp");
-                    loadMiniDapp("dexxed.minidapp");
-                    loadMiniDapp("terminal.minidapp");
-                    loadMiniDapp("scriptide.minidapp");
-                    loadMiniDapp("futurecash.minidapp");
+//                    loadMiniDapp("block.minidapp");
+//                    loadMiniDapp("wallet.minidapp");
+//                    loadMiniDapp("coinmaster.minidapp");
+//                    loadMiniDapp("coinflip.minidapp");
+//                    loadMiniDapp("dexxed.minidapp");
+//                    loadMiniDapp("terminal.minidapp");
+//                    loadMiniDapp("scriptide.minidapp");
+//                    loadMiniDapp("futurecash.minidapp");
 
                     //And reload the lot..
                     mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(DAPPManager.DAPP_RELOAD);

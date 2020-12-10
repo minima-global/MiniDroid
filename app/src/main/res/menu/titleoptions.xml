@@ -4,6 +4,15 @@
     <item android:id="@+id/minimalogs"
         android:title="Open Logs"/>
 
+    <item android:id="@+id/shareapp"
+        android:title="Share this App"/>
+
+    <item android:id="@+id/backup"
+        android:title="Backup"/>
+
+    <item android:id="@+id/restore"
+        android:title="Restore"/>
+
     <item android:id="@+id/minimahelp"
         android:title="Help"/>
 

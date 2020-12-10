@@ -63,12 +63,15 @@ public class Start {
 				ArrayList<String> vars = new ArrayList<>();
 				
 				vars.add("-daemon");
-//				vars.add("-clean");
+				vars.add("-clean");
+
+//				vars.add("-private");
 //				vars.add("-port");
 //				vars.add("9001");
-//				vars.add("-connect");
-//				vars.add("34.90.172.118");
-//				vars.add("9001");
+
+				vars.add("-connect");
+				vars.add("35.228.18.150");
+				vars.add("9001");
 				vars.add("-conf");
 				vars.add(mConfFolder);
 				
@@ -322,6 +325,19 @@ public class Start {
 		}
 		
 		MinimaLogger.log("Main thread finished..");
+	}
+
+	public String runMinimaCMD(String zInput){
+		//Create a Command
+		CMD cmd = new CMD(zInput);
+
+		//Run it.. wait for it to finish
+		cmd.run();
+
+		//Get the Response..
+		String resp = cmd.getFinalResult();
+
+		return resp;
 	}
 }	
 

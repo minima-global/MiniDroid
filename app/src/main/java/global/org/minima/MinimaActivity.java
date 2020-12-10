@@ -18,6 +18,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 
 import org.minima.GlobalParams;
 import org.minima.system.brains.ConsensusHandler;
@@ -25,9 +26,12 @@ import org.minima.utils.MinimaLogger;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageListener;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Enumeration;
 
 import com.minima.service.MinimaService;
@@ -100,10 +104,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         mTextIP.setText("\nSynchronising.. please wait..");
 
         //start Minima node Foreground Service
-        //text tweak
-//        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
-//        startForegroundService(minimaintent);
-//        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+        startForegroundService(minimaintent);
+        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -126,12 +129,78 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 startActivity(intent);
                 return true;
 
+            case R.id.backup:
+                //First check we are connected..
+                if(!mSynced){
+                    Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
+                    return true;
+                }
+
+                //Get a timeStamp..
+                SimpleDateFormat s = new SimpleDateFormat("ddMMyyyyhhmmss");
+                String format = s.format(new Date());
+
+                //Get the file location..
+                File backup = new File(getFilesDir(),"backup-"+format+".minima");
+
+                //Run a function..
+                //Toast.makeText(this,"Backup to "+backup.getAbsolutePath(),Toast.LENGTH_LONG).show();
+                backupMinima(backup.getAbsolutePath());
+                return true;
+
+            case R.id.shareapp:
+                //Create a link and share that..
+                String link = "http://mifi.minima.global/minima-latest.apk";
+
+                //Now share it
+                Intent sendIntent = new Intent();
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, link);
+                sendIntent.setType("text/plain");
+
+                Intent shareIntent = Intent.createChooser(sendIntent, null);
+                startActivity(shareIntent);
+
+                return true;
+
             case R.id.shutdown:
                 shutdownMinima();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    public void backupMinima(final String zFileBackup) {
+        Thread backup = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //First run the function
+                String resp = mMinima.getMinima().runMinimaCMD("network");
+
+                //Get the FileURI
+                Uri fileUri = FileProvider.getUriForFile(
+                        getApplicationContext(),
+                        "global.org.minima.fileprovider",
+                        new File(zFileBackup));
+
+                toastPopUp(fileUri.toString());
+
+//                //Now share it
+//                Intent sendIntent = new Intent();
+//                sendIntent.setAction(Intent.ACTION_SEND);
+//                sendIntent.putExtra(Intent.EXTRA_STREAM,fileUri);
+//                sendIntent.setType("application/octet-stream");
+//
+//                Intent shareIntent = Intent.createChooser(sendIntent, null);
+//                startActivity(shareIntent);
+
+                //And now share that
+//                toastPopUp(resp);
+//                Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
+            }
+        });
+        backup.start();
     }
 
     public void shutdownMinima() {
@@ -383,7 +452,10 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
             MinimaLogger.log("ACTIVITY SYNC COMPLETE : " + zMessage);
 
-            setPercentInitial("Almost Done.. Checking MiniDAPPs");
+            //Set the correct view..
+            setPostSyncDetails();
+
+//            setPercentInitial("Almost Done.. Checking MiniDAPPs");
 
         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALPERC)) {
             setPercentInitial(zMessage.getString("info"));
