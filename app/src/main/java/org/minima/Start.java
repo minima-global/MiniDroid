@@ -63,12 +63,9 @@ public class Start {
 				ArrayList<String> vars = new ArrayList<>();
 				
 				vars.add("-daemon");
-				vars.add("-clean");
-
-//				vars.add("-private");
+//				vars.add("-clean");
 //				vars.add("-port");
 //				vars.add("9001");
-
 				vars.add("-connect");
 				vars.add("35.228.18.150");
 				vars.add("9001");
@@ -326,7 +323,7 @@ public class Start {
 		
 		MinimaLogger.log("Main thread finished..");
 	}
-
+	
 	public String runMinimaCMD(String zInput){
 		//Create a Command
 		CMD cmd = new CMD(zInput);

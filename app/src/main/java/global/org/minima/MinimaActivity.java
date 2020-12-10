@@ -121,7 +121,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         // Handle item selection
         switch (item.getItemId()) {
             case R.id.minimahelp:
-                Toast.makeText(this,"HELP!!",Toast.LENGTH_SHORT).show();
+                Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
                 return true;
 
             case R.id.minimalogs:
@@ -137,7 +137,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 }
 
                 //Get a timeStamp..
-                SimpleDateFormat s = new SimpleDateFormat("ddMMyyyyhhmmss");
+                SimpleDateFormat s = new SimpleDateFormat("dd_MM_yyyy_hhmmss");
                 String format = s.format(new Date());
 
                 //Get the file location..
@@ -148,9 +148,24 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 backupMinima(backup.getAbsolutePath());
                 return true;
 
+            case R.id.restore:
+                //First check we are connected..
+                if(!mSynced){
+                    Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
+                    return true;
+                }
+
+                //Open a file chooser app
+                Intent filechoose = new Intent().setType("*/*")
+                        .setAction(Intent.ACTION_GET_CONTENT);
+
+                startActivityForResult(Intent.createChooser(filechoose, "Select a file"), 123);
+
+                return true;
+
             case R.id.shareapp:
                 //Create a link and share that..
-                String link = "http://mifi.minima.global/minima-latest.apk";
+                String link = "http://mifi.minima.global/apk/minima-latest.apk";
 
                 //Now share it
                 Intent sendIntent = new Intent();
@@ -171,6 +186,16 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == 123 && resultCode == RESULT_OK) {
+            Uri selectedfile = data.getData(); //The uri with the location of the file
+
+            Toast.makeText(this,selectedfile.toString(),Toast.LENGTH_LONG).show();
+        }
+    }
+
     public void backupMinima(final String zFileBackup) {
         Thread backup = new Thread(new Runnable() {
             @Override
@@ -184,20 +209,16 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                         "global.org.minima.fileprovider",
                         new File(zFileBackup));
 
-                toastPopUp(fileUri.toString());
+                //toastPopUp(fileUri.toString());
 
-//                //Now share it
-//                Intent sendIntent = new Intent();
-//                sendIntent.setAction(Intent.ACTION_SEND);
-//                sendIntent.putExtra(Intent.EXTRA_STREAM,fileUri);
-//                sendIntent.setType("application/octet-stream");
-//
-//                Intent shareIntent = Intent.createChooser(sendIntent, null);
-//                startActivity(shareIntent);
+                //Now share it
+                Intent sendIntent = new Intent();
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_STREAM,fileUri);
+                sendIntent.setType("application/octet-stream");
 
-                //And now share that
-//                toastPopUp(resp);
-//                Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
+                Intent shareIntent = Intent.createChooser(sendIntent, null);
+                startActivity(shareIntent);
             }
         });
         backup.start();
@@ -237,7 +258,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
     }
 
-        public void restartMinima(){
+    public void restartMinima(){
         //Hide the start Button..
         btnMini.setVisibility(View.GONE);
         mTextIP.setText("\nRestarting Minima.. please wait..");

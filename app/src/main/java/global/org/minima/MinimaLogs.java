@@ -42,8 +42,8 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
         mText.setTypeface(Typeface.MONOSPACE);
 
         //Connect tp the service..
-//        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
-//        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
     }
 
     @Override
