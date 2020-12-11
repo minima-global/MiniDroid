@@ -53,6 +53,8 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
     boolean mSynced = false;
 
+    boolean mBound = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -83,21 +85,22 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         btnLogs.setVisibility(View.GONE);
 
         btnRestart= findViewById(R.id.btn_reset);
-        btnRestart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                new AlertDialog.Builder(MinimaActivity.this)
-                        .setTitle("Restart Minima")
-                        .setMessage("Please confirm ?")
-                        .setIcon(android.R.drawable.ic_dialog_alert)
-                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int whichButton) {
-                                restartMinima();
-                            }})
-                        .setNegativeButton(android.R.string.no, null).show();
-            }
-        });
         btnRestart.setVisibility(View.GONE);
+//        btnRestart.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                new AlertDialog.Builder(MinimaActivity.this)
+//                        .setTitle("Restart Minima")
+//                        .setMessage("Please confirm ?")
+//                        .setIcon(android.R.drawable.ic_dialog_alert)
+//                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+//                            public void onClick(DialogInterface dialog, int whichButton) {
+//                                restartMinima();
+//                            }})
+//                        .setNegativeButton(android.R.string.no, null).show();
+//            }
+//        });
+
 
         //The TEXT that shows the current IP
         mTextIP = findViewById(R.id.iptext_minidapp);
@@ -232,12 +235,23 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 //Little message
                 toastPopUp("Disconnecting from Minima..");
 
-                disconnectFromService();
+                setPercentInitial("Shutting down.. Please wait..");
 
-                //Wait a few seconds..
-                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+                if(mMinima != null){
+                    try{
+                        //First run the function
+                        String resp = mMinima.getMinima().runMinimaCMD("quit");
+                        MinimaLogger.log(resp);
 
-                toastPopUp("Stopping Service..");
+                        //Now stop listening
+                        mMinima.getMinima().getServer().getConsensusHandler().removeListener(MinimaActivity.this);
+                    }catch(Exception exc){}
+                }
+
+//                //Wait a few seconds..
+//                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+//
+//                toastPopUp("Stopping Service..");
 
                 Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
                 stopService(minimaintent);
@@ -247,8 +261,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
                 toastPopUp("Minima Shutdown Complete..");
 
-                try {Thread.sleep(3000);} catch (InterruptedException e) {}
+                try {Thread.sleep(2000);} catch (InterruptedException e) {}
 
+                //Close it down..
                 MinimaActivity.this.finish();
                 System.exit(0);
             }
@@ -258,45 +273,45 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
     }
 
-    public void restartMinima(){
-        //Hide the start Button..
-        btnMini.setVisibility(View.GONE);
-        mTextIP.setText("\nRestarting Minima.. please wait..");
-
-        Thread restart = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                mSynced = false;
-
-                toastPopUp("Disconnecting from Minima..");
-                //Disconnect..
-                disconnectFromService();
-
-                //Wait a few seconds..
-                try {Thread.sleep(10000);} catch (InterruptedException e) {}
-
-                toastPopUp("Stopping Service..");
-                //First stop the service,,
-                Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
-                stopService(minimaintent);
-
-                //Wait a few seconds..
-                try {Thread.sleep(10000);} catch (InterruptedException e) {}
-
-                //And then restart it..
-                toastPopUp("Re-Starting Service");
-                Intent minimaintentstarter = new Intent(getBaseContext(), MinimaService.class);
-                startForegroundService(minimaintentstarter);
-
-                //Wait a few seconds..
-                try {Thread.sleep(10000);} catch (InterruptedException e) {}
-
-                toastPopUp("Re-Binding to Minima..");
-                bindService(minimaintent, MinimaActivity.this, Context.BIND_AUTO_CREATE);
-            }
-        });
-        restart.start();
-    }
+//    public void restartMinima(){
+//        //Hide the start Button..
+//        btnMini.setVisibility(View.GONE);
+//        mTextIP.setText("\nRestarting Minima.. please wait..");
+//
+//        Thread restart = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                mSynced = false;
+//
+//                toastPopUp("Disconnecting from Minima..");
+//                //Disconnect..
+//                disconnectFromService();
+//
+//                //Wait a few seconds..
+//                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+//
+//                toastPopUp("Stopping Service..");
+//                //First stop the service,,
+//                Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+//                stopService(minimaintent);
+//
+//                //Wait a few seconds..
+//                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+//
+//                //And then restart it..
+//                toastPopUp("Re-Starting Service");
+//                Intent minimaintentstarter = new Intent(getBaseContext(), MinimaService.class);
+//                startForegroundService(minimaintentstarter);
+//
+//                //Wait a few seconds..
+//                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+//
+//                toastPopUp("Re-Binding to Minima..");
+//                bindService(minimaintent, MinimaActivity.this, Context.BIND_AUTO_CREATE);
+//            }
+//        });
+//        restart.start();
+//    }
 
 //    @Override
 //    protected void onStart() {
@@ -326,12 +341,15 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     }
 
     private void disconnectFromService(){
+        MinimaLogger.log("TRY DISCONNECT SERVICE");
+
         if(mMinima != null){
             try{
                 mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
             }catch(Exception exc){}
+        }
 
-            //Clean Unbind
+        if(mBound){
             unbindService(this);
         }
     }
@@ -428,9 +446,11 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-        //MinimaLogger.log("CONNECTED TO SERVICE");
+        MinimaLogger.log("CONNECTED TO SERVICE");
         MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
         mMinima = binder.getService();
+
+        mBound = true;
 
         Thread addlistener = new Thread(new Runnable() {
             @Override
@@ -446,13 +466,10 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                         setPostSyncDetails();
 
                     }else{
-                        MinimaLogger.log("ACTIVITY : LISTENING FOR SYNC COMPLETE..");
-
                         //Listen for messages..
                         mMinima.getMinima().getServer().getConsensusHandler().addListener(MinimaActivity.this);
 
-                        //And Post a message to make sure it is actually running..
-
+                        MinimaLogger.log("ACTIVITY : LISTENING FOR SYNC COMPLETE..");
                     }
                 }catch(Exception exc){
 
@@ -466,6 +483,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
         MinimaLogger.log("DISCONNECTED TO SERVICE");
+
+        mBound = false;
+
     }
 
     @Override
@@ -493,6 +513,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             MinimaLogger.log("ACTIVITY : DAPP INSTALLED "+dapp);
 
             setPercentInitial("MiniDAPP installed : "+dapp);
+
+            //Set the correct view..
+            setPostSyncDetails();
 
         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_LOG)) {
             String log = zMessage.getString("msg");

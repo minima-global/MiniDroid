@@ -2,7 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/minimalogs"
-        android:title="Open Logs"/>
+        android:title="Logs"/>
 
     <item android:id="@+id/shareapp"
         android:title="Share this App"/>
@@ -13,9 +13,10 @@
     <item android:id="@+id/restore"
         android:title="Restore"/>
 
+    <item android:id="@+id/shutdown"
+        android:title="Shutdown" />
+
     <item android:id="@+id/minimahelp"
         android:title="Help"/>
 
-    <item android:id="@+id/shutdown"
-        android:title="Shutdown" />
 </menu>

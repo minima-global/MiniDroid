@@ -370,6 +370,10 @@ public class DAPPManager extends MessageProcessor {
 			//And the actual folder...
 			File dapp  = new File(alldapps,hash.to0xString());
 			if(dapp.exists() && !overwrite){
+				//Notify those listening..
+				Main.getMainHandler().getConsensusHandler()
+						.updateListeners(new Message(ConsensusHandler.CONSENSUS_NOTIFY_DAPP_INSTALLED).addString("name", filename));
+
 				InputHandler.endResponse(zMessage, true, "MiniDAPP already installed..");
 				return;
 			}

@@ -252,7 +252,7 @@ public class MinimaService extends Service {
 //                    loadMiniDapp("futurecash.minidapp");
 
                     //And reload the lot..
-                    mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(DAPPManager.DAPP_RELOAD);
+                    //mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(DAPPManager.DAPP_RELOAD);
                 }
             });
 
@@ -276,7 +276,7 @@ public class MinimaService extends Service {
             //The Install message
             Message msg = new Message(DAPPManager.DAPP_INSTALL);
             msg.addObject("overwrite", false);
-            msg.addBoolean("reload", false);
+            msg.addBoolean("reload", true);
             msg.addObject("minidapp", dapp);
             msg.addString("filename", zMiniDapp);
 
@@ -309,6 +309,8 @@ public class MinimaService extends Service {
             //Wait for it..
             resp.waitToFinish();
             MinimaLogger.log("Service : "+resp.getResponse());
+        }else{
+            MinimaLogger.log("Service : Already shutdown..");
         }
 
         //Shut the channel..
