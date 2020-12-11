@@ -235,7 +235,14 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 //Little message
                 toastPopUp("Disconnecting from Minima..");
 
-                setPercentInitial("Shutting down.. Please wait..");
+                //Update..
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        btnMini.setVisibility(View.GONE);
+                        mTextIP.setText("\nShutting down.. Please wait..");
+                    }
+                });
 
                 if(mMinima != null){
                     try{
@@ -250,14 +257,13 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
 //                //Wait a few seconds..
 //                try {Thread.sleep(5000);} catch (InterruptedException e) {}
-//
 //                toastPopUp("Stopping Service..");
 
                 Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
                 stopService(minimaintent);
 
                 //Wait a few seconds..
-                try {Thread.sleep(10000);} catch (InterruptedException e) {}
+                try {Thread.sleep(5000);} catch (InterruptedException e) {}
 
                 toastPopUp("Minima Shutdown Complete..");
 
