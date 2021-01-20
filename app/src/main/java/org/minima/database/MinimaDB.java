@@ -29,7 +29,6 @@ import org.minima.database.userdb.UserDB;
 import org.minima.database.userdb.java.JavaUserDB;
 import org.minima.objects.Address;
 import org.minima.objects.Coin;
-import org.minima.objects.PubPrivKey;
 import org.minima.objects.StateVariable;
 import org.minima.objects.Transaction;
 import org.minima.objects.TxPoW;
@@ -41,6 +40,7 @@ import org.minima.objects.base.MiniInteger;
 import org.minima.objects.base.MiniNumber;
 import org.minima.objects.greet.SyncPackage;
 import org.minima.objects.greet.SyncPacket;
+import org.minima.objects.keys.MultiKey;
 import org.minima.objects.proofs.TokenProof;
 import org.minima.system.brains.BackupManager;
 import org.minima.system.brains.ConsensusHandler;
@@ -314,7 +314,7 @@ public class MinimaDB {
 			/**
 			 * Only cascade the tree every 100 blocks.. no need to do it EVERY block..
 			 */
-			MiniNumber checkcasc = newtip.getBlockNumber().modulo(new MiniNumber(100));
+			MiniNumber checkcasc = newtip.getBlockNumber().modulo(GlobalParams.MINIMA_CASCADE_FREQUENCY);
 			if(!checkcasc.isEqual(MiniNumber.ZERO)) {
 				return;
 			}
@@ -1031,7 +1031,7 @@ public class MinimaDB {
 		MiniData transhash = Crypto.getInstance().hashObject(trx);
 		for(MiniData pubk : sigpubk) {
 			//Get the Pub Priv..
-			PubPrivKey signer = getUserDB().getPubPrivKey(pubk);
+			MultiKey signer = getUserDB().getPubPrivKey(pubk);
 			
 			//Sign the data
 			MiniData signature = signer.sign(transhash);

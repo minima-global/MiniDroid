@@ -61,14 +61,14 @@ public class Start {
 				
 				//Start up Variables
 				ArrayList<String> vars = new ArrayList<>();
-
+				
 				vars.add("-daemon");
 //				vars.add("-clean");
 //				vars.add("-port");
 //				vars.add("9001");
-				vars.add("-connect");
-				vars.add("35.228.18.150");
-				vars.add("9001");
+//				vars.add("-connect");
+//				vars.add("34.90.172.118");
+//				vars.add("9001");
 				vars.add("-conf");
 				vars.add(mConfFolder);
 				

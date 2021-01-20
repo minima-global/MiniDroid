@@ -248,6 +248,7 @@ public class MinimaService extends Service {
 //                    loadMiniDapp("coinflip.minidapp");
 //                    loadMiniDapp("dexxed.minidapp");
                     loadMiniDapp("terminal.minidapp");
+                    loadMiniDapp("storefront.minidapp");
 //                    loadMiniDapp("scriptide.minidapp");
 //                    loadMiniDapp("futurecash.minidapp");
 

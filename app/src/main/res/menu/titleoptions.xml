@@ -4,8 +4,8 @@
     <item android:id="@+id/minimalogs"
         android:title="Logs"/>
 
-    <item android:id="@+id/shareapp"
-        android:title="Share this App"/>
+<!--    <item android:id="@+id/shareapp"
+        android:title="Share this App"/> -->
 
     <item android:id="@+id/backup"
         android:title="Backup"/>

@@ -166,20 +166,20 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
                 return true;
 
-            case R.id.shareapp:
-                //Create a link and share that..
-                String link = "http://mifi.minima.global/apk/minima-latest.apk";
-
-                //Now share it
-                Intent sendIntent = new Intent();
-                sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, link);
-                sendIntent.setType("text/plain");
-
-                Intent shareIntent = Intent.createChooser(sendIntent, null);
-                startActivity(shareIntent);
-
-                return true;
+//            case R.id.shareapp:
+//                //Create a link and share that..
+//                String link = "http://mifi.minima.global/apk/minima-latest.apk";
+//
+//                //Now share it
+//                Intent sendIntent = new Intent();
+//                sendIntent.setAction(Intent.ACTION_SEND);
+//                sendIntent.putExtra(Intent.EXTRA_TEXT, link);
+//                sendIntent.setType("text/plain");
+//
+//                Intent shareIntent = Intent.createChooser(sendIntent, null);
+//                startActivity(shareIntent);
+//
+//                return true;
 
             case R.id.shutdown:
                 shutdownMinima();
