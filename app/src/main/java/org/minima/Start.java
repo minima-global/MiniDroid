@@ -106,7 +106,8 @@ public class Start {
 		String connecthost      = VALID_BOOTSTRAP_NODES[hostnum];
 		int connectport         = 9001;
 		String host             = "";
-		
+
+		//Basic vars
 		boolean clean           = false;
 		boolean cleanhard       = false;
 		boolean genesis 		= false;
