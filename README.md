@@ -29,7 +29,7 @@ The standard allocated fix time for a bug is three weeks, please bear with us we
 9. An explanation of how the bug can be reproduced
 10. Your android device manufacturer and model number 
 
-Thank you for helping us improve the Minima Beta App. 
+Thank you for helping us improve the Minima App. 
 
 
 
