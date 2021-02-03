@@ -2,7 +2,7 @@
 
 Android version of Minima.
 
-## How to Download the Minima Beta App on Any Android Device 
+## How to Download the Minima App on Android 
 
 On an Android device (Android version 8 or later), download the apk from the [apk](/apk) folder. 
 
