@@ -242,7 +242,10 @@ public class ConsensusBackup extends ConsensusProcessor {
 				InputHandler.endResponse(zMessage, false, "Restore file does not exist");
 				return;
 			}
-			
+
+			//Load the whole file
+			byte[] restore 				= MiniFile.readCompleteFile(fullrestore);
+
 			//Clear the database..
 			getMainDB().getMainTree().clearTree();
 			getMainDB().getCoinDB().clearDB();
@@ -250,9 +253,8 @@ public class ConsensusBackup extends ConsensusProcessor {
 			
 			//Wipe everything
 			BackupManager.safeDelete(getBackup().getRootFolder());
-			
-			//Load the whole file
-			byte[] restore 				= MiniFile.readCompleteFile(fullrestore);
+
+			//Now Load..
 			ByteArrayInputStream bais 	= new ByteArrayInputStream(restore);
 			DataInputStream dis 		= new DataInputStream(bais);
 			

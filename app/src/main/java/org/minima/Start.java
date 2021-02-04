@@ -106,8 +106,7 @@ public class Start {
 		String connecthost      = VALID_BOOTSTRAP_NODES[hostnum];
 		int connectport         = 9001;
 		String host             = "";
-
-		//Basic vars
+		
 		boolean clean           = false;
 		boolean cleanhard       = false;
 		boolean genesis 		= false;
@@ -178,6 +177,13 @@ public class Start {
 					
 				}else if(arg.equals("-conf")) {
 					conffolder = zArgs[counter++];
+				
+				}else if(arg.equals("-test")) {
+					//Use the Test PARAMS!
+					TestParams.setTestParams();
+					
+				}else if(arg.equals("")) {
+					//Do nothing..
 					
 				}else {
 					MinimaLogger.log("UNKNOWN arg.. : "+arg);

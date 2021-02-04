@@ -16,7 +16,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"></uses-permission>
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:fullBackupOnly="false"
         android:largeHeap="true"
         android:persistent="true"
         android:icon="@mipmap/ic_launcher"

@@ -22,11 +22,15 @@ import androidx.core.content.FileProvider;
 
 import org.minima.GlobalParams;
 import org.minima.system.brains.ConsensusHandler;
+import org.minima.utils.MiniFile;
+import org.minima.utils.MiniFormat;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageListener;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -147,7 +151,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 File backup = new File(getFilesDir(),"backup-"+format+".minima");
 
                 //Run a function..
-                //Toast.makeText(this,"Backup to "+backup.getAbsolutePath(),Toast.LENGTH_LONG).show();
+                Toast.makeText(this,"Minima Backup to "+backup.getAbsolutePath(),Toast.LENGTH_LONG).show();
                 backupMinima(backup.getAbsolutePath());
                 return true;
 
@@ -195,7 +199,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         if(requestCode == 123 && resultCode == RESULT_OK) {
             Uri selectedfile = data.getData(); //The uri with the location of the file
 
-            Toast.makeText(this,selectedfile.toString(),Toast.LENGTH_LONG).show();
+            Toast.makeText(this,"Restoring from Backup!",Toast.LENGTH_LONG).show();
+
+            restore(selectedfile);
         }
     }
 
@@ -204,7 +210,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             @Override
             public void run() {
                 //First run the function
-                String resp = mMinima.getMinima().runMinimaCMD("network");
+                String resp = mMinima.getMinima().runMinimaCMD("backup "+zFileBackup);
 
                 //Get the FileURI
                 Uri fileUri = FileProvider.getUriForFile(
@@ -212,7 +218,8 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                         "global.org.minima.fileprovider",
                         new File(zFileBackup));
 
-                //toastPopUp(fileUri.toString());
+                //System.out.println("BACKUP FILE : "+fileUri.toString());
+                toastPopUp(fileUri.toString());
 
                 //Now share it
                 Intent sendIntent = new Intent();
@@ -225,6 +232,53 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             }
         });
         backup.start();
+    }
+
+    public void restore(final Uri zFileBackup) {
+        Thread restorer = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //First copy the whole file..
+                File restore = new File(getFilesDir(),"restore.minima");
+                if(restore.exists()){
+                    restore.delete();
+                }
+
+                //Now copy ..
+                try{
+                    //Get the Stream
+                    InputStream is = getContentResolver().openInputStream(zFileBackup);
+
+                    //Create the File.
+                    restore.createNewFile();
+                    FileOutputStream fos = new FileOutputStream(restore);
+
+                    byte[] copy = new byte[4096];
+                    int read=0;
+                    while(read != -1){
+                        read = is.read(copy);
+                        if(read>=0){
+                            //Write it out..
+                            fos.write(copy,0,read);
+                        }
+                    }
+                    fos.flush();
+                    fos.close();
+
+                    mSynced = false;
+                    setPercentInitial("Restoring Minima.. please wait..");
+                    MinimaLogger.log("Restore File : "+restore.getAbsolutePath()+" "+restore.length());
+
+                    //Now do the restore..
+                    String resp = mMinima.getMinima().runMinimaCMD("restore "+restore.getAbsolutePath());
+                    MinimaLogger.log(resp);
+
+                }catch(Exception exc){
+                    MinimaLogger.log("ERROR Restore : "+exc);
+                }
+            }
+        });
+        restorer.start();
     }
 
     public void shutdownMinima() {
