@@ -543,9 +543,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
         MinimaLogger.log("DISCONNECTED TO SERVICE");
-
         mBound = false;
-
     }
 
     @Override
@@ -557,6 +555,11 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             setPostSyncDetails();
 
 //            setPercentInitial("Almost Done.. Checking MiniDAPPs");
+
+        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_RECONNECT)) {
+            //Reconnecting to network.. notify user..
+            mSynced = false;
+            setPercentInitial("Reconnecting in 30 seconds..");
 
         }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALPERC)) {
             setPercentInitial(zMessage.getString("info"));
