@@ -243,12 +243,12 @@ public class MinimaService extends Service {
                 public void run() {
 
 //                    loadMiniDapp("block.minidapp");
-                    loadMiniDapp("wallet.minidapp");
+                    loadMiniDapp("wallet1.0.1.minidapp");
 //                    loadMiniDapp("coinmaster.minidapp");
 //                    loadMiniDapp("coinflip.minidapp");
 //                    loadMiniDapp("dexxed.minidapp");
                     loadMiniDapp("terminal.minidapp");
-                    loadMiniDapp("storefront.minidapp");
+                    loadMiniDapp("storefront1.0.2.minidapp");
 //                    loadMiniDapp("scriptide.minidapp");
 //                    loadMiniDapp("futurecash.minidapp");
 
