@@ -27,6 +27,7 @@ import org.minima.system.network.NetworkHandler;
 import org.minima.system.network.minidapps.comms.CommsManager;
 import org.minima.system.network.minidapps.minibackend.BackEndDAPP;
 import org.minima.system.network.minidapps.websocket.WebSocketManager;
+import org.minima.system.network.rpc.RPCClient;
 import org.minima.utils.Crypto;
 import org.minima.utils.MiniFile;
 import org.minima.utils.MinimaLogger;
@@ -171,7 +172,8 @@ public class DAPPManager extends MessageProcessor {
 			ret.put("name", "*ERROR*");
 			ret.put("description", "This minidapp did not load correctly..");
 			ret.put("uid", uid);
-	        ret.put("root", "/minidapps/"+uid);
+			ret.put("installed", (long)0);
+	        ret.put("root", "");
 	        ret.put("web", "http://"+mNetwork.getBaseHost()+":"+mNetwork.getMiniDAPPServerPort()+"/minidapps/"+uid);
 		}
 		
@@ -290,8 +292,28 @@ public class DAPPManager extends MessageProcessor {
 					
 				}else {
 					MinimaLogger.log("ERROR : minidapp.conf not found for "+minidappid);
-				}
 				
+					//Some details..
+					if(conf != null) {
+						String root = conf.getParent();
+				        int start = root.indexOf("minidapps");
+				        
+				        if(start != -1) {
+					        String uid = root.substring(start+10);
+				        
+							JSONObject confjson = new JSONObject();
+							confjson.put("name", "*ERROR*");
+							confjson.put("description", "minidapp.conf file missing..");
+							confjson.put("uid", uid);
+							confjson.put("installed", (long)0);
+							confjson.put("root", "");
+							confjson.put("web", "http://"+mNetwork.getBaseHost()+":"+mNetwork.getMiniDAPPServerPort()+"/minidapps/"+uid);
+							
+					        //Add it..
+							CURRENT_MINIDAPPS.add(confjson);
+				        }
+					}
+				}
 			}
 		}
 		
@@ -591,6 +613,17 @@ public class DAPPManager extends MessageProcessor {
 			Message msg = new Message(WebSocketManager.WEBSOCK_SENDTOALL);
 			msg.addString("message", json.toString());
 			mNetwork.getWebSocketManager().PostMessage(msg);
+			
+			//Post it to an URL..
+			try {
+				//Get the URL
+				String url = mNetwork.getExternalURL();
+				if(!url.equals("")) {
+					RPCClient.sendPOST(url, json.toString(), "application/json");
+				}
+			}catch(Exception exc) {
+				MinimaLogger.log(exc);
+			}
 		}
 		
 	}
