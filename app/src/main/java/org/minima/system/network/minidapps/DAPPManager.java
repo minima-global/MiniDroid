@@ -173,6 +173,7 @@ public class DAPPManager extends MessageProcessor {
 			ret.put("description", "This minidapp did not load correctly..");
 			ret.put("uid", uid);
 			ret.put("installed", (long)0);
+			ret.put("version", "1.0");
 	        ret.put("root", "");
 	        ret.put("web", "http://"+mNetwork.getBaseHost()+":"+mNetwork.getMiniDAPPServerPort()+"/minidapps/"+uid);
 		}
@@ -307,6 +308,7 @@ public class DAPPManager extends MessageProcessor {
 							confjson.put("uid", uid);
 							confjson.put("installed", (long)0);
 							confjson.put("root", "");
+							confjson.put("version", "1.0");
 							confjson.put("web", "http://"+mNetwork.getBaseHost()+":"+mNetwork.getMiniDAPPServerPort()+"/minidapps/"+uid);
 							
 					        //Add it..
@@ -388,6 +390,8 @@ public class DAPPManager extends MessageProcessor {
 			//Get the Data
 			MiniData data = (MiniData) zMessage.getObject("minidapp");
 			String filename = zMessage.getString("filename");
+			
+			MinimaLogger.log("INSTALLING : "+filename+" "+data.getLength());
 			
 			//Do we overwrite..
 			boolean overwrite = true;
@@ -518,6 +522,8 @@ public class DAPPManager extends MessageProcessor {
 			String minidapp = zMessage.getString("minidapp");
 			InputHandler.getResponseJSON(zMessage).put("minidapp", minidapp);
 			
+			MinimaLogger.log("UNINSTALLING : "+minidapp);
+			
 			//UNINSTALL the DAPP
 			File appfolder = new File(getMiniDAPPSFolder(),minidapp);
 		
@@ -619,10 +625,12 @@ public class DAPPManager extends MessageProcessor {
 				//Get the URL
 				String url = mNetwork.getExternalURL();
 				if(!url.equals("")) {
-					RPCClient.sendPOST(url, json.toString(), "application/json");
+//					MinimaLogger.log("Attempt to call external URL "+url); 
+					String reply = RPCClient.sendPOST(url, json.toString(), "application/json");
+//					MinimaLogger.log("Reply : "+reply); 
 				}
 			}catch(Exception exc) {
-				MinimaLogger.log(exc);
+				MinimaLogger.log("ExternalURL error : "+exc.toString()+" "+json.toString());
 			}
 		}
 		
