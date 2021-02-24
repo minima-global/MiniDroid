@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Binder;
@@ -234,31 +235,36 @@ public class MinimaService extends Service {
     }
 
     public void installDappSuite(){
+
+        //Only try this once..
         if(mFirstRun) {
-            MinimaLogger.log("Service : Install all DAPPS..");
-            mFirstRun = false;
+            //Get the shared prefs..
+            SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
 
-            Thread mini_install = new Thread(new Runnable() {
-                @Override
-                public void run() {
+            //Have we done this already another time..
+            boolean installed = pref.getBoolean("minidapps",false);
 
-//                    loadMiniDapp("block.minidapp");
-                    loadMiniDapp("wallet1.0.1.minidapp");
-//                    loadMiniDapp("coinmaster.minidapp");
-//                    loadMiniDapp("coinflip.minidapp");
-//                    loadMiniDapp("dexxed.minidapp");
-                    loadMiniDapp("terminal.minidapp");
-                    loadMiniDapp("storefront1.0.2.minidapp");
-//                    loadMiniDapp("scriptide.minidapp");
-//                    loadMiniDapp("futurecash.minidapp");
+            if(!installed) {
+                MinimaLogger.log("Service : Install all DAPPS..");
+                mFirstRun = false;
 
-                    //And reload the lot..
-                    //mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(DAPPManager.DAPP_RELOAD);
-                }
-            });
+                //Permanent store
+                SharedPreferences.Editor editor = pref.edit();
+                editor.putBoolean("minidapps",true);
+                editor.commit();
 
-            //Run it..
-            mini_install.start();
+                Thread mini_install = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        loadMiniDapp("wallet1.0.1.minidapp");
+                        loadMiniDapp("terminal.minidapp");
+                        loadMiniDapp("storefront.minidapp");
+                    }
+                });
+
+                //Run it..
+                mini_install.start();
+            }
         }else{
             MinimaLogger.log("Service : Install DAPPS - not first run..");
         }
