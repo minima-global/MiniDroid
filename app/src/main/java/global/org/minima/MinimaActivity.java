@@ -202,9 +202,6 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                                 editor.putBoolean("minidapps",false);
                                 editor.commit();
 
-                                //Reset the minidapp install
-                                mMinima.mFirstRun = true;
-
                                 //Now reset
                                 mMinima.getMinima().runMinimaCMD("reset");
                             }
