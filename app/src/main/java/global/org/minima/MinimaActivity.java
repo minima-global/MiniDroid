@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -192,6 +193,19 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 Toast.makeText(MinimaActivity.this, "Resetting.. Please wait",Toast.LENGTH_LONG).show();
+
+                                //Get the shared prefs..
+                                SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
+
+                                //Permanent store
+                                SharedPreferences.Editor editor = pref.edit();
+                                editor.putBoolean("minidapps",false);
+                                editor.commit();
+
+                                //Reset the minidapp install
+                                mMinima.mFirstRun = true;
+
+                                //Now reset
                                 mMinima.getMinima().runMinimaCMD("reset");
                             }
                         }).setNegativeButton("No", null).show();

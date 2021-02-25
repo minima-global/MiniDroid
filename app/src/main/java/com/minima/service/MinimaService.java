@@ -80,7 +80,7 @@ public class MinimaService extends Service {
 
     boolean mListenerAdded;
 
-    boolean mFirstRun = true;
+    public boolean mFirstRun = true;
 
     //The Last time some action happened..
     long mLastActionTime = 0;
@@ -235,6 +235,7 @@ public class MinimaService extends Service {
     }
 
     public void installDappSuite(){
+        MinimaLogger.log("Service : installDappSuite()");
 
         //Only try this once..
         if(mFirstRun) {
