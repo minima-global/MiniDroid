@@ -184,6 +184,19 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //                startActivity(shareIntent);
 //
 //                return true;
+            case R.id.reset:
+                //Reset the whole thing..
+                new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert)
+                        .setTitle("Reset Minima").setMessage("Are you sure you want to RESET Minima ?\n\nThis will wipe all information..")
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Toast.makeText(MinimaActivity.this, "Resetting.. Please wait",Toast.LENGTH_LONG).show();
+                                mMinima.getMinima().runMinimaCMD("reset");
+                            }
+                        }).setNegativeButton("No", null).show();
+
+                return true;
 
             case R.id.shutdown:
                 shutdownMinima();
