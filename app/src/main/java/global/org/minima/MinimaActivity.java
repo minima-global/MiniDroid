@@ -44,8 +44,6 @@ import com.minima.service.MinimaService;
 public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
 
     Button btnMini;
-    Button btnLogs;
-    Button btnRestart;
 
     //The IP Text..
     TextView mTextIP;
@@ -64,12 +62,12 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-//        MinimaLogger.log("Activity : onCreate");
-
         setContentView(global.org.minima.R.layout.activity_main);
 
         //The Button to open the local browser
         btnMini = findViewById(global.org.minima.R.id.btn_minidapp);
+        btnMini.setTransformationMethod(null);
+
         btnMini.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -78,34 +76,6 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             }
         });
         btnMini.setVisibility(View.GONE);
-
-        btnLogs= findViewById(global.org.minima.R.id.btn_logs);
-        btnLogs.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MinimaActivity.this, MinimaLogs.class);
-                startActivity(intent);
-            }
-        });
-        btnLogs.setVisibility(View.GONE);
-
-        btnRestart= findViewById(R.id.btn_reset);
-        btnRestart.setVisibility(View.GONE);
-//        btnRestart.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                new AlertDialog.Builder(MinimaActivity.this)
-//                        .setTitle("Restart Minima")
-//                        .setMessage("Please confirm ?")
-//                        .setIcon(android.R.drawable.ic_dialog_alert)
-//                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-//                            public void onClick(DialogInterface dialog, int whichButton) {
-//                                restartMinima();
-//                            }})
-//                        .setNegativeButton(android.R.string.no, null).show();
-//            }
-//        });
-
 
         //The TEXT that shows the current IP
         mTextIP = findViewById(R.id.iptext_minidapp);
