@@ -13,16 +13,20 @@ public class STATE extends MinimaFunction {
 	
 	@Override
 	public Value runFunction(Contract zContract) throws ExecutionException {
-		//Which Output - must be from 0-255
-		int statenum = getParameter(0).getValue(zContract).getNumber().getAsInt();
-				
-		String stateval = zContract.getState(statenum).toString();
-		stateval = Contract.cleanScript(stateval);
+		checkExactParamNumber(requiredParams());
 		
+		//Which Output
+		int statenum = zContract.getNumberParam(0, this).getNumber().getAsInt();
+
 		//Work it out
-		return Value.getValue(stateval);
+		return zContract.getState(statenum);
 	}
 
+	@Override
+	public int requiredParams() {
+		return 1;
+	}
+	
 	@Override
 	public MinimaFunction getNewFunction() {
 		return new STATE();

@@ -111,7 +111,7 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
                 int len = current.length();
                 if(len>250000){
                     //Resize in order
-                    String tt = current.substring(len-100000,len);
+                    String tt = current.substring(len-200000,len);
 
                     //And now set it
                     mText.setText("...(cropped)\n"+tt);

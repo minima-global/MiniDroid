@@ -3,8 +3,6 @@
  */
 package org.minima.objects.base;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -26,18 +24,36 @@ import org.minima.utils.Streamable;
 public class MiniNumber implements Streamable, Comparable<MiniNumber> {
 	
 	/**
-	 * The Math Context used for ALL real numbers
-	 * 
-	 * Can represent 1 billion with 8 zeros ( 10 + 8 ) digits with no loss of precision.. 
-	 * 
-	 * But all Minima values are actually in significant digit format anyway.. so infinite precision..
+	 * The MAX Number of Significant digits for any MiniNUmber
 	 */
-	public static final MathContext mMathContext = new MathContext(18, RoundingMode.DOWN);
+	public static final int MAX_DIGITS = 64;
 	
 	/**
-	 * The decimal precision of the significant digits.
+	 * MAX number is 8 byte unsigned long.. 2^64 -1 .. 20 digits
 	 */
-//	public static final DecimalFormat MINIMA_SIGNIFICANT_FORMAT = new DecimalFormat("0.#################E0");
+	public static final int MAX_DECIMAL_PLACES = MAX_DIGITS - 20;
+	
+	/** 
+	 * The base Math Context used for all operations
+	 */
+	public static final MathContext MATH_CONTEXT = new MathContext(MAX_DIGITS, RoundingMode.DOWN);
+	
+	/**
+	 * The MAXIMUM value any MiniNumber can be..
+	 * 
+	 * 2^64 - 1 or as HEX 0xFFFFFFFFFFFFFFFF
+	 */
+	public static final BigDecimal MAX_MININUMBER = new BigDecimal(2).pow(64,MATH_CONTEXT).subtract(BigDecimal.ONE,MATH_CONTEXT);
+	
+	/**
+	 * The Minimum value any MiniNumber can be..
+	 */
+	public static final BigDecimal MIN_MININUMBER = MAX_MININUMBER.negate();
+	
+	/**
+	 * The smallest unit possible
+	 */
+	public static final MiniNumber MINI_UNIT = new MiniNumber("1E-"+MAX_DECIMAL_PLACES);
 	
 	/**
 	 * Useful numbers
@@ -55,17 +71,15 @@ public class MiniNumber implements Streamable, Comparable<MiniNumber> {
 	public static final MiniNumber FIVEONE12    = new MiniNumber("512");
 	public static final MiniNumber THOUSAND24   = new MiniNumber("1024");
 	
-	public static final MiniNumber TEN          = new MiniNumber("10");
-	public static final MiniNumber HUNDRED      = new MiniNumber("100");
-	public static final MiniNumber THOUSAND     = new MiniNumber("1000");
-	public static final MiniNumber MILLION      = new MiniNumber("1000000");
-	public static final MiniNumber BILLION      = new MiniNumber("1000000000");
+	public static final MiniNumber TEN          = new MiniNumber("1E1");
+	public static final MiniNumber HUNDRED      = new MiniNumber("1E2");
+	public static final MiniNumber THOUSAND     = new MiniNumber("1E3");
+	public static final MiniNumber MILLION      = new MiniNumber("1E6");
+	public static final MiniNumber HUNDMILLION  = new MiniNumber("1E8");
+	public static final MiniNumber BILLION      = new MiniNumber("1E9");
+	public static final MiniNumber TRILLION     = new MiniNumber("1E12");
 	
 	public static final MiniNumber MINUSONE 	= new MiniNumber("-1");
-	
-	public static final MiniNumber POINTONE 	= new MiniNumber("0.1");
-	public static final MiniNumber ONEPOINTONE 	= new MiniNumber("1.1");
-	public static final MiniNumber POINTNINE 	= new MiniNumber("0.9");
 	
 	/**
 	 * The number representation
@@ -73,42 +87,80 @@ public class MiniNumber implements Streamable, Comparable<MiniNumber> {
 	private BigDecimal mNumber;
 	
 	/**
-	 * 
+	 * Many different COnstructors for all number types
 	 */
 	public MiniNumber(){
-		mNumber = BigDecimal.ZERO;
+		mNumber = new BigDecimal(0,MATH_CONTEXT);
 	}
 	
 	public MiniNumber(int zNumber){
-		mNumber = new BigDecimal(zNumber,mMathContext);
+		mNumber = new BigDecimal(zNumber,MATH_CONTEXT);
+		checkLimits();
 	}
 	
 	public MiniNumber(long zNumber){
-		mNumber = new BigDecimal(zNumber,mMathContext);
+		mNumber = new BigDecimal(zNumber,MATH_CONTEXT);
+		checkLimits();
 	}
 
 	public MiniNumber(BigInteger zNumber){
-		mNumber = new BigDecimal(zNumber,mMathContext);
+		mNumber = new BigDecimal(zNumber,MATH_CONTEXT);
+		checkLimits();
 	}
 	
-	public MiniNumber(BigDecimal zBigD){
-		mNumber = zBigD;
+	public MiniNumber(BigDecimal zNumber){
+		mNumber = new BigDecimal(zNumber.toPlainString(),MATH_CONTEXT);
+		checkLimits();
+	}
+	
+	public MiniNumber(MiniNumber zMiniNumber){
+		mNumber = zMiniNumber.getAsBigDecimal();
+		checkLimits();
 	}
 	
 	public MiniNumber(String zNumber){
-		mNumber = new BigDecimal(zNumber,mMathContext);
+		mNumber = new BigDecimal(zNumber,MATH_CONTEXT);
+		checkLimits();
 	}
 	
+	public BigDecimal getNumber() {
+		return getAsBigDecimal();
+	}
+	
+	/**
+	 * Check MiniNumber is within the acceptable range
+	 */
+	private void checkLimits() {
+		if(mNumber.scale() > MAX_DECIMAL_PLACES) {
+			mNumber = mNumber.setScale(MAX_DECIMAL_PLACES, RoundingMode.DOWN);
+		}
+		
+		if(mNumber.compareTo(MAX_MININUMBER)>0) {
+			throw new NumberFormatException("MiniNumber too large - outside allowed range 2^64 "+mNumber);
+		}
+		
+		if(mNumber.compareTo(MIN_MININUMBER)<0) {
+			throw new NumberFormatException("MiniNumber too small - outside allowed range -(2^64)");
+		}
+	}
+	
+	/**
+	 * Is this a valid number for an input or an output in Minima
+	 * @return true false..
+	 */
+	public boolean isValidMinimaValue() {
+		return isLessEqual(MiniNumber.BILLION) && isMore(MiniNumber.ZERO);
+	}
+	
+	/**
+	 * Convert to various normal number types
+	 */
 	public BigDecimal getAsBigDecimal() {
 		return mNumber;
 	}
 	
 	public BigInteger getAsBigInteger() {
 		return mNumber.toBigInteger();
-	}
-	
-	public double getAsDouble() {
-		return mNumber.doubleValue();
 	}
 	
 	public long getAsLong() {
@@ -119,32 +171,31 @@ public class MiniNumber implements Streamable, Comparable<MiniNumber> {
 		return mNumber.intValue();
 	}
 	
+	/**
+	 * Basic arithmetic functions 
+	 */
 	public MiniNumber add(MiniNumber zNumber) {
-		return new MiniNumber( mNumber.add(zNumber.getAsBigDecimal(),mMathContext) );
+		return new MiniNumber( mNumber.add(zNumber.getAsBigDecimal(),MATH_CONTEXT) );
 	}
 	
 	public MiniNumber sub(MiniNumber zNumber) {
-		return new MiniNumber( mNumber.subtract(zNumber.getAsBigDecimal(),mMathContext) );
+		return new MiniNumber( mNumber.subtract(zNumber.getAsBigDecimal(),MATH_CONTEXT) );
 	}
 	
 	public MiniNumber div(MiniNumber zNumber) {
-		return new MiniNumber( mNumber.divide(zNumber.getAsBigDecimal(), mMathContext) );
-	}
-	
-	public MiniNumber divRoundDown(MiniNumber zNumber) {
-		return new MiniNumber( mNumber.divide(zNumber.getAsBigDecimal(), RoundingMode.DOWN) );
+		return new MiniNumber( mNumber.divide(zNumber.getAsBigDecimal(), MATH_CONTEXT) );
 	}
 	
 	public MiniNumber mult(MiniNumber zNumber) {
-		return new MiniNumber( mNumber.multiply(zNumber.getAsBigDecimal(),mMathContext) );
+		return new MiniNumber( mNumber.multiply(zNumber.getAsBigDecimal(),MATH_CONTEXT) );
 	}
 	
 	public MiniNumber pow(int zNumber) {
-		return new MiniNumber( mNumber.pow(zNumber,mMathContext) );
+		return new MiniNumber( mNumber.pow(zNumber,MATH_CONTEXT) );
 	}
 	
 	public MiniNumber modulo(MiniNumber zNumber) {
-		return new MiniNumber( mNumber.remainder(zNumber.getAsBigDecimal(),mMathContext) );
+		return new MiniNumber( mNumber.remainder(zNumber.getAsBigDecimal(),MATH_CONTEXT) );
 	}
 	
 	public MiniNumber floor() {
@@ -156,10 +207,14 @@ public class MiniNumber implements Streamable, Comparable<MiniNumber> {
 	}
 	
 	public MiniNumber setSignificantDigits(int zSignificantDigits) {
+		//1-max digits..
 		int sigdig = zSignificantDigits;
-		if(sigdig>18) {
-			sigdig = 18;	
+		if(sigdig>MAX_DIGITS) {
+			throw new NumberFormatException("Cannot specify this many significant digits "+sigdig);	
+		}else if(sigdig<0) {
+			throw new NumberFormatException("Cannot specify negative significant digits "+sigdig);
 		}
+		
 		return new MiniNumber( mNumber.round(new MathContext(sigdig, RoundingMode.DOWN))) ;
 	}
 	
@@ -168,13 +223,17 @@ public class MiniNumber implements Streamable, Comparable<MiniNumber> {
 	}
 		
 	public MiniNumber increment() {
-		return new MiniNumber( mNumber.add(BigDecimal.ONE,mMathContext) );
+		return new MiniNumber( mNumber.add(BigDecimal.ONE,MATH_CONTEXT) );
 	}
 	
 	public MiniNumber decrement() {
-		return new MiniNumber( mNumber.subtract(BigDecimal.ONE,mMathContext) );
+		return new MiniNumber( mNumber.subtract(BigDecimal.ONE,MATH_CONTEXT) );
 	}
 
+	public int decimalPlaces() {
+		return mNumber.scale();
+	}
+	
 	@Override
 	public int compareTo(MiniNumber zCompare) {
 		return mNumber.compareTo(zCompare.getAsBigDecimal());
@@ -227,8 +286,7 @@ public class MiniNumber implements Streamable, Comparable<MiniNumber> {
 		
 		//Read in the byte array for unscaled BigInteger
 		int len = zIn.readInt();
-		if(len > 20 || len<1) {
-			//Something wrong..
+		if(len > 64 || len<1) {
 			throw new IOException("ERROR reading MiniNumber - input too large or negative "+len);
 		}
 		
@@ -237,7 +295,7 @@ public class MiniNumber implements Streamable, Comparable<MiniNumber> {
 		
 		//And create..
 		BigInteger unscaled = new BigInteger(data);
-		mNumber = new BigDecimal(unscaled,scale,mMathContext);
+		mNumber = new BigDecimal(unscaled,scale,MATH_CONTEXT);
 	}
 
 	public static MiniNumber ReadFromStream(DataInputStream zIn) throws IOException{
@@ -245,31 +303,14 @@ public class MiniNumber implements Streamable, Comparable<MiniNumber> {
 		data.readDataStream(zIn);
 		return data;
 	}
-	
+
 	public static void main(String[] zargs) {
-		MiniNumber num = new MiniNumber("100300000.040060012");
+		MiniNumber tt = MiniNumber.MINI_UNIT;
 		
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		DataOutputStream dos = new DataOutputStream(baos);
+		System.out.println("Smallest : "+tt+" "+tt.getNumber().scale());
 		
-		try {
-			num.writeDataStream(dos);
-		
-			dos.flush();
-			baos.flush();
-		
-			ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-			DataInputStream dis = new DataInputStream(bais);
-			
-			MiniNumber test = MiniNumber.ReadFromStream(dis);
-			
-			System.out.println("Number : "+test);
-			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		System.out.println("TEN      : "+new MiniNumber("1E1"));
+		System.out.println("HUNDRED  : "+new MiniNumber("1E2"));
 	}
-	
 	
 }

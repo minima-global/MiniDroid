@@ -19,17 +19,18 @@ public class GETINAMT extends MinimaFunction {
 	
 	@Override
 	public Value runFunction(Contract zContract) throws ExecutionException {
+		checkExactParamNumber(requiredParams());
 		
-		//Which Output - must be from 0-255
-		int input = getParameter(0).getValue(zContract).getNumber().getAsInt();
+		//Which Output
+		int input = zContract.getNumberParam(0, this).getNumber().getAsInt();
 		
 		//Get the Transaction
 		Transaction trans = zContract.getTransaction();
 		
 		//Check output exists..
 		ArrayList<Coin> ins = trans.getAllInputs();
-		if(ins.size()<=input) {
-			throw new ExecutionException("Input number too high "+input+"/"+ins.size());
+		if(input<0 || ins.size()<=input) {
+			throw new ExecutionException("Input number out of range "+input+"/"+ins.size());
 		}
 		
 		//Get it..
@@ -42,13 +43,19 @@ public class GETINAMT extends MinimaFunction {
 			if(td == null) {
 				throw new ExecutionException("No Token found for ID "+cc.getTokenID());
 			}
-			return new NumberValue(cc.getAmount().mult(td.getScaleFactor()));
+//			return new NumberValue(cc.getAmount().mult(td.getScaleFactor()));
+			return new NumberValue(td.getScaledTokenAmount(cc.getAmount()));
 		}
 		
 		//Return the address	
 		return new NumberValue(cc.getAmount());
 	}
 
+	@Override
+	public int requiredParams() {
+		return 1;
+	}
+	
 	@Override
 	public MinimaFunction getNewFunction() {
 		return new GETINAMT();

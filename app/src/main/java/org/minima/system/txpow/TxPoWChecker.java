@@ -11,11 +11,12 @@ import org.minima.database.mmr.MMRSet;
 import org.minima.database.txpowtree.BlockTreeNode;
 import org.minima.kissvm.Contract;
 import org.minima.kissvm.values.BooleanValue;
-import org.minima.kissvm.values.HEXValue;
+import org.minima.kissvm.values.HexValue;
 import org.minima.kissvm.values.NumberValue;
-import org.minima.kissvm.values.ScriptValue;
+import org.minima.kissvm.values.StringValue;
 import org.minima.objects.Address;
 import org.minima.objects.Coin;
+import org.minima.objects.StateVariable;
 import org.minima.objects.Transaction;
 import org.minima.objects.TxPoW;
 import org.minima.objects.Witness;
@@ -150,18 +151,32 @@ public class TxPoWChecker {
 	}
 	
 	public static boolean checkTransactionMMR(TxPoW zTxPOW, MinimaDB zDB, 
-				TxPoW zBlock, MMRSet zMMRSet, boolean zTouchMMR) {
+			TxPoW zBlock, MMRSet zMMRSet, boolean zTouchMMR) {
+		return checkTransactionMMR(zTxPOW, zDB, zBlock, zMMRSet, zTouchMMR, new JSONArray());
+	}
+	
+	public static boolean checkTransactionMMR(TxPoW zTxPOW, MinimaDB zDB, 
+				TxPoW zBlock, MMRSet zMMRSet, boolean zTouchMMR, JSONArray zContraclogs) {
+		
+		JSONObject contractlog = new JSONObject();
+		
 		//need a body
 		if(!zTxPOW.hasBody()) {
+			contractlog.put("error", "TxPoW has no body!");
+			contractlog.put("txpow", zTxPOW.toJSON());
+			zContraclogs.add(contractlog);
 			return false;
 		}
 		
 		//Now Check the Transaction Link Hash..
 		if(!zTxPOW.getTransaction().getLinkHash().isEqual(new MiniData("0x00"))) {
+			contractlog.put("error", "LinkHash not equal to 0x00");
+			contractlog.put("txpow", zTxPOW.toJSON());
+			zContraclogs.add(contractlog);
 			return false;
 		}
 		
-		return checkTransactionMMR(zTxPOW.getTransaction(), zTxPOW.getWitness(), zDB, zBlock, zMMRSet, zTouchMMR, new JSONArray());	
+		return checkTransactionMMR(zTxPOW.getTransaction(), zTxPOW.getWitness(), zDB, zBlock, zMMRSet, zTouchMMR, zContraclogs);	
 	}
 	
 	public static boolean checkTransactionMMR(Transaction zTrans, Witness zWit, MinimaDB zDB, 
@@ -174,7 +189,7 @@ public class TxPoWChecker {
 		
 		//get some extra variables..
 		MiniNumber tBlockNumber = zBlock.getBlockNumber();
-		MiniNumber tBlockTime   = zBlock.getTimeSecs();
+		MiniNumber tBlockTime   = zBlock.getTimeMilli();
 		
 		//Make a deep copy.. as we may need to edit it.. with floating values
 		Transaction trans;
@@ -259,7 +274,9 @@ public class TxPoWChecker {
 				//Is this a Token ?
 				String tokscript = "";
 				MiniNumber tokentotal = MiniNumber.BILLION;
-				MiniNumber tokenscale = MiniNumber.ONE;
+//				MiniNumber tokenscale = MiniNumber.ONE;
+				MiniNumber tamount = input.getAmount();
+				
 				if(!input.getTokenID().isEqual(Coin.MINIMA_TOKENID)) {
 					//Do we have a token Script..
 					TokenProof tokdets = zWit.getTokenDetail(input.getTokenID());
@@ -271,7 +288,8 @@ public class TxPoWChecker {
 					
 					//Is there a script.
 					tokscript  = tokdets.getTokenScript().toString();
-					tokenscale = tokdets.getScaleFactor();
+//					tokenscale = tokdets.getScaleFactor();
+					tamount    = tokdets.getScaledTokenAmount(tamount);
 					tokentotal = tokdets.getTotalTokens();
 				}
 				
@@ -282,15 +300,15 @@ public class TxPoWChecker {
 				cc.setGlobalVariable("@BLKNUM", new NumberValue(tBlockNumber));
 				cc.setGlobalVariable("@BLKTIME", new NumberValue(tBlockTime));
 				cc.setGlobalVariable("@BLKDIFF", new NumberValue(tBlockNumber.sub(proof.getMMRData().getInBlock())));
-				cc.setGlobalVariable("@PREVBLKHASH", new HEXValue(zBlock.getParentID()));
+				cc.setGlobalVariable("@PREVBLKHASH", new HexValue(zBlock.getParentID()));
 				cc.setGlobalVariable("@INBLKNUM", new NumberValue(proof.getMMRData().getInBlock()));
 				cc.setGlobalVariable("@INPUT", new NumberValue(i));
-				cc.setGlobalVariable("@AMOUNT", new NumberValue(input.getAmount().mult(tokenscale)));
-				cc.setGlobalVariable("@ADDRESS", new HEXValue(input.getAddress()));
-				cc.setGlobalVariable("@COINID", new HEXValue(input.getCoinID()));
-				cc.setGlobalVariable("@SCRIPT", new ScriptValue(script));
-				cc.setGlobalVariable("@TOKENID", new HEXValue(input.getTokenID()));
-				cc.setGlobalVariable("@TOKENSCRIPT", new ScriptValue(tokscript));
+				cc.setGlobalVariable("@AMOUNT", new NumberValue(tamount));
+				cc.setGlobalVariable("@ADDRESS", new HexValue(input.getAddress()));
+				cc.setGlobalVariable("@COINID", new HexValue(input.getCoinID()));
+				cc.setGlobalVariable("@SCRIPT", new StringValue(script));
+				cc.setGlobalVariable("@TOKENID", new HexValue(input.getTokenID()));
+				cc.setGlobalVariable("@TOKENSCRIPT", new StringValue(tokscript));
 				cc.setGlobalVariable("@TOKENTOTAL", new NumberValue(tokentotal));
 				cc.setGlobalVariable("@FLOATING", new BooleanValue(input.isFloating()));
 				cc.setGlobalVariable("@TOTIN", new NumberValue(trans.getAllInputs().size()));
@@ -403,8 +421,8 @@ public class TxPoWChecker {
 					MMRProof proof = zWit.getAllMMRProofs().get(i);
 					
 					//Update the MMR with this spent coin..
-					MMREntry spent = zMMRSet.updateSpentCoin(proof);
-				
+					MMREntry spent  = zMMRSet.updateSpentCoin(proof);
+		
 					//Do we keep it..
 					if(zDB.getUserDB().isAddressRelevant(input.getAddress())) {
 						zMMRSet.addKeeper(spent.getEntryNumber());	
@@ -443,10 +461,15 @@ public class TxPoWChecker {
 				}
 				
 				//Create a new Coin..
-				Coin mmrcoin = new Coin(coinid, output.getAddress(), output.getAmount(), tokid);
+				Coin mmrcoin = new Coin(coinid, output.getAddress(), output.getAmount(), tokid, output.isFloating(), output.storeState());
 				
-				//Now add as an unspent to the MMR
-				MMRData mmrdata = new MMRData(MiniByte.FALSE, mmrcoin, tBlockNumber, trans.getCompleteState());
+				//Create the MMRData and see if we store the state.. 
+				MMRData mmrdata = null;
+				if(output.storeState()) {
+					mmrdata = new MMRData(MiniByte.FALSE, mmrcoin, tBlockNumber, trans.getCompleteState());
+				}else {
+					mmrdata = new MMRData(MiniByte.FALSE, mmrcoin, tBlockNumber, new ArrayList<StateVariable>());
+				}
 				
 				//And Add it..
 				MMREntry unspent = zMMRSet.addUnspentCoin(mmrdata);
@@ -455,7 +478,7 @@ public class TxPoWChecker {
 				boolean reladdress = zDB.getUserDB().isCoinRelevant(output);
 				
 				//Do we keep it..
-				if(reladdress || relstate) {
+				if( reladdress || ( relstate && output.storeState() ) ) {
 					//Keep this MMR record
 					zMMRSet.addKeeper(unspent.getEntryNumber());	
 				}	

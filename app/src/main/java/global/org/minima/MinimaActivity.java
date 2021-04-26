@@ -173,15 +173,16 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                                 editor.commit();
 
                                 //Now reset
-                                mMinima.getMinima().runMinimaCMD("reset");
+                                resetMinima();
+
                             }
                         }).setNegativeButton("No", null).show();
 
                 return true;
 
-            case R.id.shutdown:
-                shutdownMinima();
-                return true;
+//            case R.id.shutdown:
+//                shutdownMinima();
+//                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -273,6 +274,21 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             }
         });
         restorer.start();
+    }
+
+    public void resetMinima(){
+        Thread resetter = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                mSynced = false;
+
+                setPercentInitial("Resetting Minima..");
+
+                //RUn this.. can take some time..
+                mMinima.getMinima().runMinimaCMD("reset");
+            }
+        });
+        resetter.start();
     }
 
     public void shutdownMinima() {

@@ -10,8 +10,6 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.minima.objects.base.MiniNumber;
-import org.minima.objects.greet.SyncPacket;
 import org.minima.system.Main;
 import org.minima.system.brains.BackupManager;
 import org.minima.system.network.commands.CMD;
@@ -27,13 +25,15 @@ public class Start {
 	/**
 	 * A list of default valid nodes to connect to at startup..
 	 */
-	public static final String[] VALID_BOOTSTRAP_NODES = 
-		{"35.204.181.120",
-		 "35.204.119.15",
-		 "34.91.220.49",
-		 "35.204.62.177",
-		 "35.204.139.141",
-		 "35.204.194.45"};
+//	public static final String[] VALID_BOOTSTRAP_NODES = 
+//		{"35.204.181.120",
+//		 "35.204.119.15",
+//		 "34.91.220.49",
+//		 "35.204.62.177",
+//		 "35.204.139.141",
+//		 "35.204.194.45"};
+	
+	public static final String[] VALID_BOOTSTRAP_NODES = {"35.228.18.150"};
 	
 	/**
 	 * A static link to the main server - for Android
@@ -190,26 +190,6 @@ public class Start {
 					//Use the Test PARAMS!
 					TestParams.setTestParams();
 				
-					
-					//MY HACK WAY OF TESTING SOMETHING
-				}else if(arg.equals("-specialfunction")) {
-					//Which Block
-					String block = zArgs[counter++];
-					MinimaLogger.log("Block : "+block);
-					
-					//BLocks folder..
-					File blocksdb = new File(conf,"blocks");
-					MinimaLogger.log("Blocks Folder : "+blocksdb.getAbsolutePath());
-					
-					//Full file
-					File blkfile = BackupManager.getBlockFile(blocksdb, new MiniNumber(block));
-					MinimaLogger.log("Final File : "+blkfile.getAbsolutePath()+" "+blkfile.exists());
-					
-					//Do Something special
-					SyncPacket spack = SyncPacket.loadBlock(blkfile);
-					
-					System.exit(0);
-					
 				}else if(arg.equals("")) {
 					//Do nothing..
 					

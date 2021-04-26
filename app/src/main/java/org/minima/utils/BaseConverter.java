@@ -17,12 +17,16 @@ public class BaseConverter {
 	        hexChars[j * 2 + 1] = HEX16ARRAY[v & 0x0F];
 	    }
 	    
+	    if(hexChars.length == 0) {
+	    	return "";
+	    }
+	    
 	    return "0x"+new String(hexChars);
 	}
 	
-	public static byte[] decode16(String zHex) {
+	public static byte[] decode16(String zHex) throws NumberFormatException {
 		String hex = zHex;
-		if(hex.startsWith("0x")) {
+		if(hex.toLowerCase().startsWith("0x")) {
 			hex = zHex.substring(2);
 		}		
 		
@@ -30,6 +34,17 @@ public class BaseConverter {
 		hex = hex.toUpperCase();
 		int len = hex.length();
 	
+		//return empty array for 0 length hex string
+		if(len == 0) {
+			return new byte[0];
+		}
+		
+		//Check that every char is a valid base 16 value..
+		boolean isHex = hex.matches("[0-9A-F]+");
+		if(!isHex) {
+			throw new NumberFormatException("Invalid HEX string in decode16 : "+zHex);
+		}
+		
 		//Must be 2 digits per byte
 		if(len % 2 != 0) {
 			//Need a leading zero
@@ -164,10 +179,14 @@ public class BaseConverter {
 	
 	public static void main(String[] zArgs) {
 		
-		String tt = numberToHex(8687);
-		System.out.println(tt);
+		byte[] data = decode16("");
 		
-		System.out.println(hexToNumber(tt));
+		System.out.print(data.length);
+		
+//		String tt = numberToHex(8687);
+//		System.out.println(tt);
+//		
+//		System.out.println(hexToNumber(tt));
 		
 
 //		MiniData hash = MiniData.getRandomData(64);

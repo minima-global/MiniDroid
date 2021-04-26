@@ -1,36 +1,83 @@
 package org.minima.kissvm.values;
 
-import java.math.BigInteger;
-
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
 
-public class HEXValue extends Value {
-
-	public static final int VALUE_HEX = 1;
+public class HexValue extends Value {
 	
-	public HEXValue(MiniData zData) {
+	/**
+	 * The RAW bytes
+	 */
+	protected MiniData mData;
+	
+	/**
+	 * Needed by ScriptValue to init
+	 */
+	protected HexValue() {}
+	
+	/**
+	 * Convert a MiniData byte array into a HEXValue
+	 * 
+	 * @param zData
+	 */
+	public HexValue(MiniData zData) {
 		this(zData.getData()); 
 	}
 	
-	public HEXValue(byte[] zData) {
+	/**
+	 * Convert a byte array into a HEXValue
+	 * 
+	 * @param zData
+	 */
+	public HexValue(byte[] zData) {
 		//It's a HEX value..
 		mData   = new MiniData(zData);
-		
-		//And now
-		mNumber = new MiniNumber(mData.getDataValue());
 	}
 	
-	public HEXValue(MiniNumber zNumber) {
-		this(new BigInteger(zNumber.toString()).toString(16).toUpperCase());
-	}
-	
-	public HEXValue(String zHex) {
+	/**
+	 * Convert a HEX String into a byte array
+	 * 
+	 * @param zHex
+	 */
+	public HexValue(String zHex) {
 		//HEX
 		mData 	= new MiniData(zHex);
+	}
+	
+	/**
+	 * Convert a positive whole number into a HEXValue..
+	 * 
+	 * If the number is not positive or not a whole number exception thrown
+	 * 
+	 * @param zNumber
+	 */
+	public HexValue(MiniNumber zNumber) {
+		if(zNumber.isLess(MiniNumber.ZERO)){
+			throw new NumberFormatException("HEXValue Number must be positive");
+		}
 		
-		//THE NUMBER is only to 128 BIT (not complete). The full BigInteger value is stored in the RamData
-		mNumber = new MiniNumber(mData.getDataValue());
+		if(!zNumber.floor().isEqual(zNumber)){
+			throw new NumberFormatException("HEXValue Number must be a whole number");
+		}
+		
+		//HEX
+		mData 	= new MiniData(zNumber.getAsBigInteger().toByteArray());
+	}
+	
+	/**
+	 * The Data version
+	 * @return
+	 */
+	public MiniData getMiniData() {
+		return mData;
+	}
+	
+	/**
+	 * Get the RAW byte data
+	 * @return
+	 */
+	public byte[] getRawData() {
+		return getMiniData().getData();
 	}
 	
 	@Override
@@ -38,50 +85,25 @@ public class HEXValue extends Value {
 		return VALUE_HEX;
 	}
 	
-	@Override
-	public boolean isEqual(Value zValue) {
+	public boolean isEqual(HexValue zValue) {
 		return mData.isEqual(zValue.getMiniData());
 	}
 	
-	@Override
-	public boolean isLess(Value zValue) {
-		return mData.isLess(zValue.getMiniData());
-	}
-	
-	@Override
-	public boolean isLessEqual(Value zValue) {
-		return mData.isLessEqual(zValue.getMiniData());
-	}
-	
-	@Override
-	public boolean isMore(Value zValue) {
-		return mData.isMore(zValue.getMiniData());
-	}
-	
-	@Override
-	public boolean isMoreEqual(Value zValue) {
-		return mData.isMoreEqual(zValue.getMiniData());
-	}
-	
-	@Override
-	public Value add(Value zValue) {
-		return new HEXValue( mNumber.add(zValue.getNumber()) );
-	}
-	
-	@Override
-	public Value sub(Value zValue) {
-		return new HEXValue( mNumber.sub(zValue.getNumber()) );
-	}
-	
-	@Override
-	public Value mult(Value zValue) {
-		return new HEXValue( mNumber.mult(zValue.getNumber()) );
-	}
-	
-	@Override
-	public Value div(Value zValue) {
-		return new HEXValue( mNumber.div(zValue.getNumber()) );
-	}
+//	public boolean isLess(HEXValue zValue) {
+//		return mData.isLess(zValue.getMiniData());
+//	}
+//	
+//	public boolean isLessEqual(HEXValue zValue) {
+//		return mData.isLessEqual(zValue.getMiniData());
+//	}
+//	
+//	public boolean isMore(HEXValue zValue) {
+//		return mData.isMore(zValue.getMiniData());
+//	}
+//	
+//	public boolean isMoreEqual(HEXValue zValue) {
+//		return mData.isMoreEqual(zValue.getMiniData());
+//	}
 	
 	@Override
 	public String toString() {

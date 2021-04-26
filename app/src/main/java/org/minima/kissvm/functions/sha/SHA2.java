@@ -3,9 +3,9 @@ package org.minima.kissvm.functions.sha;
 import org.minima.kissvm.Contract;
 import org.minima.kissvm.exceptions.ExecutionException;
 import org.minima.kissvm.functions.MinimaFunction;
-import org.minima.kissvm.values.HEXValue;
+import org.minima.kissvm.values.HexValue;
+import org.minima.kissvm.values.StringValue;
 import org.minima.kissvm.values.Value;
-import org.minima.objects.base.MiniData;
 import org.minima.utils.Crypto;
 
 public class SHA2 extends MinimaFunction {
@@ -22,17 +22,34 @@ public class SHA2 extends MinimaFunction {
 	 */
 	@Override
 	public Value runFunction(Contract zContract) throws ExecutionException {
-		//get the Input Data
-		byte[] data = getParameter(0).getValue(zContract).getRawData();
+		checkExactParamNumber(requiredParams());
+		
+		Value vv = getParameter(0).getValue(zContract);
+		checkIsOfType(vv, Value.VALUE_HEX | Value.VALUE_SCRIPT);
+		
+		byte[] data = null;
+		if(vv.getValueType() == Value.VALUE_HEX) {
+			//HEX
+			HexValue hex = (HexValue)vv;
+			data = hex.getRawData();
+			
+		}else {
+			//Script..
+			StringValue scr = (StringValue)vv;
+			data = scr.getBytes();
+			
+		}
 		
 		//Perform the SHA2 Operation
 		byte[] ans = Crypto.getInstance().hashSHA2(data);
 		
-		//Ensure a 32 byte hash
-		MiniData hash = new MiniData(ans);
-		
 		//return the New HEXValue
-		return new HEXValue(hash.getData());
+		return new HexValue(ans);
+	}
+	
+	@Override
+	public int requiredParams() {
+		return 1;
 	}
 	
 	@Override

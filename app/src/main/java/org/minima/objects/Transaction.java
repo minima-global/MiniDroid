@@ -16,7 +16,6 @@ import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
 import org.minima.objects.proofs.TokenProof;
 import org.minima.system.input.functions.gimme50;
-import org.minima.utils.MinimaLogger;
 import org.minima.utils.Streamable;
 import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
@@ -214,6 +213,24 @@ public class Transaction implements Streamable {
 			}
 		}
 		
+		//Check that all the inputs and outputs are valid Minima Values
+		for(Coin cc : mInputs) {
+			if(!cc.getAmount().isValidMinimaValue()) {
+				return false;
+			}
+			
+			//Inputs MUST be more than ZERO
+			if(cc.getAmount().isLessEqual(MiniNumber.ZERO)) {
+				return false;
+			}
+		}
+		
+		for(Coin cc : mOutputs) {
+			if(!cc.getAmount().isValidMinimaValue()) {
+				return false;
+			}
+		}
+			
 		return true;
 	}
 	

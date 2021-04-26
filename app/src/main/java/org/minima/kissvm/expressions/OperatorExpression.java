@@ -8,10 +8,10 @@ import java.math.BigInteger;
 import org.minima.kissvm.Contract;
 import org.minima.kissvm.exceptions.ExecutionException;
 import org.minima.kissvm.values.BooleanValue;
-import org.minima.kissvm.values.HEXValue;
+import org.minima.kissvm.values.HexValue;
 import org.minima.kissvm.values.NumberValue;
+import org.minima.kissvm.values.StringValue;
 import org.minima.kissvm.values.Value;
-import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
 
 /**
@@ -61,67 +61,149 @@ public class OperatorExpression implements Expression{
 		
 		Value lval = mLeft.getValue(zContract);
 		Value rval = mRight.getValue(zContract);
-				
-		MiniNumber left  = lval.getNumber();
-		MiniNumber right = rval.getNumber();
-		
-		MiniData ldata  = lval.getMiniData();
-		MiniData rdata  = rval.getMiniData();
-		
-		BigInteger lbig = ldata.getDataValue();
-		BigInteger rbig = rdata.getDataValue();
-		
+						
 		//Which Operator..
 		switch (mOperatorType) {
+		
+			/**
+			 * ADD is SPECIAL
+			 * 
+			 * Works with Number OR SCRIPT
+			 */
 		case OPERATOR_ADD :
-			ret = lval.add(rval);
-			break;
-		case OPERATOR_SUB :
-			ret = lval.sub(rval);
-			break;
-		case OPERATOR_MUL :
-			ret = lval.mult(rval);
-			break;
-		case OPERATOR_DIV :
-			//Check Divide by zero
-			if(right.isEqual(MiniNumber.ZERO)) {
-				throw new ExecutionException("Divide By ZERO! "+toString()); 
+			{
+				if(lval.getValueType() == Value.VALUE_NUMBER) {
+					Value.checkSameType(lval, rval);
+					NumberValue lnv = (NumberValue)lval;
+					NumberValue rnv = (NumberValue)rval;
+					MiniNumber ans = lnv.getNumber().add(rnv.getNumber());
+					return new NumberValue(ans);
+					
+				}else if(lval.getValueType() == Value.VALUE_SCRIPT) {
+					Value.checkSameType(lval, rval);
+					StringValue lnv = (StringValue)lval;
+					StringValue rnv = (StringValue)rval;
+					return lnv.add(rnv);
+				
+				}else {
+					throw new ExecutionException("Invalid type in ADD. MUST be Number or String "+lval.toString());
+				}
 			}
 			
-			ret = lval.div(rval);
 			
+			/**
+			 * MUST be NUMBERS
+			 */
+		case OPERATOR_SUB :
+			{
+				Value.checkSameType(lval, rval,Value.VALUE_NUMBER);
+				NumberValue lnv = (NumberValue)lval;
+				NumberValue rnv = (NumberValue)rval;
+				ret = lnv.sub(rnv);
+			}
 			break;
+			
+		case OPERATOR_MUL :
+			{
+				Value.checkSameType(lval, rval,Value.VALUE_NUMBER);
+				NumberValue lnv = (NumberValue)lval;
+				NumberValue rnv = (NumberValue)rval;
+				ret = lnv.mult(rnv);
+			}
+			break;
+		case OPERATOR_DIV :
+			{
+				Value.checkSameType(lval, rval,Value.VALUE_NUMBER);
+				NumberValue lnv = (NumberValue)lval;
+				NumberValue rnv = (NumberValue)rval;
+				if(rnv.getNumber().isEqual(MiniNumber.ZERO)) {
+					throw new ExecutionException("Divide By ZERO! "+toString()); 
+				}
+				ret = lnv.div(rnv);
+			}
+			break;
+		
 		case OPERATOR_NEG :
-			ret = new NumberValue( left.mult(MiniNumber.MINUSONE) );
+			{
+				lval.verifyType(Value.VALUE_NUMBER);
+				NumberValue lnv = (NumberValue)lval;
+				ret = new NumberValue( lnv.getNumber().mult(MiniNumber.MINUSONE) );
+			}
 			break;
 		
 		case OPERATOR_MODULO :
-			ret = new NumberValue( left.modulo(right) );
+			{
+				Value.checkSameType(lval, rval,Value.VALUE_NUMBER);
+				NumberValue lnv = (NumberValue)lval;
+				NumberValue rnv = (NumberValue)rval;
+				ret = new NumberValue( lnv.getNumber().modulo(rnv.getNumber()) );
+			}
 			break;
 		
 			/**
-			 * These are done on the RAW data - not the number
+			 * MUST be HEX
 			 */
 		case OPERATOR_SHIFTL :
-			ret = new HEXValue( ldata.shiftl(right.getAsInt()).toString() );
+			{
+				lval.verifyType(Value.VALUE_HEX);
+				rval.verifyType(Value.VALUE_NUMBER);
+				HexValue    lhv = (HexValue)lval;
+				NumberValue rnv = (NumberValue)rval;
+				ret = new HexValue( lhv.getMiniData().shiftl(rnv.getNumber().getAsInt()).to0xString() );
+			}
 			break;
 		case OPERATOR_SHIFTR :
-			ret = new HEXValue( ldata.shiftr(right.getAsInt()).toString() );
-			break;
-		
-			/**
-			 * Bitwise operators - done on the RAW data - not the number
-			 */
-		case OPERATOR_AND :
-			ret = new HEXValue ( lbig.and(rbig).toString(16) );
-			break;
-		case OPERATOR_OR :
-			ret = new HEXValue ( lbig.or(rbig).toString(16) );
-			break;
-		case OPERATOR_XOR :
-			ret = new HEXValue ( lbig.xor(rbig).toString(16) );
+			{
+				lval.verifyType(Value.VALUE_HEX);
+				rval.verifyType(Value.VALUE_NUMBER);
+				HexValue    lhv = (HexValue)lval;
+				NumberValue rnv = (NumberValue)rval;
+				ret = new HexValue( lhv.getMiniData().shiftr(rnv.getNumber().getAsInt()).to0xString() );
+			}
 			break;
 			
+			/**
+			 * MUST be HEX
+			 */
+		case OPERATOR_AND :
+			{
+				Value.checkSameType(lval, rval,Value.VALUE_HEX);
+				HexValue lhv  = (HexValue)lval;
+				HexValue rhv  = (HexValue)rval;
+				
+				BigInteger lbig = lhv.getMiniData().getDataValue();
+				BigInteger rbig = rhv.getMiniData().getDataValue();
+				
+				ret = new HexValue ( lbig.and(rbig).toString(16) );
+			}
+			break;
+		case OPERATOR_OR :
+			{
+				Value.checkSameType(lval, rval,Value.VALUE_HEX);
+				HexValue lhv  = (HexValue)lval;
+				HexValue rhv  = (HexValue)rval;
+				
+				BigInteger lbig = lhv.getMiniData().getDataValue();
+				BigInteger rbig = rhv.getMiniData().getDataValue();
+				
+				ret = new HexValue ( lbig.or(rbig).toString(16) );
+			}
+			break;
+		case OPERATOR_XOR :
+			{
+				Value.checkSameType(lval, rval,Value.VALUE_HEX);
+				HexValue lhv  = (HexValue)lval;
+				HexValue rhv  = (HexValue)rval;
+				
+				BigInteger lbig = lhv.getMiniData().getDataValue();
+				BigInteger rbig = rhv.getMiniData().getDataValue();
+				
+				ret = new HexValue ( lbig.xor(rbig).toString(16) );
+			}
+			break;
+			
+		default :
+			throw new ExecutionException("UNKNOWN operator");		
 		}
 		
 		//This action counts as one instruction

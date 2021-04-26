@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.Arrays;
 
 import org.minima.system.network.base.MinimaReader;
 import org.minima.utils.BaseConverter;
@@ -30,16 +31,51 @@ public class MiniData implements Streamable {
 	 */
 	protected byte[] mData;
 	
+	/**
+	 * Default Empty Constructor
+	 */
 	public MiniData() {
 		this(new byte[0]);
 	}
 	
+	/**
+	 * Throws a NumberFormatException if the HEX String is Invalid
+	 * 
+	 * @param zHexString
+	 */
 	public MiniData(String zHexString) {
 		this(BaseConverter.decode16(zHexString));
 	}
 	
+	/**
+	 * Construct from a byte array
+	 * 
+	 * @param zData
+	 */
 	public MiniData(byte[] zData) {
 		mData = zData;
+	}
+	
+	/**
+	 * Use a BigInteger to create
+	 * 
+	 * @param zBigInteger
+	 */
+	public MiniData(BigInteger zBigInteger) {
+		//Only Positive numbers
+		if(zBigInteger.signum() == -1) {
+			throw new IllegalArgumentException("MiniData value must be a postitive BigInteger");
+		}
+		
+		//Get the Byte array
+		byte[] signedValue = zBigInteger.toByteArray();
+        
+		//Remove a leading zero..
+		if(signedValue.length>1 && signedValue[0] == 0x00) {
+			mData = Arrays.copyOfRange(signedValue, 1, signedValue.length);
+        }else {
+        	mData = signedValue;
+        }
 	}
 	
 	public int getLength() {
@@ -56,10 +92,6 @@ public class MiniData implements Streamable {
 	
 	public BigDecimal getDataValueDecimal() {
 		return new BigDecimal(getDataValue());
-	}
-	
-	public MiniNumber getDataValueMiniNumber() {
-		return new MiniNumber(getDataValue());
 	}
 	
 	@Override
@@ -103,11 +135,11 @@ public class MiniData implements Streamable {
 	}
 	
 	public MiniData shiftr(int zNumber) {
-		return new MiniData(getDataValue().shiftRight(zNumber).toString(16).toUpperCase());
+		return new MiniData(getDataValue().shiftRight(zNumber));
 	}
 	
 	public MiniData shiftl(int zNumber) {
-		return new MiniData(getDataValue().shiftLeft(zNumber).toString(16).toUpperCase());
+		return new MiniData(getDataValue().shiftLeft(zNumber));
 	}
 	
 	public int compare(MiniData zCompare) {
@@ -264,20 +296,13 @@ public class MiniData implements Streamable {
 	
 	public static void main(String[] zArgs) {
 		
-		MiniData data1 = getRandomData(128);
-		MiniData data2 = getRandomData(128);
+		MiniData dd = new MiniData(BigInteger.ONE.multiply(new BigInteger("-1")));
+		System.out.println(dd.getDataValue()+" "+dd.to0xString());
 		
-		long timenow = System.currentTimeMillis();
-		boolean allsame = true;
-		for(int i=0;i<10000000;i++) {
-			boolean same = data1.isEqual(data2);
-			if(!same) {
-				allsame = false;
-			}
-		}
+		MiniData ff = dd.shiftr(1);
 		
-		long timediff = System.currentTimeMillis() - timenow;
-		System.out.println(allsame+" "+timediff);
+		System.out.println(dd.getDataValue()+" "+ff.getDataValue()+" "+ff.shiftr(1).getDataValue());
+		System.out.println(dd.to0xString()+" "+ff.to0xString()+" "+ff.shiftr(1).to0xString());
 		
 	}
 }

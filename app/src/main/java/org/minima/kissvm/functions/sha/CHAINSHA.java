@@ -3,7 +3,7 @@ package org.minima.kissvm.functions.sha;
 import org.minima.kissvm.Contract;
 import org.minima.kissvm.exceptions.ExecutionException;
 import org.minima.kissvm.functions.MinimaFunction;
-import org.minima.kissvm.values.HEXValue;
+import org.minima.kissvm.values.HexValue;
 import org.minima.kissvm.values.Value;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.proofs.Proof;
@@ -17,12 +17,13 @@ public class CHAINSHA extends MinimaFunction {
 	
 	@Override
 	public Value runFunction(Contract zContract) throws ExecutionException {
-		//Get the Input.. Could be HEX, SCRIPT, NUMBER
-		Value val     = getParameter(0).getValue(zContract);
+		checkExactParamNumber(requiredParams());
+		
+		HexValue val  = zContract.getHexParam(0, this);
 		MiniData data = val.getMiniData();
 
-		//Get the 32 byte hash data chain + 1 byte for left right 
-		HEXValue chain = (HEXValue) getParameter(1).getValue(zContract);
+		//Get the hash data chain + 1 byte for left right 
+		HexValue chain = zContract.getHexParam(1, this);
 		
 		//Bit Strength
 		int bits;
@@ -44,7 +45,12 @@ public class CHAINSHA extends MinimaFunction {
 		chainproof.setProof(chain.getMiniData());
 		
 		//Return..
-		return new HEXValue(chainproof.getFinalHash());
+		return new HexValue(chainproof.getFinalHash());
+	}
+	
+	@Override
+	public int requiredParams() {
+		return 2;
 	}
 	
 	@Override
