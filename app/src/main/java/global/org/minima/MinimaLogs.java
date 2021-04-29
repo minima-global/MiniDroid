@@ -99,7 +99,7 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
         //Get Minima..
         mMinima = binder.getService();
 
-        //Get the Text..
+        //Set the whole output
         addText("",true);
 
         //Add a listener..
