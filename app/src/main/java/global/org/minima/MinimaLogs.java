@@ -58,12 +58,18 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
         // Handle item selection
         switch (item.getItemId()) {
             case R.id.share:
+                //Get the text
+                String text = mText.getText().toString();
+
+                //Create an intent
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, MinimaLogger.getFullOutput());
+                sendIntent.putExtra(Intent.EXTRA_SUBJECT, "Minima Logs");
+                sendIntent.putExtra(Intent.EXTRA_TEXT, text);
                 sendIntent.setType("text/plain");
 
-                Intent shareIntent = Intent.createChooser(sendIntent, null);
+                //Fire it off..
+                Intent shareIntent = Intent.createChooser(sendIntent, "Shareing Options");
                 startActivity(shareIntent);
 
                 return true;
@@ -94,34 +100,40 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
         mMinima = binder.getService();
 
         //Get the Text..
-        mText.setText(MinimaLogger.getFullOutput());
+        addText("",true);
 
         //Add a listener..
         mMinima.getMinima().getServer().getConsensusHandler().addListener(this);
     }
 
-    private void addText(final String zText){
+    private void addText(final String zText, final boolean zFullOutput){
         Runnable adder = new Runnable() {
             @Override
             public void run() {
+                String text = zText;
+                if(zFullOutput){
+                    text = MinimaLogger.getFullOutput();
+                }
+
+                //Add return
+                if(!text.endsWith("\n")){
+                    text = text+"\n";
+                }
+
+                //And add the new..
+                mText.append(text);
+
                 //How big is it..
                 String current = mText.getText().toString();
 
                 //Check the Length
                 int len = current.length();
-                if(len>250000){
+                if(len>150000){
                     //Resize in order
-                    String tt = current.substring(len-200000,len);
+                    String tt = current.substring(len-140000,len);
 
                     //And now set it
                     mText.setText("...(cropped)\n"+tt);
-                }
-
-                //And add the new..
-                if(zText.endsWith("\n")){
-                    mText.append(zText);
-                }else{
-                    mText.append(zText+"\n");
                 }
             }
         };
@@ -137,7 +149,7 @@ public class MinimaLogs extends AppCompatActivity implements ServiceConnection, 
         //Get the LOG messages..
         if(zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_LOG)){
             //Add it to the text view..
-            addText(zMessage.getString("msg"));
+            addText(zMessage.getString("msg"), false);
         }
     }
 }
