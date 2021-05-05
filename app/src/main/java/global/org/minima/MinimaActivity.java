@@ -9,6 +9,8 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -85,6 +87,60 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
         startForegroundService(minimaintent);
         bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+
+        //Make sure..
+        requestBatteryCheck();
+    }
+
+    /**
+     * Show ameesgae requesting access to battery settings
+     */
+    public void requestBatteryCheck(){
+        String packageName = getPackageName();
+        PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
+        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Battery Optimise")
+                    .setMessage("Minima needs to run in the background to validate and secure your coins.\n\n" +
+                            "You can see this setting in your options menu in the top right.")
+                    // Specifying a listener allows you to take an action before dismissing the dialog.
+                    // The dialog is automatically dismissed when a dialog button is clicked.
+                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Continue with delete operation
+                            checkBatteryOptimisation();
+                        }
+                    })
+                    // A null listener allows the button to dismiss the dialog and take no further action.
+//                    .setNegativeButton(android.R.string.no, null)
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .show();
+        }
+    }
+
+    public void checkBatteryOptimisation(){
+        Intent intent = new Intent();
+        String packageName = getPackageName();
+        PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
+        if (!pm.isIgnoringBatteryOptimizations(packageName)){
+            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + packageName));
+            startActivity(intent);
+        }
+    }
+
+    public void openBatteryOptimisation(){
+        Intent intent = new Intent();
+//        String packageName = getPackageName();
+        PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
+        //if (pm.isIgnoringBatteryOptimizations(packageName))
+            intent.setAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+//        else {
+//            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+//            intent.setData(Uri.parse("package:" + packageName));
+//        }
+
+        startActivity(intent);
     }
 
     @Override
@@ -178,6 +234,10 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                             }
                         }).setNegativeButton("No", null).show();
 
+                return true;
+
+            case R.id.battery:
+                openBatteryOptimisation();
                 return true;
 
 //            case R.id.shutdown:
@@ -386,7 +446,6 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //    @Override
 //    protected void onStart() {
 //        super.onStart();
-//        MinimaLogger.log("Activity : onStart");
 //    }
 //
 //    @Override
@@ -547,7 +606,6 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             }
         });
         addlistener.start();
-
     }
 
     @Override
