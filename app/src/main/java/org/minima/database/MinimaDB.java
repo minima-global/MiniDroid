@@ -36,6 +36,7 @@ import org.minima.objects.greet.SyncPackage;
 import org.minima.objects.greet.SyncPacket;
 import org.minima.objects.keys.MultiKey;
 import org.minima.objects.proofs.TokenProof;
+import org.minima.system.Main;
 import org.minima.system.brains.BackupManager;
 import org.minima.system.brains.ConsensusHandler;
 import org.minima.system.input.functions.gimme50;
@@ -142,6 +143,9 @@ public class MinimaDB {
 				
 		//Back it up..
 		getBackup().backupTxpow(gen); 
+		
+		//Backup the Temp block
+		getBackup().backupTempBlock(root);
 	}
 	
 	public TxPoW getTxPOW(MiniData zTxPOWID) {

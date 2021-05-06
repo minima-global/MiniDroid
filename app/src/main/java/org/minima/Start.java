@@ -25,15 +25,15 @@ public class Start {
 	/**
 	 * A list of default valid nodes to connect to at startup..
 	 */
-//	public static final String[] VALID_BOOTSTRAP_NODES = 
-//		{"35.204.181.120",
-//		 "35.204.119.15",
-//		 "34.91.220.49",
-//		 "35.204.62.177",
-//		 "35.204.139.141",
-//		 "35.204.194.45"};
+	public static final String[] VALID_BOOTSTRAP_NODES = 
+		{"35.204.181.120",
+		 "35.204.119.15",
+		 "34.91.220.49",
+		 "35.204.62.177",
+		 "35.204.139.141",
+		 "35.204.194.45"};
 	
-	public static final String[] VALID_BOOTSTRAP_NODES = {"35.228.18.150"};
+//	public static final String[] VALID_BOOTSTRAP_NODES = {"35.228.18.150"};
 	
 	/**
 	 * A static link to the main server - for Android
@@ -95,18 +95,23 @@ public class Start {
 	public static void main(String[] zArgs){
 		//Check command line inputs
 		int arglen 				= zArgs.length;
+		
+		//Which port are we listening on
 		int port 				= 9001;
 		
 		boolean connect         = true;
 		
 		//Pick a random host
-		Random rand = new Random();
-		int hostnum = rand.nextInt(VALID_BOOTSTRAP_NODES.length);
-		//hostnum = 3;
+		Random rand  = new Random();
 		
+		//Which Boot node
+		int hostnum  = rand.nextInt(VALID_BOOTSTRAP_NODES.length);
+		
+		//9001, 10001, 11001 are valid ports from the BOOT nodes
+		int portrand 			= rand.nextInt(3);
 		ArrayList<String> connectlist = new ArrayList<>();
 		String connecthost      = VALID_BOOTSTRAP_NODES[hostnum];
-		int connectport         = 9001;
+		int connectport         = 9001 + (1000*portrand);
 		String host             = "";
 
 		String external 		= "";
