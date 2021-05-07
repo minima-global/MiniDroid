@@ -9,6 +9,8 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.ViewPager;
 
+import com.google.android.material.tabs.TabLayout;
+
 import global.org.minima.R;
 
 public class IntroductionActivity extends AppCompatActivity {
@@ -22,6 +24,9 @@ public class IntroductionActivity extends AppCompatActivity {
         //Get the viewpager
         ViewPager pager = (ViewPager)findViewById(R.id.intro_viewpager);
         pager.setAdapter(new IntroPageAdapter(this));
+
+        TabLayout tabLayout = (TabLayout) findViewById(R.id.tabDots);
+        tabLayout.setupWithViewPager(pager, true);
 
 //        TextView maintext = (TextView)findViewById(R.id.intro_text1);
 //        maintext.setText("The Complete Blockchain Solution\n\n" +

@@ -43,6 +43,8 @@ import java.util.Enumeration;
 
 import com.minima.service.MinimaService;
 
+import global.org.minima.intro.IntroductionActivity;
+
 public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
 
     Button btnMini;
@@ -88,8 +90,23 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         startForegroundService(minimaintent);
         bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
 
+        //Do we do the intro..
+        SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
+
+        //Introduction
+        boolean doIntro = pref.getBoolean("intro",true);
+        if(doIntro){
+            SharedPreferences.Editor editor = pref.edit();
+            editor.putBoolean("intro",false);
+            editor.commit();
+
+            //Start the intro activity..
+            Intent intro = new Intent(this, IntroductionActivity.class);
+            startActivity(intro);
+        }
+
         //Make sure..
-        requestBatteryCheck();
+//        requestBatteryCheck();
     }
 
     /**

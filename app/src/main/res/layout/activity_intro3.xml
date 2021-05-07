@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/intro_layout1"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="top|center_horizontal">
+
+    <TextView
+        android:id="@+id/intro_texttitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dip"
+        android:layout_marginRight="20dip"
+        android:layout_marginTop="50dip"
+        android:layout_marginBottom="80px"
+        android:fontFamily="@font/manrope"
+        android:gravity="center"
+        android:text="Backup and Restore"
+        android:textColor="#001C32"
+        android:textSize="32dip"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/intro_text1"
+        android:text="@string/intro_backup"
+        android:textStyle="bold"
+        android:textSize="18dip"
+        android:textColor="#001C32"
+        android:fontFamily="@font/manrope"
+        android:gravity="center"
+        android:layout_marginBottom="40dip"
+        android:layout_marginLeft="20dip"
+        android:layout_marginRight="20dip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+</LinearLayout>

@@ -41,7 +41,7 @@
         </provider>
 
         <!-- ACTIVITIES -->
-        <activity android:name=".intro.IntroductionActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize">
+        <activity android:name=".MinimaActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -53,7 +53,7 @@
         <activity android:name=".MinimaLogs" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"></activity>
 
         <!-- Intro Activity -->
-        <activity android:name=".intro.Introduction2Activity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:name=".intro.IntroductionActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"/>
 
         <!-- SERVICES -->
         <service android:name="com.minima.service.MinimaService" android:enabled="true" android:exported="true"></service>

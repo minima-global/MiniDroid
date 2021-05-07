@@ -4,5 +4,24 @@
     <string name="btn_text"> Launch </string>
     <string name="btn2_text">Help</string>
     <string name="btn3_text">BACK</string>
+
+    <string name="intro_battery">
+        Minima needs to run in the background to fully validate and secure your coins.\n\n
+        You can view this setting later in the app by choosing Battery Optimisation from the Options Menu.\n\n
+        Please grant this application permission..</string>
+
+    <string name="intro_backup">
+        You MUST NOT uninstall this application without FIRST making a backup.\n\n
+        Your coins are secured with private keys that ONLY you have.\n\n
+        Choose BACKUP from the Options Menu and you can RESTORE there as well.\n\n
+        It\'s very easy - don\'t worry..
+    </string>
+
+    <string name="intro_conclusion">
+        Congratulations.\n\n
+        You are now ready to start using Minima.\n\n
+        A new world of Freedom awaits you.
+    </string>
+
     <string name="help_text">You can access MiniDAPP anywhere as long as the Node is running.  Type the following URL in any browser, device or desktop: http://</string>
 </resources>
