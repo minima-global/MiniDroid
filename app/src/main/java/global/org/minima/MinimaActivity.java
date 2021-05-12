@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.provider.Browser;
 import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -71,12 +72,12 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         //The Button to open the local browser
         btnMini = findViewById(global.org.minima.R.id.btn_minidapp);
         btnMini.setTransformationMethod(null);
-
         btnMini.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:9004/"));
-                startActivity(intent);
+                intent.putExtra(Browser.EXTRA_APPLICATION_ID, MinimaActivity.this.getPackageName());
+                 startActivity(intent);
             }
         });
         btnMini.setVisibility(View.GONE);
