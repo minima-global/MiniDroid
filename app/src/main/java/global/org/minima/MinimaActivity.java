@@ -77,7 +77,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:9004/"));
                 intent.putExtra(Browser.EXTRA_APPLICATION_ID, MinimaActivity.this.getPackageName());
-                 startActivity(intent);
+                startActivity(intent);
             }
         });
         btnMini.setVisibility(View.GONE);

@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
@@ -38,11 +39,16 @@ public class IntroPageAdapter extends PagerAdapter {
             next.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    Intent intent = new Intent();
                     String packageName = mContext.getPackageName();
-                    intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                    intent.setData(Uri.parse("package:" + packageName));
-                    mContext.startActivity(intent);
+                    PowerManager pm = (PowerManager)mContext.getSystemService(Context.POWER_SERVICE);
+                    if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                        Intent intent = new Intent();
+                        intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                        intent.setData(Uri.parse("package:" + packageName));
+                        mContext.startActivity(intent);
+                    }else{
+                        Toast.makeText(mContext, "Permission already enabled!", Toast.LENGTH_LONG).show();
+                    }
                 }
             });
 
