@@ -248,7 +248,7 @@ public class MinimaService extends Service {
             Thread mini_install = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    loadMiniDapp("wallet-1.0.73.minidapp");
+                    loadMiniDapp("wallet-1.0.78.minidapp");
                     loadMiniDapp("terminal.minidapp");
                     loadMiniDapp("storefront.minidapp");
                 }

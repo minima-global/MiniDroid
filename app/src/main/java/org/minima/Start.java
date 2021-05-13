@@ -15,6 +15,7 @@ import org.minima.system.brains.BackupManager;
 import org.minima.system.network.commands.CMD;
 import org.minima.utils.MiniFormat;
 import org.minima.utils.MinimaLogger;
+import org.minima.utils.SQLHandler;
 
 /**
  * @author Paddy Cerri
@@ -118,9 +119,14 @@ public class Start {
 		
 		boolean clean           = false;
 		boolean cleanhard       = false;
-		boolean genesis 		= false;
+		boolean privatenetwork 	= false;
 		boolean daemon          = false;
 		boolean automine 		= false;
+		
+		boolean mysql 			= false;
+		String mysqlhost 		= "";
+		String mysqluser 		= "";
+		String mysqlpassword 	= "";
 		
 		//Configuration folder
 		File conf = new File(System.getProperty("user.home"),".minima");
@@ -153,7 +159,9 @@ public class Start {
 					MinimaLogger.log("        -noconnect             : Don't connect to MainNet. Can then connect to private chains.");
 					MinimaLogger.log("        -connect [host] [port] : Don't connect to MainNet but connect to this node instead.");
 					MinimaLogger.log("        -daemon                : Accepts no input from STDIN. Can run in background process.");
+					MinimaLogger.log("        -mysql                 : Specify a MySQL server to use instead of built in H2 database. user:password@host");
 					MinimaLogger.log("        -externalurl           : Send a POST request to this URL with Minima JSON information.");
+					
 					MinimaLogger.log("        -help                  : Show this help");
 					MinimaLogger.log("");
 					MinimaLogger.log("With zero parameters Minima will start and connect to a set of default nodes.");
@@ -161,9 +169,9 @@ public class Start {
 					return;
 				
 				}else if(arg.equals("-private")) {
-					genesis     = true;
-					connect 	= false;
-					automine    = true;
+					privatenetwork  = true;
+					connect 		= false;
+					automine    	= true;
 					
 				}else if(arg.equals("-noconnect")) {
 					connect = false;
@@ -188,6 +196,27 @@ public class Start {
 				}else if(arg.equals("-conf")) {
 					conffolder = zArgs[counter++];
 				
+				}else if(arg.equals("-mysql")) {
+					//Get the details..
+					String dets = zArgs[counter++];
+					
+					//Parse the details..
+					int muse  = dets.indexOf(":");
+					int mhost = dets.indexOf("@");
+					
+					if(muse==-1 || mhost==-1) {
+						MinimaLogger.log("ERROR mysql format user:password@host : "+dets);
+						System.exit(0);
+					}
+					
+					//Get the details..
+					mysql 			= true;
+					mysqluser 		= dets.substring(0,muse);
+					mysqlpassword	= dets.substring(muse+1, mhost);
+					mysqlhost		= dets.substring(mhost+1);
+					
+//					System.out.println(mysqluser+" "+mysqlpassword+" "+mysqlhost);
+										
 				}else if(arg.equals("-externalurl")) {
 					external = zArgs[counter++];
 				
@@ -204,11 +233,17 @@ public class Start {
 				}
 			}
 		}
+
+		//Are we using MYSQL
+		if(mysql) {
+			boolean success = SQLHandler.setMySQLDetails(mysqlhost, mysqluser, mysqlpassword);
+			if(!success) {
+				MinimaLogger.log("ERROR conecting to MYSQL database.. "+mysqluser+":"+mysqlpassword+"@"+mysqlhost);
+				System.exit(0);
+			}
+		}
 		
-//		//Add a version number to the CONF folder
-//		int dotindex = GlobalParams.MINIMA_VERSION.indexOf(".",2);
-//		String versionfolder = GlobalParams.MINIMA_VERSION.substring(0, dotindex);
-//		File conffile = new File(conffolder,versionfolder);
+		//Configuration folder
 		File conffile = new File(conffolder);
 		
 		//Clean up..
@@ -221,8 +256,12 @@ public class Start {
 			BackupManager.deleteWebRoot(conffile);
 		}
 		
+		
+		
+		
+		
 		//Start the main Minima server
-		Main rcmainserver = new Main(host, port, genesis, conffile.getAbsolutePath());
+		Main rcmainserver = new Main(host, port, conffile.getAbsolutePath());
 		
 		//Link it.
 		mMainServer = rcmainserver;
@@ -240,8 +279,11 @@ public class Start {
 		rcmainserver.setAutoConnect(connect);
 		
 		//Are we private!
-		if(genesis) {
-			rcmainserver.privateChain(clean);
+		if(privatenetwork) {
+			//Do we need a gensis block
+			boolean needgenesis = clean || BackupManager.requiresPrivateGenesis(conffile);
+			
+			rcmainserver.privateChain(needgenesis);
 		}
 		
 		if(automine) {
