@@ -5,7 +5,7 @@ repositories {
         // Choose whatever name you like
         name = "GitHubPackages"
         // The url of the repository that contains the published artifacts
-        url = "https://maven.pkg.github.com/1mprobable/Minima"
+        url = "https://maven.pkg.github.com/minima-global/Minima"
         credentials {
             // The credentials (described in the next section)
             username = project.findProperty("gpr.user")
