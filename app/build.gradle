@@ -1,5 +1,10 @@
-apply plugin: 'com.android.application'
+plugins {
+    // Apply the java plugin to add support for Java
+    id 'com.android.application'
+    // Plugin to publish artifacts to github and maven
+    id 'maven-publish'
 
+}
 repositories {
     maven {
         // Choose whatever name you like
@@ -8,8 +13,8 @@ repositories {
         url = "https://maven.pkg.github.com/minima-global/Minima"
         credentials {
             // The credentials (described in the next section)
-            username = project.findProperty("gpr.user")
-            password = project.findProperty("gpr.key")
+            username = System.getenv("GITHUB_ACTOR")
+            password = System.getenv("GITHUB_TOKEN")
         }
     }
 }
