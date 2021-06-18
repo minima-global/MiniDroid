@@ -13,6 +13,18 @@
 
 <script type='text/javascript'>
 
+	function getParam(parameterName){
+		var result = null,tmp = [];
+		var items = location.search.substr(1).split("&");
+		for (var index = 0; index < items.length; index++) {
+		    tmp = items[index].split("=");
+			if (tmp[0] === parameterName){
+				return decodeURIComponent(tmp[1]);
+			}
+		}
+		return null;
+	}
+
 	//Wait for the page to load..
 	window.addEventListener('load', function(){
 		const inputElement = document.getElementById('file-input');
@@ -21,6 +33,11 @@
 		function handleFiles() {
 		  document.getElementById('installform').submit();
 		}
+		
+		//Check if we have logged in..
+		var sessionid = getParam("sessionid");
+		console.log("Sessionid : "+sessionid);
+		
 	});
 	
 
@@ -55,6 +72,8 @@
 
 <tr>
 	<td width=100% height=100% class='minidapplist'>
+		<div class="allthetext" style="width:100%">
+		
 		######
 		
 		<!--
@@ -78,6 +97,9 @@
 		
 		<div style='height:15px; width:100%; clear:both;'></div>
 		-->
+		
+		
+		</div>
 		
 	</td>
 </tr>

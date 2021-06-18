@@ -11,12 +11,16 @@ import java.util.Date;
 import java.util.StringTokenizer;
 
 import org.minima.objects.base.MiniString;
+import org.minima.system.Main;
+import org.minima.system.input.functions.newaddress;
 import org.minima.system.network.commands.CMD;
 import org.minima.system.network.commands.FILE;
 import org.minima.system.network.commands.NET;
 import org.minima.system.network.commands.SQL;
 import org.minima.utils.MiniFormat;
 import org.minima.utils.MinimaLogger;
+import org.minima.utils.json.JSONObject;
+import org.minima.utils.json.parser.JSONParser;
 
 /**
  * This class handles a single request then exits
@@ -89,6 +93,8 @@ public class RPCHandler implements Runnable {
 			String reqtype     = "";
 			String command     = "";
 			
+			MinimaLogger.log("REQUEST : "+fileRequested);
+			
 			//POST can handle longer messages
 			if (method.equals("POST")){
 				//Create a char buffer
@@ -99,6 +105,8 @@ public class RPCHandler implements Runnable {
 				
 				//What is being asked..
 				command = URLDecoder.decode(new String(cbuf),"UTF-8").trim();
+				
+				MinimaLogger.log("command : "+command);
 				
 				//Remove slashes..
 				reqtype = new String(fileRequested);
@@ -140,19 +148,51 @@ public class RPCHandler implements Runnable {
 				throw new IOException("Unsupported Method in RPCHandler : "+firstline);
 			}
 			
-			//Get the MinDAPP ID
-			String MiniDAPPID = "0x00";
-			int slash = reqtype.indexOf("/");
-			if(slash!=-1) {
-				MiniDAPPID = reqtype.substring(slash+1);
-				reqtype    = reqtype.substring(0,slash);
+			//Base..
+			String MiniDAPPID 	 = "0x00";
+			boolean invalidlogon = false;
+			
+			//Is this JSONRPC
+			if(reqtype.equalsIgnoreCase("jsonrpc")) {
+				//Convert trhe command to JSON..
+				JSONObject fulljsoncommand = (JSONObject) new JSONParser().parse(command);
+				
+				//Break it down..
+				MiniDAPPID 			= (String) fulljsoncommand.get("minidappid");
+				String MiniCodeID 	= (String) fulljsoncommand.get("minicodeid");
+				
+				//Check the CodeID
+				String codeid = Main.getMainHandler().getNetworkHandler().getDAPPManager().getMiniDAPPCodeID(MiniDAPPID);
+				
+				//Are we good..
+				if(!codeid.equals(MiniCodeID)) {
+					invalidlogon = true;
+				}
+				
+				reqtype				= (String) fulljsoncommand.get("type");
+				command				= (String) fulljsoncommand.get("command");
+				
+			}else {
+				//Get the MinDAPP ID
+				int slash = reqtype.indexOf("/");
+				if(slash!=-1) {
+					MiniDAPPID = reqtype.substring(slash+1);
+					reqtype    = reqtype.substring(0,slash);
+				}
 			}
 			
-//			MinimaLogger.log("File requested : "+fileRequested);
-//			MinimaLogger.log("RPCHandler "+method+" "+reqtype+" "+command+" "+MiniDAPPID);
-			
+			//Was this an invlid logon..
+			if(invalidlogon) {
+				if(command.equals("topblock;balance")) {
+					//it's the initial..
+					finalresult = "[{\"status\":false, \"message\":\"STARTUP SECURITY ERROR : INVALID CODEID FOR MINIDAPP\"}, "
+								 + "{\"status\":false, \"message\":\"STARTUP SECURITY ERROR : INVALID CODEID FOR MINIDAPP\"} ]";
+				}else {
+					finalresult = "{\"status\":false, \"message\":\"SECURITY ERROR : INVALID CODEID FOR MINIDAPP\"}";
+				}
+				
 			//Is this a SQL function
-			if(reqtype.equals("sql")) {
+			}else if(reqtype.equals("sql")) {
 				//Create a SQL object
 				SQL sql = new SQL(command, MiniDAPPID);
 				

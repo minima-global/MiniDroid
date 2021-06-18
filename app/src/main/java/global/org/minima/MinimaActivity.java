@@ -29,6 +29,7 @@ import org.minima.system.brains.ConsensusHandler;
 import org.minima.utils.MiniFile;
 import org.minima.utils.MiniFormat;
 import org.minima.utils.MinimaLogger;
+import org.minima.utils.cryptojs.TravisAES;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageListener;
 
@@ -86,10 +87,17 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         mTextIP = findViewById(R.id.iptext_minidapp);
         mTextIP.setText("\nSynchronising.. please wait..");
 
-        //start Minima node Foreground Service
-        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
-        startForegroundService(minimaintent);
-        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+//        //start Minima node Foreground Service
+//        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+//        startForegroundService(minimaintent);
+//        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+
+
+        TravisAES.main(null);
+
+        if(true){
+            return;
+        }
 
         //Do we do the intro..
         SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode

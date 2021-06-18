@@ -29,6 +29,7 @@ import org.minima.system.network.minidapps.comms.CommsManager;
 import org.minima.system.network.minidapps.minibackend.BackEndDAPP;
 import org.minima.system.network.minidapps.websocket.WebSocketManager;
 import org.minima.system.network.rpc.RPCClient;
+import org.minima.utils.BaseConverter;
 import org.minima.utils.Crypto;
 import org.minima.utils.MiniFile;
 import org.minima.utils.MiniFormat;
@@ -55,7 +56,14 @@ public class DAPPManager extends MessageProcessor {
 	public static String DAPP_MINIDAPP_POST     = "DAPP_MINIDAPP_POST";
 	public static String DAPP_MINIDAPP_POSTALL  = "DAPP_MINIDAPP_POSTALL";
 	
+	//Key reqired to create all the codeid values for all the minidapps..
+	MiniData MINIDAPP_BASE_CODE = null;
+	
+//	//Code are the hash of the MiniDAPPID and the base code..
+//	Hashtable<String, String> CURRENT_MINIDAPPS_CODES = new Hashtable<>();
+	
 	JSONArray CURRENT_MINIDAPPS = new JSONArray();
+	
 	String MINIDAPPS_FOLDER     = "";
 	
 	//The MiniDAPP app server
@@ -132,6 +140,16 @@ public class DAPPManager extends MessageProcessor {
 		}
 		
 		return CURRENT_MINIDAPPS;
+	}
+	
+	public String getMiniDAPPCodeID(String zMiniDAPPID) {
+		//Create the MiniData object
+		MiniData mini = new MiniData(zMiniDAPPID);
+		
+		//Hash the MiniDAPP base code and this..
+		MiniData code = Crypto.getInstance().hashAllObjects(160, MINIDAPP_BASE_CODE, mini);
+		
+		return code.to0xString();
 	}
 	
 	public String getMiniDAPPID(String zMiniDAPPNAme) {
@@ -392,6 +410,10 @@ public class DAPPManager extends MessageProcessor {
 			mDAPPServer = new DAPPServer(mNetwork.getMiniDAPPServerPort(), this);
 			try {
 				mDAPPServer.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+				
+				//Create the login codes..
+				createMiniHubCode();
+				
 				MinimaLogger.log("MiniDAPP server started on port "+mNetwork.getMiniDAPPServerPort());
 				
 			} catch (IOException e) {
@@ -628,25 +650,18 @@ public class DAPPManager extends MessageProcessor {
 			JSONObject wsmsg = new JSONObject();
 			wsmsg.put("event","network");
 			wsmsg.put("details",json);
-			
-			//MinimaLogger.log("DIRECT POST "+wsmsg.toString());
-			
-			//Check it exists
-			BackEndDAPP bend = mBackends.get(minidapp);
-			if(bend == null) {
-				InputHandler.endResponse(zMessage, false, "MiniDAPP not found "+minidapp);
-				return;
-			}
+				
+			//BOTH NEED TO BE LISTENING!!
 			
 			//Send to the backend
 			sendToBackEND(minidapp,wsmsg);
 			
-//			//And to the front end..
-//			Message msg = new Message(WebSocketManager.WEBSOCK_SEND);
-//			msg.addString("message", wsmsg.toString());
-//			msg.addString("minidappid", minidapp);
-//			mNetwork.getWebSocketManager().PostMessage(msg);
-		
+			//And to the front end..
+			Message msg = new Message(WebSocketManager.WEBSOCK_SEND);
+			msg.addString("message", wsmsg.toString());
+			msg.addString("minidappid", minidapp);
+			mNetwork.getWebSocketManager().PostMessage(msg);
+					
 		}else if(zMessage.getMessageType().equals(DAPP_DIRECTREPLY)) {
 			//Get the REPLY ID
 			String replyid = zMessage.getString("replyid");
@@ -728,6 +743,24 @@ public class DAPPManager extends MessageProcessor {
 				bend.MinimaEvent(JSONEvent);
 			}
 		}	
+	}
+	
+	/**
+	 * Create the BASE MiniHUB login code and base hash unit for the minidapps 
+	 */
+	public void createMiniHubCode() {
+		//Set the Dynamic Key
+		MiniData rand = MiniData.getRandomData(5);
+		
+		//Convert to HEX32
+		String code = BaseConverter.encode32(rand.getData());
+		
+		//Set it..
+//		mDAPPServer.setLogonCode(code);
+		mDAPPServer.setLogonCode("0xFFEEDD");
+		
+		//Now the base code for all the MinDAPPS
+		MINIDAPP_BASE_CODE = MiniData.getRandomData(20);
 	}
 	
 	public File findFile(File zRootDirectory, String zFilename) {

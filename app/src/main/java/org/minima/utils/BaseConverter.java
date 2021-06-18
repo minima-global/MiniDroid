@@ -179,9 +179,15 @@ public class BaseConverter {
 	
 	public static void main(String[] zArgs) {
 		
-		byte[] data = decode16("");
+		String datastr = "0xFFEEFFEEFF";
+		System.out.println(datastr);
 		
-		System.out.print(data.length);
+		byte[] data = decode16(datastr);
+		System.out.println(data.length);
+		
+		String enc32 = encode32(data);
+		System.out.println(enc32);
+		System.out.println(enc32.length());
 		
 //		String tt = numberToHex(8687);
 //		System.out.println(tt);

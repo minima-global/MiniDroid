@@ -171,6 +171,14 @@ public class MiniData implements Streamable {
 		return BaseConverter.encode16(mData);
 	}
 	
+	/**
+	 * HEX string without 0x at the start
+	 * @return
+	 */
+	public String toPureString() {
+		return BaseConverter.encode16(mData).substring(2);
+	}
+	
 	public String to0xString(int zLen) {
 		String data = to0xString();
 		int len = data.length();

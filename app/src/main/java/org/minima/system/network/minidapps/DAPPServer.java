@@ -2,8 +2,11 @@ package org.minima.system.network.minidapps;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -22,6 +25,8 @@ import org.minima.system.network.minidapps.minihub.hexdata.helphtml;
 import org.minima.system.network.minidapps.minihub.hexdata.iconpng;
 import org.minima.system.network.minidapps.minihub.hexdata.indexhtml;
 import org.minima.system.network.minidapps.minihub.hexdata.installdapphtml;
+import org.minima.system.network.minidapps.minihub.hexdata.invalidlogonhtml;
+import org.minima.system.network.minidapps.minihub.hexdata.logonhtml;
 import org.minima.system.network.minidapps.minihub.hexdata.manropettf;
 import org.minima.system.network.minidapps.minihub.hexdata.minidapphubpng;
 import org.minima.system.network.minidapps.minihub.hexdata.minidappscss;
@@ -57,6 +62,7 @@ public class DAPPServer extends NanoHTTPD{
 	
 	Hashtable<String, JSONObject> mParams;
 	
+	private String LOGON_SESSIONID_CODE = "0xFFEEDD";
 	
 	public DAPPServer(int zPort, DAPPManager zDAPPManager) {
 		super(zPort);
@@ -69,6 +75,14 @@ public class DAPPServer extends NanoHTTPD{
 		mParams = new Hashtable<>();
 	}
 
+	public void setLogonCode(String zCode) {
+		LOGON_SESSIONID_CODE = zCode;
+	}
+	
+	public String getLogonCode() {
+		return LOGON_SESSIONID_CODE;
+	}
+	
 	@Override
     public Response serve(IHTTPSession session) {
         try {
@@ -149,11 +163,41 @@ public class DAPPServer extends NanoHTTPD{
 			
 				//Are we using the MiniHUB..!
 			if(isroot) {
+				
 				if(fileRequested.equals("index.html")) {
-					//And create the Page...
-					String page    = new String(indexhtml.returnData(),StandardCharsets.UTF_8);
-					String newpage = page.replace("######", createMiniDAPPList());
-					return getOKResponse(newpage.getBytes(), "text/html");
+					//Valid logon ?
+					boolean validlogon   = false;
+					boolean logonattempt = false;
+					
+					//Check if the correct sessionId is present..
+					if(!params.isEmpty() && params.get("sessionid")!=null) {
+						logonattempt = true;
+						
+						//Get the sessionod
+						String sesh = params.get("sessionid").get(0);
+						if(sesh.equals(LOGON_SESSIONID_CODE)) {
+							//we good!
+							validlogon = true;
+						}
+					}
+					
+					//Show page depending..
+					if(validlogon) {
+						//And create the Page...
+						String page    = new String(indexhtml.returnData(),StandardCharsets.UTF_8);
+						String newpage = page.replace("######", createMiniDAPPList());
+						return getOKResponse(newpage.getBytes(), "text/html");
+					}else if(logonattempt) {
+						//Small Pause.. to stop someone grinding the keys
+						Thread.sleep(2000);
+						return getOKResponse(invalidlogonhtml.returnData(), "text/html");
+					}
+						
+					//Otherwise.. show logon page..
+					return getOKResponse(logonhtml.returnData(), "text/html");
+					
+				}else if(fileRequested.equals("logon.html")) {
+					return getOKResponse(logonhtml.returnData(), "text/html");
 					
 				}else if(fileRequested.equals("minidapps.css")) {
 					return getOKResponse(minidappscss.returnData(), "text/css");
@@ -383,11 +427,15 @@ public class DAPPServer extends NanoHTTPD{
 			//Now do it..
 			String root  = (String) app.get("root");
 			String uid  = (String) app.get("uid");
+			
+			//Get the code for this MiniDAPP to logon..
+			String codeid = mDAPPManager.getMiniDAPPCodeID(uid);
+			
 			String name  = (String) app.get("name");
 			String desc  = (String) app.get("description");
 //			String backg = root+"/"+(String) app.get("background");
 			String icon  = root+"/"+(String) app.get("icon");
-			String webpage  = root+"/index.html";
+			String webpage  = root+"/index.html?minicodeid="+codeid;
 			String download =  (String) app.get("download");
 			
 			String version  = "1.0";
@@ -449,4 +497,35 @@ public class DAPPServer extends NanoHTTPD{
 		return mCurrentIndex;
 	}
 	
+    
+    
+    /**
+     * Load a resource..
+     * @param resource
+     * @return
+     */
+    public URL getResource(String resource){
+        URL url ;
+
+        //Try with the Thread Context Loader. 
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if(classLoader != null){
+            url = classLoader.getResource(resource);
+            if(url != null){
+                return url;
+            }
+        }
+
+        //Let's now try with the classloader that loaded this class.
+        classLoader = getClass().getClassLoader();
+        if(classLoader != null){
+            url = classLoader.getResource(resource);
+            if(url != null){
+                return url;
+            }
+        }
+
+        //Last ditch attempt. Get the resource from the classpath.
+        return ClassLoader.getSystemResource(resource);
+    }
 }
