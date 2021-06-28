@@ -250,7 +250,7 @@ public class MinimaService extends Service {
                 public void run() {
                     loadMiniDapp("wallet1.1.4.minidapp");
                     loadMiniDapp("terminal.minidapp");
-                    loadMiniDapp("storefront1.0.4.minidapp");
+                    loadMiniDapp("storefront-v1.0.5.minidapp");
                 }
             });
 
