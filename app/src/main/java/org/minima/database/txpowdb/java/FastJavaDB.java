@@ -120,8 +120,8 @@ public class FastJavaDB implements TxPowDB {
 		//The minimum block before its too late
 		MiniNumber minused = zCascade.sub(MiniNumber.SIXTYFOUR);
 		
-		//Keep them for at least 12 hours
-		long mintime = System.currentTimeMillis() - (1000 * 60 * 60 * 12);
+		//Keep them for at least 2 hours
+		long mintime = System.currentTimeMillis() - (1000 * 60 * 60 * 2);
 		
 		Enumeration<JavaDBRow> allrows = mTxPoWRows.elements();
 		while(allrows.hasMoreElements()) {
