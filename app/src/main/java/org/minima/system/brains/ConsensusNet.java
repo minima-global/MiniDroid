@@ -612,6 +612,7 @@ public class ConsensusNet extends ConsensusProcessor {
 		 */
 		}else if ( zMessage.isMessageType(CONSENSUS_NET_TXPOWLIST)) {
 			TxPoWList block = (TxPoWList)zMessage.getObject("txpowlist"); 
+			boolean hittip = false;
 			
 			//Cycle through.. and Post as normal..
 			ArrayList<TxPoW> txps = block.getList();
@@ -622,9 +623,16 @@ public class ConsensusNet extends ConsensusProcessor {
 				if(txp.getBlockNumber().isMoreEqual(mCurrentSyncTip)) {
 					//We are equal..
 					MinimaLogger.log("SYNC TIP HIT!!");
-					getConsensusHandler().PostMessage(CONSENSUS_NET_SYNCOMPLETE);
+					hittip = true;
+//					getConsensusHandler().PostMessage(CONSENSUS_NET_SYNCOMPLETE);
 				}
 			}
+			
+			//Are we done
+			if(hittip) {
+				finishUpSync();
+			}
+			
 			
 		/**
 		 * A TxPoWID message from a client.. do you need it ?	
@@ -811,24 +819,24 @@ public class ConsensusNet extends ConsensusProcessor {
 			return;
 		}
 		
-		//Check if we have sent off for it recently..
-		String data  = zTxPoWID.to0xString();
-		
-		//Check for it.. in last 5 seconds..
-		boolean found = mDataTimer.checkForData(data, 5000);
-		
-		//If found.. repost the request on a 5 second timer..
-		if(found) {
-			//Wait 10 seconds before trying again..
-			TimerMessage newtxpowid = new TimerMessage(10000, CONSENSUS_NET_TXPOWID);
-			//Add the TxPOWID
-			newtxpowid.addObject("txpowid", zTxPoWID);
-			//And the Net Client..
-			newtxpowid.addObject("netclient", zClient);
-			//Post it for later..
-			getConsensusHandler().PostTimerMessage(newtxpowid);
-			return;
-		}
+//		//Check if we have sent off for it recently..
+//		String data  = zTxPoWID.to0xString();
+//		
+//		//Check for it.. in last 5 seconds..
+//		boolean found = mDataTimer.checkForData(data, 5000);
+//		
+//		//If found.. repost the request on a 5 second timer..
+//		if(found) {
+//			//Wait 10 seconds before trying again..
+//			TimerMessage newtxpowid = new TimerMessage(10000, CONSENSUS_NET_TXPOWID);
+//			//Add the TxPOWID
+//			newtxpowid.addObject("txpowid", zTxPoWID);
+//			//And the Net Client..
+//			newtxpowid.addObject("netclient", zClient);
+//			//Post it for later..
+//			getConsensusHandler().PostTimerMessage(newtxpowid);
+//			return;
+//		}
 		
 		//Add it to the list of requested..
 		getNetworkHandler().addRequestedTxPow(zTxPoWID.to0xString());
