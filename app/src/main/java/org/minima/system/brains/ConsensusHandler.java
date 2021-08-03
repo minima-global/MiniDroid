@@ -212,8 +212,8 @@ public class ConsensusHandler extends MessageProcessor {
 		//Redo every 10 minutes..
 		PostTimerMessage(new TimerMessage(AUTOBACKUP_TIMER, CONSENSUS_AUTOBACKUP));
 		
-		//Flush Mempool
-		PostTimerMessage(new TimerMessage(FLUSH_TIMER, CONSENSUS_FLUSH));
+		//Flush Mempool - 5 min delay
+		PostTimerMessage(new TimerMessage(FLUSH_TIMER + (1000 * 60 * 5), CONSENSUS_FLUSH));
 		
 		//Initialise the multi keys..
 		PostTimerMessage(new TimerMessage(INITKEYS_TIMER, CONSENSUS_INITKEYS));
@@ -398,6 +398,9 @@ public class ConsensusHandler extends MessageProcessor {
 	
 			//AUTO Messages
 		}else if ( zMessage.isMessageType(CONSENSUS_FLUSH) ) {
+			//Post a FULL resync message
+			PostMessage(new Message(ConsensusNet.CONSENSUS_NET_FULLTREERESYSNC));
+			
 			//Flush / Check the mem-pool
 			PostMessage(new Message(ConsensusUser.CONSENSUS_FLUSHMEMPOOL));
 			
