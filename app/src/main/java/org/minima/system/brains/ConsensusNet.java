@@ -1,6 +1,10 @@
 package org.minima.system.brains;
 
 import java.io.File;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 
 import org.minima.GlobalParams;
@@ -78,6 +82,12 @@ public class ConsensusNet extends ConsensusProcessor {
 	 * What tip are we syncing to..
 	 */
 	MiniNumber mCurrentSyncTip = MiniNumber.MINUSONE;
+	
+	/**
+	 * Difficulty Math Context
+	 */
+	MathContext DIFF_MATH_CONTEXT 	= new MathContext(5, RoundingMode.DOWN);
+	BigDecimal DIFF_THRESHOLD 		= new BigDecimal(4);
 	
 	/**
 	 * Has the initial Sync been done..
@@ -683,7 +693,7 @@ public class ConsensusNet extends ConsensusProcessor {
 			//Do we have it..
 			if(getMainDB().getTxPOW(txpowid) == null) {
 				//We don't have it, get it..
-				sendTxPowRequestMessage(zMessage, txpowid);
+				sendTxPowRequestMessage(zMessage, txpowid, false);
 			}
 		
 		/**
@@ -797,6 +807,30 @@ public class ConsensusNet extends ConsensusProcessor {
 				}
 			}
 			
+			//Check Difficulty is high enough..
+			if(txpow.isBlock()) {
+				MiniData currentdiff = getMainDB().getTopTxPoW().getBlockDifficulty();
+				MiniData blockdiff 	 = txpow.getBlockDifficulty();
+				
+				BigInteger cd = new BigInteger(1,currentdiff.getData());
+				BigInteger bd = new BigInteger(1,blockdiff.getData());
+				
+				BigDecimal cdd = new BigDecimal(cd);
+				BigDecimal bdd = new BigDecimal(bd);
+				
+				//Divide..
+				BigDecimal ratio = bdd.divide(cdd, DIFF_MATH_CONTEXT);
+				
+				if(ratio.compareTo(DIFF_THRESHOLD)>0) {
+					//Difficulty too low.. don't process - is a zombie sidechain
+					MinimaLogger.log("DISCARD SIDECHAIN BLOCK : Current Block :"+getMainDB().getTopBlock()+" New Block:"+txpow.getBlockNumber()+" diffratio:"+ratio);
+					return;
+				}
+				
+//				MinimaLogger.log("Current Block :"+getMainDB().getTopBlock()+" New Block:"+txpow.getBlockNumber()+" diffratio:"+ratio);
+			}
+			
+			
 			//Do we have it.. now check DB - hmmm..
 			if(getMainDB().getTxPOW(txpow.getTxPowID()) != null) {
 //				MinimaLogger.log("NET Transaction we already have.. "+txpow.getBlockNumber()+" "+txpow.getTxPowID());
@@ -816,16 +850,16 @@ public class ConsensusNet extends ConsensusProcessor {
 					MiniData parentID = txpow.getParentID();
 					if(getMainDB().getTxPOW(parentID) == null) {
 						//We don't have it, get it..
-						MinimaLogger.log("Request Parent TxPoW @ "+txpow.getBlockNumber()+" parent:"+parentID); 
-						sendTxPowRequestMessage(zMessage, parentID);
+						MinimaLogger.log("Missing Parent TxPoW @ "+txpow.getBlockNumber()+" parent:"+parentID); 
+						sendTxPowRequestMessage(zMessage, parentID, true);
 					}
 				
 					//And now check the Txn list..
 					ArrayList<MiniData> txns = txpow.getBlockTransactions();
 					for(MiniData txn : txns) {
 						if(getMainDB().getTxPOW(txn) == null ) {
-							MinimaLogger.log("Request missing TxPoW in block "+txpow.getBlockNumber()+" "+txn);
-							sendTxPowRequestMessage(zMessage, txn);
+							MinimaLogger.log("Missing TxPoW in block "+txpow.getBlockNumber()+" "+txn);
+							sendTxPowRequestMessage(zMessage, txn, true);
 						}
 					}	
 				}
@@ -838,27 +872,9 @@ public class ConsensusNet extends ConsensusProcessor {
 	 * Check if has been done recently and reposts with a 5 second delay if it has
 	 */
 	public void sendTxPowRequest(MiniData zTxPoWID) {
-		//Asks ALL the clients..
-		ArrayList<MinimaClient> allclients = getNetworkHandler().getNetClients();
-		for(MinimaClient client : allclients) {
-			sendTxPowRequestClient(client,zTxPoWID);
-		}
-	}
-	
-	private void sendTxPowRequestMessage(Message zFromMessage, MiniData zTxPoWID) {
-		//Get the NetClient...
-		if(zFromMessage.exists("netclient")) {
-			MinimaClient client = (MinimaClient) zFromMessage.getObject("netclient");
-			sendTxPowRequestClient(client, zTxPoWID);
-		}else {
-			sendTxPowRequestClient(null, zTxPoWID);
-		}
-	}
-	
-	private void sendTxPowRequestClient(MinimaClient zClient, MiniData zTxPoWID) {
 		//Don't ask for 0x00..
 		if(zTxPoWID.isEqual(MiniData.ZERO_TXPOWID)) {
-			//it's the genesis..
+			//it's the genesis parent..
 			return;
 		}
 		
@@ -870,7 +886,7 @@ public class ConsensusNet extends ConsensusProcessor {
 			
 			//Add it to the DB..
 			if(txp != null) {
-				MinimaLogger.log("Loaded missing TxPoW from File! "+txp.getTxPowID().to0xString());
+//				MinimaLogger.log("Loaded missing TxPoW from File! "+txp.getTxPowID().to0xString());
 			
 				//Send it to be processed!
 				Message txpownet = new Message(CONSENSUS_NET_TXPOW).addObject("txpow", txp);
@@ -879,9 +895,53 @@ public class ConsensusNet extends ConsensusProcessor {
 				return;
 			}
 		}
+		
+		//Add it to the list of requested..
+		getNetworkHandler().addRequestedTxPow(zTxPoWID.to0xString());
+		
+		//Asks ALL the clients..
+		ArrayList<MinimaClient> allclients = getNetworkHandler().getNetClients();
+		for(MinimaClient client : allclients) {
+			//Give it to the client to send on..	
+			Message req = new Message(MinimaClient.NETCLIENT_SENDTXPOWREQ).addObject("txpowid", zTxPoWID);
+			
+			//And Post it..
+			client.PostMessage(req);
+		}
+		
+		MinimaLogger.log("MULTI NET Request to "+allclients.size()+" peers for missing TxPoW "+zTxPoWID.to0xString());
+	}
+	
+	private void sendTxPowRequestMessage(Message zFromMessage, MiniData zTxPoWID, boolean zMissing) {
+		//Don't ask for 0x00..
+		if(zTxPoWID.isEqual(MiniData.ZERO_TXPOWID)) {
+			//it's the genesis..
+			return;
+		}
+		
+		//Who's asking?
+		MinimaClient client = null;
+		if(zFromMessage.exists("netclient")) {
+			client = (MinimaClient) zFromMessage.getObject("netclient");
+		}
+		
+		//Do we have it in the File systemm ?
+		File txpf = Main.getMainHandler().getBackupManager().getTxpowFile(zTxPoWID);
+		if(txpf.exists()) {
+			//Load it..
+			TxPoW txp = ConsensusBackup.loadTxPOW(txpf);
+			
+			//Add it to the DB..
+			if(txp != null) {
+				//Send it to be processed!
+				Message txpownet = new Message(CONSENSUS_NET_TXPOW).addObject("txpow", txp);
+				getConsensusHandler().PostMessage(txpownet);
+				return;
+			}
+		}
 
 		//Do we have a client
-		if(zClient == null) {
+		if(client == null) {
 			return;
 		}
 		
@@ -904,6 +964,10 @@ public class ConsensusNet extends ConsensusProcessor {
 //			return;
 //		}
 		
+		if(zMissing) {
+			MinimaLogger.log("NET Request for missing TxPoW "+zTxPoWID.to0xString());
+		}
+		
 		//Add it to the list of requested..
 		getNetworkHandler().addRequestedTxPow(zTxPoWID.to0xString());
 				
@@ -912,7 +976,7 @@ public class ConsensusNet extends ConsensusProcessor {
 		req.addObject("txpowid", zTxPoWID);
 		
 		//And Post it..
-		zClient.PostMessage(req);
+		client.PostMessage(req);
 	}
 	
 	/**
