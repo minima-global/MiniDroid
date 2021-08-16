@@ -795,7 +795,9 @@ public class ConsensusNet extends ConsensusProcessor {
 			MiniNumber cascade   = getMainDB().getMainTree().getCascadeNode().getBlockNumber();
 			MiniNumber timeblock = txpow.getBlockNumber();
 			
-			if(!syncmessage && txpow.isBlock()) {
+			boolean requested = getNetworkHandler().isRequestedTxPow(txpow.getTxPowID().to0xString());
+			
+			if(!requested && !syncmessage && txpow.isBlock()) {
 				if(timeblock.sub(timetip).isMore(GlobalParams.MINIMA_CASCADE_START_DEPTH)) {
 					MinimaLogger.log("NET Transaction FAR IN THE FUTURE.. new:"+timeblock+" / current:"+timetip);
 					return;
@@ -805,10 +807,8 @@ public class ConsensusNet extends ConsensusProcessor {
 					MinimaLogger.log("NET Transaction BLOCK TOO OLD! "+timeblock+" / cascade:"+cascade);
 					return;
 				}
-			}
 			
-			//Check Difficulty is high enough..
-			if(txpow.isBlock()) {
+				//Check is difficult enough!
 				MiniData currentdiff = getMainDB().getTopTxPoW().getBlockDifficulty();
 				MiniData blockdiff 	 = txpow.getBlockDifficulty();
 				
@@ -826,10 +826,7 @@ public class ConsensusNet extends ConsensusProcessor {
 					MinimaLogger.log("DISCARD SIDECHAIN BLOCK : Current Block :"+getMainDB().getTopBlock()+" New Block:"+txpow.getBlockNumber()+" diffratio:"+ratio);
 					return;
 				}
-				
-//				MinimaLogger.log("Current Block :"+getMainDB().getTopBlock()+" New Block:"+txpow.getBlockNumber()+" diffratio:"+ratio);
 			}
-			
 			
 			//Do we have it.. now check DB - hmmm..
 			if(getMainDB().getTxPOW(txpow.getTxPowID()) != null) {
