@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:orientation="vertical"
+    android:paddingBottom="@dimen/newsitem_padding_top"
+    android:paddingLeft="@dimen/newsitem_padding_side"
+    android:paddingRight="@dimen/newsitem_padding_side"
+    android:paddingTop="@dimen/newsitem_padding_top">
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="16dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingTop="16dp">
+
+            <ImageView
+                android:id="@+id/image"
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:contentDescription="@string/app_name"
+                android:src="@mipmap/ic_launcher" />
+
+            <TextView
+                android:id="@+id/text_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:paddingLeft="10dp"
+                android:layout_alignParentEnd="true"
+                android:layout_toEndOf="@id/image"
+                android:textAppearance="?android:textAppearanceLarge" />
+
+            <TextView
+                android:id="@+id/text_subtitle"
+                android:paddingTop="10dp"
+                android:layout_width="0dp"
+                android:layout_height="200dp"
+                android:layout_alignParentEnd="true"
+                android:layout_below="@id/image"
+                android:layout_alignLeft="@id/image"
+                android:textAppearance="?android:textAppearanceMedium" />
+
+            <TextView
+                android:id="@+id/text_date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:layout_alignParentEnd="true"
+                android:layout_below="@id/text_subtitle"
+                android:textAppearance="?android:textAppearanceSmall" />
+
+        </RelativeLayout>
+    </androidx.cardview.widget.CardView>
+</LinearLayout>

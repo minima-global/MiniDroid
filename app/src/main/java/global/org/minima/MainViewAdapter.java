@@ -7,7 +7,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -15,6 +17,14 @@ import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
 import com.jraska.console.Console;
+import com.prof.rssparser.Article;
+import com.prof.rssparser.Parser;
+
+import java.util.ArrayList;
+import java.util.Date;
+
+import global.org.minima.news.NewsAdapter;
+import global.org.minima.news.NewsModel;
 
 public class MainViewAdapter extends PagerAdapter{
 
@@ -22,8 +32,42 @@ public class MainViewAdapter extends PagerAdapter{
 
     EditText mConsoleInput;
 
+    NewsAdapter mNewsAdapter;
+
     public MainViewAdapter(Activity zContext){
         mContext = zContext;
+
+        mNewsAdapter = new NewsAdapter(mContext);
+        mNewsAdapter.add(new NewsModel("","Loading..","Please wait..", new Date()));
+
+        refreshRSSFeed();
+    }
+
+    public void refreshRSSFeed(){
+        //url of RSS feed
+        String urlString = "http://www.androidcentral.com/feed";
+
+        Parser parser = new Parser();
+        parser.onFinish(new Parser.OnTaskCompleted() {
+            @Override
+            public void onTaskCompleted(ArrayList<Article> arrayList) {
+                mNewsAdapter.clear();
+
+                for(Article art : arrayList){
+                    NewsModel cm = new NewsModel(art.getImage(),art.getTitle(), art.getDescription(), art.getPubDate());
+                    mNewsAdapter.add(cm);
+                }
+
+                mNewsAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onError() {
+                System.out.println("ERROR rss load..!!");
+            }
+        });
+
+        parser.execute(urlString);
     }
 
     @Override
@@ -38,6 +82,16 @@ public class MainViewAdapter extends PagerAdapter{
 
         }else if(position == 1) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_newsfeed, collection, false);
+
+            ListView newsfeed = (ListView)layout;
+            newsfeed.setAdapter(mNewsAdapter);
+
+            newsfeed.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                    NewsModel nm = mNewsAdapter.getItem(position);
+                }
+            });
 
         }else if(position == 2) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_terminal, collection, false);
