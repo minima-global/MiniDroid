@@ -1,47 +1,25 @@
 package global.org.minima;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.os.PowerManager;
-import android.provider.Browser;
 import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.FileProvider;
+import androidx.viewpager.widget.ViewPager;
 
 //import org.minima.GlobalParams;
 //import org.minima.system.brains.ConsensusHandler;
-import org.minima.utils.MiniFile;
-import org.minima.utils.MiniFormat;
-import org.minima.utils.MinimaLogger;
-import org.minima.utils.messages.Message;
-import org.minima.utils.messages.MessageListener;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Enumeration;
-
+import com.google.android.material.tabs.TabLayout;
 import com.minima.service.MinimaService;
 
 import global.org.minima.intro.IntroductionActivity;
@@ -49,26 +27,31 @@ import global.org.minima.intro.IntroductionActivity;
 //public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
 public class MinimaActivity extends AppCompatActivity {
 
-    Button btnMini;
-
     //The IP Text..
     TextView mTextIP;
 
-    //The IP of this device
-    String mIP;
 
     //The Service..
     MinimaService mMinima = null;
 
     boolean mSynced = false;
-
     boolean mBound = false;
+
+    //The Main View pager
+    ViewPager mPager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(global.org.minima.R.layout.activity_main);
+        setContentView(R.layout.activity_viewpager);
+
+        //Get the viewpager
+        mPager = (ViewPager)findViewById(R.id.intro_viewpager);
+        mPager.setAdapter(new MainViewAdapter(this));
+
+        TabLayout tabLayout = (TabLayout) findViewById(R.id.tabDots);
+        tabLayout.setupWithViewPager(mPager, true);
 
 //        //The Button to open the local browser
 //        btnMini = findViewById(global.org.minima.R.id.btn_minidapp);

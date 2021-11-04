@@ -32,9 +32,23 @@ dependencies {
     //implementation fileTree(include: ['*.jar'], dir: 'libs')
     //implementation files('libs\\jsch-0.1.55.jar')
 
+    //RSS Parser
+    implementation 'com.prof18.rssparser:rssparser:1.4.4'
+
+    //Picasso URL image loader
+    implementation 'com.squareup.picasso:picasso:2.71828'
+
+    //Card view for news feed
+    implementation "androidx.cardview:cardview:1.0.0"
+
+    //Console for terminal
+    implementation 'com.jraska:console:1.1.0'
+
+    //Minima requirements
     implementation 'com.h2database:h2:1.4.200'
     implementation 'org.bouncycastle:bcpkix-jdk15on:1.69'
 
+    //Android
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     implementation 'androidx.viewpager:viewpager:1.0.0'

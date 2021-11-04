@@ -1,10 +1,6 @@
 package global.org.minima.intro;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.ViewPager;
@@ -19,7 +15,7 @@ public class IntroductionActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_intromain);
+        setContentView(R.layout.activity_viewpager);
 
         //Get the viewpager
         ViewPager pager = (ViewPager)findViewById(R.id.intro_viewpager);
