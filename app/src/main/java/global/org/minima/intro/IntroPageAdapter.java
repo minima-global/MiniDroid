@@ -78,7 +78,6 @@ public class IntroPageAdapter extends PagerAdapter {
         collection.removeView((View) view);
     }
 
-
     @Override
     public int getCount() {
         return 4;
