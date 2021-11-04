@@ -1,6 +1,5 @@
 package global.org.minima;
 
-import android.app.Activity;
 import android.content.Context;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -28,16 +27,16 @@ import global.org.minima.news.NewsModel;
 
 public class MainViewAdapter extends PagerAdapter{
 
-    private Activity mContext;
+    private MinimaActivity mMinimaActivity;
 
     EditText mConsoleInput;
 
     NewsAdapter mNewsAdapter;
 
-    public MainViewAdapter(Activity zContext){
-        mContext = zContext;
+    public MainViewAdapter(MinimaActivity zContext){
+        mMinimaActivity = zContext;
 
-        mNewsAdapter = new NewsAdapter(mContext);
+        mNewsAdapter = new NewsAdapter(mMinimaActivity);
         mNewsAdapter.add(new NewsModel("","Loading..","Please wait..", new Date()));
 
         refreshRSSFeed();
@@ -72,7 +71,7 @@ public class MainViewAdapter extends PagerAdapter{
 
     @Override
     public Object instantiateItem(ViewGroup collection, int position) {
-        LayoutInflater inflater = LayoutInflater.from(mContext);
+        LayoutInflater inflater = LayoutInflater.from(mMinimaActivity);
         ViewGroup layout = null;
 
         System.out.println("Position: "+position);
@@ -105,9 +104,9 @@ public class MainViewAdapter extends PagerAdapter{
                     mConsoleInput.setText("");
 
                     // Check if no view has focus:
-                    View view = mContext.getCurrentFocus();
+                    View view = mMinimaActivity.getCurrentFocus();
                     if (view != null) {
-                        InputMethodManager imm = (InputMethodManager)mContext.getSystemService(Context.INPUT_METHOD_SERVICE);
+                        InputMethodManager imm = (InputMethodManager) mMinimaActivity.getSystemService(Context.INPUT_METHOD_SERVICE);
                         imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
                     }
 

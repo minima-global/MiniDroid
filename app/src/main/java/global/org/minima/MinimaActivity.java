@@ -1,11 +1,14 @@
 package global.org.minima;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Menu;
@@ -22,10 +25,14 @@ import androidx.viewpager.widget.ViewPager;
 import com.google.android.material.tabs.TabLayout;
 import com.minima.service.MinimaService;
 
+import org.minima.utils.MinimaLogger;
+import org.minima.utils.messages.Message;
+import org.minima.utils.messages.MessageListener;
+
 import global.org.minima.intro.IntroductionActivity;
 
-//public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
-public class MinimaActivity extends AppCompatActivity {
+public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
+//public class MinimaActivity extends AppCompatActivity {
 
     //The IP Text..
     TextView mTextIP;
@@ -70,10 +77,10 @@ public class MinimaActivity extends AppCompatActivity {
 //        mTextIP = findViewById(R.id.iptext_minidapp);
 //        mTextIP.setText("\nSynchronising.. please wait..");
 
-//        //start Minima node Foreground Service
-//        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
-//        startForegroundService(minimaintent);
-//        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+        //Start Minima node Foreground Service
+        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+        startForegroundService(minimaintent);
+        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
 
         //Do we do the intro..
         SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
@@ -90,6 +97,7 @@ public class MinimaActivity extends AppCompatActivity {
             startActivity(intro);
         }
 
+        MinimaLogger.log("ACTIVITY STARTED");
         //Make sure..
 //        requestBatteryCheck();
     }
@@ -575,14 +583,14 @@ public class MinimaActivity extends AppCompatActivity {
 ////        moveTaskToBack(true);
 ////    }
 //
-//    @Override
-//    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-//        MinimaLogger.log("CONNECTED TO SERVICE");
-//        MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
-//        mMinima = binder.getService();
-//
-//        mBound = true;
-//
+    @Override
+    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+        MinimaLogger.log("CONNECTED TO SERVICE");
+        MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
+        mMinima = binder.getService();
+
+        mBound = true;
+
 //        Thread addlistener = new Thread(new Runnable() {
 //            @Override
 //            public void run() {
@@ -608,14 +616,19 @@ public class MinimaActivity extends AppCompatActivity {
 //            }
 //        });
 //        addlistener.start();
-//    }
-//
-//    @Override
-//    public void onServiceDisconnected(ComponentName componentName) {
-//        MinimaLogger.log("DISCONNECTED TO SERVICE");
-//        mBound = false;
-//    }
-//
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName componentName) {
+        MinimaLogger.log("DISCONNECTED TO SERVICE");
+        mBound = false;
+    }
+
+    @Override
+    public void processMessage(Message zMessage) {
+        MinimaLogger.log("MINIMA ACTIVITY.. "+zMessage);
+    }
+
 //    @Override
 //    public void processMessage(Message zMessage) {
 //        if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {

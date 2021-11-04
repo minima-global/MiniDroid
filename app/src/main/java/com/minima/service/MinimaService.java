@@ -111,7 +111,7 @@ public class MinimaService extends Service {
 
         //Start Minima
         mStart = new Minima();
-//        mStart.fireStarter(getFilesDir().getAbsolutePath());
+        mStart.fireStarter(getFilesDir().getAbsolutePath());
 
         Toast.makeText(this, "Minima Service Started", Toast.LENGTH_SHORT).show();
 
@@ -156,15 +156,15 @@ public class MinimaService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        //MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
+        MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
 
-//        //Only do this once..
-//        if(!mListenerAdded){
-//            mListenerAdded = true;
-//
-//            //Set the default message
-//            startForeground(1, createNotification("Syncing.."));
-//
+        //Only do this once..
+        if(!mListenerAdded){
+            mListenerAdded = true;
+
+            //Set the default message
+            startForeground(1, createNotification("Starting up.."));
+
 //            Thread installer = new Thread(new Runnable() {
 //                @Override
 //                public void run() {
@@ -228,7 +228,7 @@ public class MinimaService extends Service {
 //            });
 //
 //            installer.start();
-//        }
+        }
 
         return START_STICKY;
     }

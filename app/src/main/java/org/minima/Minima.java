@@ -43,6 +43,7 @@ public class Minima {
 				
 				vars.add("-genesis");
 				vars.add("-test");
+				vars.add("-nop2p");
 				
 //				vars.add("-port");
 //				vars.add("9001");
