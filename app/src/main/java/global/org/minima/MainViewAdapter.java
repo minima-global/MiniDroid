@@ -19,6 +19,8 @@ import com.jraska.console.Console;
 import com.prof.rssparser.Article;
 import com.prof.rssparser.Parser;
 
+import org.minima.system.params.GlobalParams;
+
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -79,6 +81,9 @@ public class MainViewAdapter extends PagerAdapter{
         if(position == 0) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_minima, collection, false);
 
+            TextView maintext = layout.findViewById(R.id.minima_maintext);
+            maintext.setText("v"+GlobalParams.MINIMA_VERSION+"\n\nThe Complete Blockchain Solution");
+
         }else if(position == 1) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_newsfeed, collection, false);
 
@@ -95,22 +100,33 @@ public class MainViewAdapter extends PagerAdapter{
         }else if(position == 2) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_terminal, collection, false);
 
+            Console console = layout.findViewById(R.id.console_window);
+            TextView ctv = console.findViewById(R.id.console_text);
+            ctv.setTextSize(10);
+
             mConsoleInput = layout.findViewById(R.id.console_input);
             mConsoleInput.setOnEditorActionListener(new TextView.OnEditorActionListener() {
                 @Override
                 public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                    //Get the command and blank the field
                     String text = mConsoleInput.getText().toString();
-                    Console.writeLine(text);
                     mConsoleInput.setText("");
 
-                    // Check if no view has focus:
-                    View view = mMinimaActivity.getCurrentFocus();
-                    if (view != null) {
-                        InputMethodManager imm = (InputMethodManager) mMinimaActivity.getSystemService(Context.INPUT_METHOD_SERVICE);
-                        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-                    }
+                    //Add to the Console..
+                    Console.writeLine(text);
 
-                    return false;
+                    //Run it..
+                    String result = mMinimaActivity.runMinimaCommand(text);
+                    Console.writeLine(result);
+
+//                    // Check if no view has focus:
+//                    View view = mMinimaActivity.getCurrentFocus();
+//                    if (view != null) {
+//                        InputMethodManager imm = (InputMethodManager) mMinimaActivity.getSystemService(Context.INPUT_METHOD_SERVICE);
+//                        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+//                    }
+
+                    return true;
                 }
             });
 

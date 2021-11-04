@@ -60,23 +60,6 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         TabLayout tabLayout = (TabLayout) findViewById(R.id.tabDots);
         tabLayout.setupWithViewPager(mPager, true);
 
-//        //The Button to open the local browser
-//        btnMini = findViewById(global.org.minima.R.id.btn_minidapp);
-//        btnMini.setTransformationMethod(null);
-//        btnMini.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:9004/"));
-//                intent.putExtra(Browser.EXTRA_APPLICATION_ID, MinimaActivity.this.getPackageName());
-//                startActivity(intent);
-//            }
-//        });
-//        btnMini.setVisibility(View.GONE);
-//
-//        //The TEXT that shows the current IP
-//        mTextIP = findViewById(R.id.iptext_minidapp);
-//        mTextIP.setText("\nSynchronising.. please wait..");
-
         //Start Minima node Foreground Service
         Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
         startForegroundService(minimaintent);
@@ -96,10 +79,6 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             Intent intro = new Intent(this, IntroductionActivity.class);
             startActivity(intro);
         }
-
-        MinimaLogger.log("ACTIVITY STARTED");
-        //Make sure..
-//        requestBatteryCheck();
     }
 
     /**
@@ -471,28 +450,14 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //        setIPText();
 //    }
 //
-//    @Override
-//    protected void onDestroy() {
-//        super.onDestroy();
-//
-//        //Remove the message listener.. don;t want to clog it up..
-//        disconnectFromService();
-//    }
-//
-//    private void disconnectFromService(){
-//        MinimaLogger.log("TRY DISCONNECT SERVICE");
-//
-//        if(mMinima != null){
-//            try{
-//                mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
-//            }catch(Exception exc){}
-//        }
-//
-//        if(mBound){
-//            unbindService(this);
-//        }
-//    }
-//
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        //Remove the message listener.. don;t want to clog it up..
+        disconnectFromService();
+    }
+
 //    public void setIPText() {
 //        //Set the IP - it may change..
 //        if (mSynced) {
@@ -583,44 +548,43 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 ////        moveTaskToBack(true);
 ////    }
 //
+
+    public String runMinimaCommand(String zCommand){
+        if(mBound && mMinima!=null){
+
+            //Run a Minima Commmand
+            return mMinima.getMinima().runMinimaCMD(zCommand);
+        }
+        else{
+            return "Not connected to Minima Service..";
+        }
+    }
+
+    private void disconnectFromService(){
+        //MinimaLogger.log("TRY DISCONNECT SERVICE");
+
+//        if(mMinima != null){
+//            try{
+//                mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
+//            }catch(Exception exc){}
+//        }
+
+        if(mBound){
+            unbindService(this);
+        }
+    }
+
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-        MinimaLogger.log("CONNECTED TO SERVICE");
+        //MinimaLogger.log("CONNECTED TO SERVICE");
         MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
         mMinima = binder.getService();
-
-        mBound = true;
-
-//        Thread addlistener = new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                try{
-//                    while(mMinima.getMinima() == null){Thread.sleep(250);}
-//                    while(mMinima.getMinima().getServer() == null){Thread.sleep(250);}
-//                    while(mMinima.getMinima().getServer().getConsensusHandler() == null){Thread.sleep(250);}
-//
-//                    //ready..
-//                    if(mMinima.getMinima().getServer().getConsensusHandler().isInitialSyncComplete()){
-//                        MinimaLogger.log("ACTIVITY : INITIAL SYNC COMPLETE ON STARTUP..");
-//                        setPostSyncDetails();
-//
-//                    }else{
-//                        //Listen for messages..
-//                        mMinima.getMinima().getServer().getConsensusHandler().addListener(MinimaActivity.this);
-//
-//                        MinimaLogger.log("ACTIVITY : LISTENING FOR SYNC COMPLETE..");
-//                    }
-//                }catch(Exception exc){
-//
-//                }
-//            }
-//        });
-//        addlistener.start();
+        mBound  = true;
     }
 
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
-        MinimaLogger.log("DISCONNECTED TO SERVICE");
+        //MinimaLogger.log("DISCONNECTED TO SERVICE");
         mBound = false;
     }
 

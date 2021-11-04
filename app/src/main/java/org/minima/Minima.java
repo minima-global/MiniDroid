@@ -43,7 +43,6 @@ public class Minima {
 				
 				vars.add("-genesis");
 				vars.add("-test");
-				vars.add("-nop2p");
 				
 //				vars.add("-port");
 //				vars.add("9001");
@@ -62,6 +61,19 @@ public class Minima {
 		//Run it..
 		Thread mainthread=new Thread(mainrunner);
 		mainthread.start();
+	}
+	
+	public String runMinimaCMD(String zInput){
+		//trim it..
+		String input = zInput.trim();
+    	
+    	//Run it..
+    	JSONArray res = Command.runMultiCommand(input);
+    	
+    	//Get the result.. 
+    	String result = MiniFormat.JSONPretty(res);
+    	
+		return result;
 	}
 	
 	public static void main(String[] zArgs) {
