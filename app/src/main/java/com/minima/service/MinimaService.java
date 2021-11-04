@@ -20,17 +20,19 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
-import org.minima.Start;
+import org.minima.Minima;
 import org.minima.objects.TxPoW;
-import org.minima.objects.base.MiniData;
-import org.minima.system.brains.ConsensusHandler;
-import org.minima.system.input.InputMessage;
-import org.minima.system.network.minidapps.DAPPManager;
-import org.minima.system.network.rpc.RPCClient;
 import org.minima.utils.MinimaLogger;
-import org.minima.utils.ResponseStream;
-import org.minima.utils.messages.Message;
-import org.minima.utils.messages.MessageListener;
+//import org.minima.objects.TxPoW;
+//import org.minima.objects.base.MiniData;
+//import org.minima.system.brains.ConsensusHandler;
+//import org.minima.system.input.InputMessage;
+//import org.minima.system.network.minidapps.DAPPManager;
+//import org.minima.system.network.rpc.RPCClient;
+//import org.minima.utils.MinimaLogger;
+//import org.minima.utils.ResponseStream;
+//import org.minima.utils.messages.Message;
+//import org.minima.utils.messages.MessageListener;
 
 import java.io.InputStream;
 import java.util.Date;
@@ -59,7 +61,7 @@ public class MinimaService extends Service {
     Alarm mAlarm;
 
     //Minima Main Starter
-    Start mStart;
+    Minima mStart;
 
     //Used to update the Notification
     Handler mHandler;
@@ -108,8 +110,8 @@ public class MinimaService extends Service {
         }
 
         //Start Minima
-        mStart = new Start();
-        mStart.fireStarter(getFilesDir().getAbsolutePath());
+        mStart = new Minima();
+//        mStart.fireStarter(getFilesDir().getAbsolutePath());
 
         Toast.makeText(this, "Minima Service Started", Toast.LENGTH_SHORT).show();
 
@@ -137,7 +139,7 @@ public class MinimaService extends Service {
         mService = this;
     }
 
-    public Start getMinima(){
+    public Minima getMinima(){
         return mStart;
     }
 
@@ -156,131 +158,79 @@ public class MinimaService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         //MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
 
-        //Only do this once..
-        if(!mListenerAdded){
-            mListenerAdded = true;
-
-            //Set the default message
-            startForeground(1, createNotification("Syncing.."));
-
-            Thread installer = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    MinimaLogger.log("Service : Initialise begin..");
-
-                    try {
-                        //Wait for Minima to start..
-                        while(mStart == null){ Thread.sleep(100);}
-                        while(mStart.getServer() == null){Thread.sleep(100);}
-                        while(mStart.getServer().getConsensusHandler() == null){Thread.sleep(100);}
-                        while(mStart.getServer().getNetworkHandler() == null){Thread.sleep(100);}
-                        while(mStart.getServer().getNetworkHandler().getDAPPManager() == null){Thread.sleep(100);}
-
-                        //Are we already up and running..
-                        if(mStart.getServer().getConsensusHandler().isInitialSyncComplete()){
-                            MinimaLogger.log("Service : Initial Sync complete at start..");
-                            installDappSuite();
-                        }else{
-                            MinimaLogger.log("Service : Initial Sync listen for complete..");
-                        }
-
-                        mStart.getServer().getConsensusHandler().addListener(new MessageListener() {
-                            @Override
-                            public void processMessage(Message zMessage) {
-                                if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_NEWBLOCK)) {
-                                    //Get the TxPoW
-                                    mTxPow = (TxPoW) zMessage.getObject("txpow");
-
-                                    //Show a notification
-                                    mHandler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            startForeground(1, createNotification("Block "+mTxPow.getBlockNumber()+" @ "+new Date(mTxPow.getTimeMilli().getAsLong())));
-                                        }
-                                    });
-
-                                }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
-                                    installDappSuite();
-
-                                }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_BALANCE)) {
-                                    mHandler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            Toast.makeText(MinimaService.this,"Minima : Your balance has changed!",Toast.LENGTH_SHORT).show();
-                                        }
-                                    });
-
-                                }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_ACTION)) {
-                                    //Something happening.. don't shut down for five monutes if not on power..
-                                    mLastActionTime = System.currentTimeMillis();
-                                }
-                            }
-                        });
-
-                        MinimaLogger.log("Service : Initialise end.. ");
-
-                    } catch (Exception e) {
-                        MinimaLogger.log("Start Service Exception "+e);
-                    }
-                }
-            });
-
-            installer.start();
-        }
+//        //Only do this once..
+//        if(!mListenerAdded){
+//            mListenerAdded = true;
+//
+//            //Set the default message
+//            startForeground(1, createNotification("Syncing.."));
+//
+//            Thread installer = new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    MinimaLogger.log("Service : Initialise begin..");
+//
+//                    try {
+//                        //Wait for Minima to start..
+//                        while(mStart == null){ Thread.sleep(100);}
+//                        while(mStart.getServer() == null){Thread.sleep(100);}
+//                        while(mStart.getServer().getConsensusHandler() == null){Thread.sleep(100);}
+//                        while(mStart.getServer().getNetworkHandler() == null){Thread.sleep(100);}
+//                        while(mStart.getServer().getNetworkHandler().getDAPPManager() == null){Thread.sleep(100);}
+//
+//                        //Are we already up and running..
+//                        if(mStart.getServer().getConsensusHandler().isInitialSyncComplete()){
+//                            MinimaLogger.log("Service : Initial Sync complete at start..");
+//                            installDappSuite();
+//                        }else{
+//                            MinimaLogger.log("Service : Initial Sync listen for complete..");
+//                        }
+//
+//                        mStart.getServer().getConsensusHandler().addListener(new MessageListener() {
+//                            @Override
+//                            public void processMessage(Message zMessage) {
+//                                if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_NEWBLOCK)) {
+//                                    //Get the TxPoW
+//                                    mTxPow = (TxPoW) zMessage.getObject("txpow");
+//
+//                                    //Show a notification
+//                                    mHandler.post(new Runnable() {
+//                                        @Override
+//                                        public void run() {
+//                                            startForeground(1, createNotification("Block "+mTxPow.getBlockNumber()+" @ "+new Date(mTxPow.getTimeMilli().getAsLong())));
+//                                        }
+//                                    });
+//
+//                                }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
+//                                    installDappSuite();
+//
+//                                }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_BALANCE)) {
+//                                    mHandler.post(new Runnable() {
+//                                        @Override
+//                                        public void run() {
+//                                            Toast.makeText(MinimaService.this,"Minima : Your balance has changed!",Toast.LENGTH_SHORT).show();
+//                                        }
+//                                    });
+//
+//                                }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_ACTION)) {
+//                                    //Something happening.. don't shut down for five monutes if not on power..
+//                                    mLastActionTime = System.currentTimeMillis();
+//                                }
+//                            }
+//                        });
+//
+//                        MinimaLogger.log("Service : Initialise end.. ");
+//
+//                    } catch (Exception e) {
+//                        MinimaLogger.log("Start Service Exception "+e);
+//                    }
+//                }
+//            });
+//
+//            installer.start();
+//        }
 
         return START_STICKY;
-    }
-
-    public void installDappSuite(){
-        //Get the shared prefs..
-        SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
-
-        //Have we done this already another time..
-        boolean installed = pref.getBoolean("minidapps",false);
-        if(!installed) {
-            MinimaLogger.log("Service : Install all DAPPS..");
-
-            //Permanent store
-            SharedPreferences.Editor editor = pref.edit();
-            editor.putBoolean("minidapps",true);
-            editor.commit();
-
-            Thread mini_install = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    loadMiniDapp("wallet1.1.8.minidapp");
-                    loadMiniDapp("terminal.minidapp");
-                    loadMiniDapp("storefront-v1.0.5.minidapp");
-                }
-            });
-
-            //Run it..
-            mini_install.start();
-        }
-    }
-
-    public void loadMiniDapp(String zMiniDapp){
-        try{
-            InputStream is=getAssets().open(zMiniDapp);
-            byte[] fileBytes=new byte[is.available()];
-            is.read( fileBytes);
-            is.close();
-
-            //Post them to Minima..
-            MiniData dapp = new MiniData(fileBytes);
-
-            //The Install message
-            Message msg = new Message(DAPPManager.DAPP_INSTALL);
-            msg.addObject("overwrite", false);
-            msg.addBoolean("reload", true);
-            msg.addObject("minidapp", dapp);
-            msg.addString("filename", zMiniDapp);
-
-            mStart.getServer().getNetworkHandler().getDAPPManager().PostMessage(msg);
-
-        }catch(Exception Exc) {
-            MinimaLogger.log("ERROR install MiniDAPP : "+zMiniDapp);
-        }
     }
 
     @Override
@@ -290,24 +240,24 @@ public class MinimaService extends Service {
         MinimaLogger.log("Service : onDestroy");
         mListenerAdded = false;
 
-        //Post It..
-        if(mStart != null && mStart.getServer()!=null && mStart.getServer().isRunning()){
-            MinimaLogger.log("Service : SAVE ONDESTROY");
-
-            //Create a response stream
-            ResponseStream resp = new ResponseStream();
-
-            //Send a backup message!
-            InputMessage backup = new InputMessage("quit",resp);
-
-            mStart.getServer().getInputHandler().PostMessage(backup);
-
-            //Wait for it..
-            resp.waitToFinish();
-            MinimaLogger.log("Service : "+resp.getResponse());
-        }else{
-            MinimaLogger.log("Service : Already shutdown..");
-        }
+//        //Post It..
+//        if(mStart != null && mStart.getServer()!=null && mStart.getServer().isRunning()){
+//            MinimaLogger.log("Service : SAVE ONDESTROY");
+//
+//            //Create a response stream
+//            ResponseStream resp = new ResponseStream();
+//
+//            //Send a backup message!
+//            InputMessage backup = new InputMessage("quit",resp);
+//
+//            mStart.getServer().getInputHandler().PostMessage(backup);
+//
+//            //Wait for it..
+//            resp.waitToFinish();
+//            MinimaLogger.log("Service : "+resp.getResponse());
+//        }else{
+//            MinimaLogger.log("Service : Already shutdown..");
+//        }
 
         //Shut the channel..
         mNotificationManager.deleteNotificationChannel(CHANNEL_ID);

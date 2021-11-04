@@ -24,8 +24,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 
-import org.minima.GlobalParams;
-import org.minima.system.brains.ConsensusHandler;
+//import org.minima.GlobalParams;
+//import org.minima.system.brains.ConsensusHandler;
 import org.minima.utils.MiniFile;
 import org.minima.utils.MiniFormat;
 import org.minima.utils.MinimaLogger;
@@ -46,7 +46,8 @@ import com.minima.service.MinimaService;
 
 import global.org.minima.intro.IntroductionActivity;
 
-public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
+//public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
+public class MinimaActivity extends AppCompatActivity {
 
     Button btnMini;
 
@@ -69,27 +70,27 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
         setContentView(global.org.minima.R.layout.activity_main);
 
-        //The Button to open the local browser
-        btnMini = findViewById(global.org.minima.R.id.btn_minidapp);
-        btnMini.setTransformationMethod(null);
-        btnMini.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:9004/"));
-                intent.putExtra(Browser.EXTRA_APPLICATION_ID, MinimaActivity.this.getPackageName());
-                startActivity(intent);
-            }
-        });
-        btnMini.setVisibility(View.GONE);
+//        //The Button to open the local browser
+//        btnMini = findViewById(global.org.minima.R.id.btn_minidapp);
+//        btnMini.setTransformationMethod(null);
+//        btnMini.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:9004/"));
+//                intent.putExtra(Browser.EXTRA_APPLICATION_ID, MinimaActivity.this.getPackageName());
+//                startActivity(intent);
+//            }
+//        });
+//        btnMini.setVisibility(View.GONE);
+//
+//        //The TEXT that shows the current IP
+//        mTextIP = findViewById(R.id.iptext_minidapp);
+//        mTextIP.setText("\nSynchronising.. please wait..");
 
-        //The TEXT that shows the current IP
-        mTextIP = findViewById(R.id.iptext_minidapp);
-        mTextIP.setText("\nSynchronising.. please wait..");
-
-        //start Minima node Foreground Service
-        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
-        startForegroundService(minimaintent);
-        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
+//        //start Minima node Foreground Service
+//        Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+//        startForegroundService(minimaintent);
+//        bindService(minimaintent, this, Context.BIND_AUTO_CREATE);
 
         //Do we do the intro..
         SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
@@ -111,7 +112,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     }
 
     /**
-     * Show ameesgae requesting access to battery settings
+     * Show a messgae requesting access to battery settings
      */
     public void requestBatteryCheck(){
         String packageName = getPackageName();
@@ -168,258 +169,259 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         return true;
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle item selection
-        switch (item.getItemId()) {
-            case R.id.minimahelp:
-                Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
-                return true;
+//
+//    @Override
+//    public boolean onOptionsItemSelected(MenuItem item) {
+//        // Handle item selection
+//        switch (item.getItemId()) {
+//            case R.id.minimahelp:
+//                Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
+//                return true;
+//
+//            case R.id.minimalogs:
+//                Intent intent = new Intent(MinimaActivity.this, MinimaLogs.class);
+//                startActivity(intent);
+//                return true;
+//
+//            case R.id.backup:
+//                //First check we are connected..
+//                if(!mSynced){
+//                    Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
+//                    return true;
+//                }
+//
+//                //Get a timeStamp..
+//                SimpleDateFormat s = new SimpleDateFormat("dd_MM_yyyy_hhmmss");
+//                String format = s.format(new Date());
+//
+//                //Get the file location..
+//                File backup = new File(getFilesDir(),"backup-"+format+".minima");
+//
+//                //Run a function..
+//                Toast.makeText(this,"Minima Backup to "+backup.getAbsolutePath(),Toast.LENGTH_LONG).show();
+//                backupMinima(backup.getAbsolutePath());
+//                return true;
+//
+//            case R.id.restore:
+//                //First check we are connected..
+//                if(!mSynced){
+//                    Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
+//                    return true;
+//                }
+//
+//                //Open a file chooser app
+//                Intent filechoose = new Intent().setType("*/*")
+//                        .setAction(Intent.ACTION_GET_CONTENT);
+//
+//                startActivityForResult(Intent.createChooser(filechoose, "Select a file"), 123);
+//
+//                return true;
+//
+////            case R.id.shareapp:
+////                //Create a link and share that..
+////                String link = "http://mifi.minima.global/apk/minima-latest.apk";
+////
+////                //Now share it
+////                Intent sendIntent = new Intent();
+////                sendIntent.setAction(Intent.ACTION_SEND);
+////                sendIntent.putExtra(Intent.EXTRA_TEXT, link);
+////                sendIntent.setType("text/plain");
+////
+////                Intent shareIntent = Intent.createChooser(sendIntent, null);
+////                startActivity(shareIntent);
+////
+////                return true;
+//            case R.id.reset:
+//                //Reset the whole thing..
+//                new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert)
+//                        .setTitle("Reset Minima").setMessage("Are you sure you want to RESET Minima ?\n\nThis will wipe all information..")
+//                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+//                            @Override
+//                            public void onClick(DialogInterface dialog, int which) {
+//                                Toast.makeText(MinimaActivity.this, "Resetting.. Please wait",Toast.LENGTH_LONG).show();
+//
+//                                //Get the shared prefs..
+//                                SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
+//
+//                                //Permanent store
+//                                SharedPreferences.Editor editor = pref.edit();
+//                                editor.putBoolean("minidapps",false);
+//                                editor.commit();
+//
+//                                //Now reset
+//                                resetMinima();
+//
+//                            }
+//                        }).setNegativeButton("No", null).show();
+//
+//                return true;
+//
+//            case R.id.battery:
+//                openBatteryOptimisation();
+//                return true;
+//
+////            case R.id.shutdown:
+////                shutdownMinima();
+////                return true;
+//            default:
+//                return super.onOptionsItemSelected(item);
+//        }
+//    }
 
-            case R.id.minimalogs:
-                Intent intent = new Intent(MinimaActivity.this, MinimaLogs.class);
-                startActivity(intent);
-                return true;
-
-            case R.id.backup:
-                //First check we are connected..
-                if(!mSynced){
-                    Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
-                    return true;
-                }
-
-                //Get a timeStamp..
-                SimpleDateFormat s = new SimpleDateFormat("dd_MM_yyyy_hhmmss");
-                String format = s.format(new Date());
-
-                //Get the file location..
-                File backup = new File(getFilesDir(),"backup-"+format+".minima");
-
-                //Run a function..
-                Toast.makeText(this,"Minima Backup to "+backup.getAbsolutePath(),Toast.LENGTH_LONG).show();
-                backupMinima(backup.getAbsolutePath());
-                return true;
-
-            case R.id.restore:
-                //First check we are connected..
-                if(!mSynced){
-                    Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
-                    return true;
-                }
-
-                //Open a file chooser app
-                Intent filechoose = new Intent().setType("*/*")
-                        .setAction(Intent.ACTION_GET_CONTENT);
-
-                startActivityForResult(Intent.createChooser(filechoose, "Select a file"), 123);
-
-                return true;
-
-//            case R.id.shareapp:
-//                //Create a link and share that..
-//                String link = "http://mifi.minima.global/apk/minima-latest.apk";
+//    @Override
+//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        super.onActivityResult(requestCode, resultCode, data);
+//        if(requestCode == 123 && resultCode == RESULT_OK) {
+//            Uri selectedfile = data.getData(); //The uri with the location of the file
+//
+//            Toast.makeText(this,"Restoring from Backup!",Toast.LENGTH_LONG).show();
+//
+//            restore(selectedfile);
+//        }
+//    }
+//
+//    public void backupMinima(final String zFileBackup) {
+//        Thread backup = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                //First run the function
+//                String resp = mMinima.getMinima().runMinimaCMD("backup "+zFileBackup);
+//
+//                //Get the FileURI
+//                Uri fileUri = FileProvider.getUriForFile(
+//                        getApplicationContext(),
+//                        "global.org.minima.fileprovider",
+//                        new File(zFileBackup));
+//
+//                //System.out.println("BACKUP FILE : "+fileUri.toString());
+//                toastPopUp(fileUri.toString());
 //
 //                //Now share it
 //                Intent sendIntent = new Intent();
 //                sendIntent.setAction(Intent.ACTION_SEND);
-//                sendIntent.putExtra(Intent.EXTRA_TEXT, link);
-//                sendIntent.setType("text/plain");
+//                sendIntent.putExtra(Intent.EXTRA_STREAM,fileUri);
+//                sendIntent.setType("application/octet-stream");
 //
 //                Intent shareIntent = Intent.createChooser(sendIntent, null);
 //                startActivity(shareIntent);
+//            }
+//        });
+//        backup.start();
+//    }
 //
-//                return true;
-            case R.id.reset:
-                //Reset the whole thing..
-                new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert)
-                        .setTitle("Reset Minima").setMessage("Are you sure you want to RESET Minima ?\n\nThis will wipe all information..")
-                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                Toast.makeText(MinimaActivity.this, "Resetting.. Please wait",Toast.LENGTH_LONG).show();
-
-                                //Get the shared prefs..
-                                SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
-
-                                //Permanent store
-                                SharedPreferences.Editor editor = pref.edit();
-                                editor.putBoolean("minidapps",false);
-                                editor.commit();
-
-                                //Now reset
-                                resetMinima();
-
-                            }
-                        }).setNegativeButton("No", null).show();
-
-                return true;
-
-            case R.id.battery:
-                openBatteryOptimisation();
-                return true;
-
-//            case R.id.shutdown:
-//                shutdownMinima();
-//                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == 123 && resultCode == RESULT_OK) {
-            Uri selectedfile = data.getData(); //The uri with the location of the file
-
-            Toast.makeText(this,"Restoring from Backup!",Toast.LENGTH_LONG).show();
-
-            restore(selectedfile);
-        }
-    }
-
-    public void backupMinima(final String zFileBackup) {
-        Thread backup = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                //First run the function
-                String resp = mMinima.getMinima().runMinimaCMD("backup "+zFileBackup);
-
-                //Get the FileURI
-                Uri fileUri = FileProvider.getUriForFile(
-                        getApplicationContext(),
-                        "global.org.minima.fileprovider",
-                        new File(zFileBackup));
-
-                //System.out.println("BACKUP FILE : "+fileUri.toString());
-                toastPopUp(fileUri.toString());
-
-                //Now share it
-                Intent sendIntent = new Intent();
-                sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_STREAM,fileUri);
-                sendIntent.setType("application/octet-stream");
-
-                Intent shareIntent = Intent.createChooser(sendIntent, null);
-                startActivity(shareIntent);
-            }
-        });
-        backup.start();
-    }
-
-    public void restore(final Uri zFileBackup) {
-        Thread restorer = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                //First copy the whole file..
-                File restore = new File(getFilesDir(),"restore.minima");
-                if(restore.exists()){
-                    restore.delete();
-                }
-
-                //Now copy ..
-                try{
-                    //Get the Stream
-                    InputStream is = getContentResolver().openInputStream(zFileBackup);
-
-                    //Create the File.
-                    restore.createNewFile();
-                    FileOutputStream fos = new FileOutputStream(restore);
-
-                    byte[] copy = new byte[4096];
-                    int read=0;
-                    while(read != -1){
-                        read = is.read(copy);
-                        if(read>=0){
-                            //Write it out..
-                            fos.write(copy,0,read);
-                        }
-                    }
-                    fos.flush();
-                    fos.close();
-
-                    mSynced = false;
-                    setPercentInitial("Restoring Minima.. please wait..");
-                    MinimaLogger.log("Restore File : "+restore.getAbsolutePath()+" "+restore.length());
-
-                    //Now do the restore..
-                    String resp = mMinima.getMinima().runMinimaCMD("restore "+restore.getAbsolutePath());
-                    MinimaLogger.log(resp);
-
-                }catch(Exception exc){
-                    MinimaLogger.log("ERROR Restore : "+exc);
-                }
-            }
-        });
-        restorer.start();
-    }
-
-    public void resetMinima(){
-        Thread resetter = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                mSynced = false;
-
-                setPercentInitial("Resetting Minima..");
-
-                //RUn this.. can take some time..
-                mMinima.getMinima().runMinimaCMD("reset");
-            }
-        });
-        resetter.start();
-    }
-
-    public void shutdownMinima() {
-
-        Thread shutdown = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                //Little message
-                toastPopUp("Disconnecting from Minima..");
-
-                //Update..
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        btnMini.setVisibility(View.GONE);
-                        mTextIP.setText("\nShutting down.. Please wait..");
-                    }
-                });
-
-                if(mMinima != null){
-                    try{
-                        //First run the function
-                        String resp = mMinima.getMinima().runMinimaCMD("quit");
-                        MinimaLogger.log(resp);
-
-                        //Now stop listening
-                        mMinima.getMinima().getServer().getConsensusHandler().removeListener(MinimaActivity.this);
-                    }catch(Exception exc){}
-                }
-
+//    public void restore(final Uri zFileBackup) {
+//        Thread restorer = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                //First copy the whole file..
+//                File restore = new File(getFilesDir(),"restore.minima");
+//                if(restore.exists()){
+//                    restore.delete();
+//                }
+//
+//                //Now copy ..
+//                try{
+//                    //Get the Stream
+//                    InputStream is = getContentResolver().openInputStream(zFileBackup);
+//
+//                    //Create the File.
+//                    restore.createNewFile();
+//                    FileOutputStream fos = new FileOutputStream(restore);
+//
+//                    byte[] copy = new byte[4096];
+//                    int read=0;
+//                    while(read != -1){
+//                        read = is.read(copy);
+//                        if(read>=0){
+//                            //Write it out..
+//                            fos.write(copy,0,read);
+//                        }
+//                    }
+//                    fos.flush();
+//                    fos.close();
+//
+//                    mSynced = false;
+//                    setPercentInitial("Restoring Minima.. please wait..");
+//                    MinimaLogger.log("Restore File : "+restore.getAbsolutePath()+" "+restore.length());
+//
+//                    //Now do the restore..
+//                    String resp = mMinima.getMinima().runMinimaCMD("restore "+restore.getAbsolutePath());
+//                    MinimaLogger.log(resp);
+//
+//                }catch(Exception exc){
+//                    MinimaLogger.log("ERROR Restore : "+exc);
+//                }
+//            }
+//        });
+//        restorer.start();
+//    }
+//
+//    public void resetMinima(){
+//        Thread resetter = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                mSynced = false;
+//
+//                setPercentInitial("Resetting Minima..");
+//
+//                //RUn this.. can take some time..
+//                mMinima.getMinima().runMinimaCMD("reset");
+//            }
+//        });
+//        resetter.start();
+//    }
+//
+//    public void shutdownMinima() {
+//
+//        Thread shutdown = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                //Little message
+//                toastPopUp("Disconnecting from Minima..");
+//
+//                //Update..
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        btnMini.setVisibility(View.GONE);
+//                        mTextIP.setText("\nShutting down.. Please wait..");
+//                    }
+//                });
+//
+//                if(mMinima != null){
+//                    try{
+//                        //First run the function
+//                        String resp = mMinima.getMinima().runMinimaCMD("quit");
+//                        MinimaLogger.log(resp);
+//
+//                        //Now stop listening
+//                        mMinima.getMinima().getServer().getConsensusHandler().removeListener(MinimaActivity.this);
+//                    }catch(Exception exc){}
+//                }
+//
+////                //Wait a few seconds..
+////                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+////                toastPopUp("Stopping Service..");
+//
+//                Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+//                stopService(minimaintent);
+//
 //                //Wait a few seconds..
 //                try {Thread.sleep(5000);} catch (InterruptedException e) {}
-//                toastPopUp("Stopping Service..");
-
-                Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
-                stopService(minimaintent);
-
-                //Wait a few seconds..
-                try {Thread.sleep(5000);} catch (InterruptedException e) {}
-
-                toastPopUp("Minima Shutdown Complete..");
-
-                try {Thread.sleep(2000);} catch (InterruptedException e) {}
-
-                //Close it down..
-                MinimaActivity.this.finish();
-                System.exit(0);
-            }
-        });
-
-        shutdown.start();
-
-    }
+//
+//                toastPopUp("Minima Shutdown Complete..");
+//
+//                try {Thread.sleep(2000);} catch (InterruptedException e) {}
+//
+//                //Close it down..
+//                MinimaActivity.this.finish();
+//                System.exit(0);
+//            }
+//        });
+//
+//        shutdown.start();
+//
+//    }
 
 //    public void restartMinima(){
 //        //Hide the start Button..
@@ -472,202 +474,201 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //        MinimaLogger.log("Activity : onStop");
 //    }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        //MinimaLogger.log("Activity : onResume");
-        setIPText();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
-        //Remove the message listener.. don;t want to clog it up..
-        disconnectFromService();
-    }
-
-    private void disconnectFromService(){
-        MinimaLogger.log("TRY DISCONNECT SERVICE");
-
-        if(mMinima != null){
-            try{
-                mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
-            }catch(Exception exc){}
-        }
-
-        if(mBound){
-            unbindService(this);
-        }
-    }
-
-    public void setIPText() {
-        //Set the IP - it may change..
-        if (mSynced) {
-            mIP = getIP();
-            mTextIP.setText("\nConnect to Minima v"+ GlobalParams.MINIMA_VERSION +" from your Desktop\n\n" +
-                    "Open a browser and go to\n\n" +
-                    "http://" + mIP + ":9004/");
-        }
-    }
-
-    public String getIP(){
-        String mHost = "127.0.0.1";
-        boolean found = false;
-        try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            while (!found && interfaces.hasMoreElements()) {
-                NetworkInterface iface = interfaces.nextElement();
-                // filters out 127.0.0.1 and inactive interfaces
-                if (iface.isLoopback() || !iface.isUp())
-                    continue;
-
-                Enumeration<InetAddress> addresses = iface.getInetAddresses();
-                while(!found && addresses.hasMoreElements()) {
-                    InetAddress addr = addresses.nextElement();
-                    String ip   = addr.getHostAddress();
-                    String name = iface.getDisplayName();
-
-                    //Only get the IPv4
-                    if(!ip.contains(":")) {
-                        mHost = ip;
-                        if(name.startsWith("wl")) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            System.out.println("Minima Network IP : "+e);
-        }
-
-        return mHost;
-    }
-
-    public void toastPopUp(final String zText){
-        Runnable littletoast = new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MinimaActivity.this, zText, Toast.LENGTH_LONG).show();
-            }
-        };
-
-        //Update..
-        runOnUiThread(littletoast);
-    }
-
-    public void setPostSyncDetails(){
-        Runnable uiupdate = new Runnable() {
-            @Override
-            public void run() {
-                mSynced = true;
-                btnMini.setVisibility(View.VISIBLE);
-                setIPText();
-                MinimaLogger.log("ACTIVITY : GET STARTED");
-            }
-        };
-
-        //Update..
-        runOnUiThread(uiupdate);
-    }
-
-    public void setPercentInitial(final String zMessage){
-        if(!mSynced) {
-            Runnable uiupdate = new Runnable() {
-                @Override
-                public void run() {
-                    mTextIP.setText("\n" + zMessage);
-                }
-            };
-
-            //Update..
-            runOnUiThread(uiupdate);
-        }
-    }
-
 //    @Override
-//    public void onBackPressed() {
-//        moveTaskToBack(true);
+//    protected void onResume() {
+//        super.onResume();
+//        setIPText();
 //    }
-
-    @Override
-    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-        MinimaLogger.log("CONNECTED TO SERVICE");
-        MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
-        mMinima = binder.getService();
-
-        mBound = true;
-
-        Thread addlistener = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try{
-                    while(mMinima.getMinima() == null){Thread.sleep(250);}
-                    while(mMinima.getMinima().getServer() == null){Thread.sleep(250);}
-                    while(mMinima.getMinima().getServer().getConsensusHandler() == null){Thread.sleep(250);}
-
-                    //ready..
-                    if(mMinima.getMinima().getServer().getConsensusHandler().isInitialSyncComplete()){
-                        MinimaLogger.log("ACTIVITY : INITIAL SYNC COMPLETE ON STARTUP..");
-                        setPostSyncDetails();
-
-                    }else{
-                        //Listen for messages..
-                        mMinima.getMinima().getServer().getConsensusHandler().addListener(MinimaActivity.this);
-
-                        MinimaLogger.log("ACTIVITY : LISTENING FOR SYNC COMPLETE..");
-                    }
-                }catch(Exception exc){
-
-                }
-            }
-        });
-        addlistener.start();
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName componentName) {
-        MinimaLogger.log("DISCONNECTED TO SERVICE");
-        mBound = false;
-    }
-
-    @Override
-    public void processMessage(Message zMessage) {
-        if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
-            MinimaLogger.log("ACTIVITY SYNC COMPLETE : " + zMessage);
-
-            //Set the correct view..
-            setPostSyncDetails();
-
-//            setPercentInitial("Almost Done.. Checking MiniDAPPs");
-
-        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_RECONNECT)) {
-            //Reconnecting to network.. notify user..
-            mSynced = false;
-            setPercentInitial("Reconnecting in 30 seconds..");
-
-        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALPERC)) {
-            setPercentInitial(zMessage.getString("info"));
-
-        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_DAPP_RELOAD)) {
-            MinimaLogger.log("ACTIVITY : DAPPS LOADED");
-
-            //Set the correct view..
-            setPostSyncDetails();
-
-        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_DAPP_INSTALLED)) {
-            String dapp = zMessage.getString("name");
-
-            MinimaLogger.log("ACTIVITY : DAPP INSTALLED "+dapp);
-
-            setPercentInitial("MiniDAPP installed : "+dapp);
-
-            //Set the correct view..
-            setPostSyncDetails();
-
-        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_LOG)) {
-            String log = zMessage.getString("msg");
-        }
-    }
+//
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//
+//        //Remove the message listener.. don;t want to clog it up..
+//        disconnectFromService();
+//    }
+//
+//    private void disconnectFromService(){
+//        MinimaLogger.log("TRY DISCONNECT SERVICE");
+//
+//        if(mMinima != null){
+//            try{
+//                mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
+//            }catch(Exception exc){}
+//        }
+//
+//        if(mBound){
+//            unbindService(this);
+//        }
+//    }
+//
+//    public void setIPText() {
+//        //Set the IP - it may change..
+//        if (mSynced) {
+//            mIP = getIP();
+//            mTextIP.setText("\nConnect to Minima v"+ GlobalParams.MINIMA_VERSION +" from your Desktop\n\n" +
+//                    "Open a browser and go to\n\n" +
+//                    "http://" + mIP + ":9004/");
+//        }
+//    }
+//
+//    public String getIP(){
+//        String mHost = "127.0.0.1";
+//        boolean found = false;
+//        try {
+//            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+//            while (!found && interfaces.hasMoreElements()) {
+//                NetworkInterface iface = interfaces.nextElement();
+//                // filters out 127.0.0.1 and inactive interfaces
+//                if (iface.isLoopback() || !iface.isUp())
+//                    continue;
+//
+//                Enumeration<InetAddress> addresses = iface.getInetAddresses();
+//                while(!found && addresses.hasMoreElements()) {
+//                    InetAddress addr = addresses.nextElement();
+//                    String ip   = addr.getHostAddress();
+//                    String name = iface.getDisplayName();
+//
+//                    //Only get the IPv4
+//                    if(!ip.contains(":")) {
+//                        mHost = ip;
+//                        if(name.startsWith("wl")) {
+//                            found = true;
+//                            break;
+//                        }
+//                    }
+//                }
+//            }
+//        } catch (SocketException e) {
+//            System.out.println("Minima Network IP : "+e);
+//        }
+//
+//        return mHost;
+//    }
+//
+//    public void toastPopUp(final String zText){
+//        Runnable littletoast = new Runnable() {
+//            @Override
+//            public void run() {
+//                Toast.makeText(MinimaActivity.this, zText, Toast.LENGTH_LONG).show();
+//            }
+//        };
+//
+//        //Update..
+//        runOnUiThread(littletoast);
+//    }
+//
+//    public void setPostSyncDetails(){
+//        Runnable uiupdate = new Runnable() {
+//            @Override
+//            public void run() {
+//                mSynced = true;
+//                btnMini.setVisibility(View.VISIBLE);
+//                setIPText();
+//                MinimaLogger.log("ACTIVITY : GET STARTED");
+//            }
+//        };
+//
+//        //Update..
+//        runOnUiThread(uiupdate);
+//    }
+//
+//    public void setPercentInitial(final String zMessage){
+//        if(!mSynced) {
+//            Runnable uiupdate = new Runnable() {
+//                @Override
+//                public void run() {
+//                    mTextIP.setText("\n" + zMessage);
+//                }
+//            };
+//
+//            //Update..
+//            runOnUiThread(uiupdate);
+//        }
+//    }
+//
+////    @Override
+////    public void onBackPressed() {
+////        moveTaskToBack(true);
+////    }
+//
+//    @Override
+//    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+//        MinimaLogger.log("CONNECTED TO SERVICE");
+//        MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
+//        mMinima = binder.getService();
+//
+//        mBound = true;
+//
+//        Thread addlistener = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try{
+//                    while(mMinima.getMinima() == null){Thread.sleep(250);}
+//                    while(mMinima.getMinima().getServer() == null){Thread.sleep(250);}
+//                    while(mMinima.getMinima().getServer().getConsensusHandler() == null){Thread.sleep(250);}
+//
+//                    //ready..
+//                    if(mMinima.getMinima().getServer().getConsensusHandler().isInitialSyncComplete()){
+//                        MinimaLogger.log("ACTIVITY : INITIAL SYNC COMPLETE ON STARTUP..");
+//                        setPostSyncDetails();
+//
+//                    }else{
+//                        //Listen for messages..
+//                        mMinima.getMinima().getServer().getConsensusHandler().addListener(MinimaActivity.this);
+//
+//                        MinimaLogger.log("ACTIVITY : LISTENING FOR SYNC COMPLETE..");
+//                    }
+//                }catch(Exception exc){
+//
+//                }
+//            }
+//        });
+//        addlistener.start();
+//    }
+//
+//    @Override
+//    public void onServiceDisconnected(ComponentName componentName) {
+//        MinimaLogger.log("DISCONNECTED TO SERVICE");
+//        mBound = false;
+//    }
+//
+//    @Override
+//    public void processMessage(Message zMessage) {
+//        if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
+//            MinimaLogger.log("ACTIVITY SYNC COMPLETE : " + zMessage);
+//
+//            //Set the correct view..
+//            setPostSyncDetails();
+//
+////            setPercentInitial("Almost Done.. Checking MiniDAPPs");
+//
+//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_RECONNECT)) {
+//            //Reconnecting to network.. notify user..
+//            mSynced = false;
+//            setPercentInitial("Reconnecting in 30 seconds..");
+//
+//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALPERC)) {
+//            setPercentInitial(zMessage.getString("info"));
+//
+//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_DAPP_RELOAD)) {
+//            MinimaLogger.log("ACTIVITY : DAPPS LOADED");
+//
+//            //Set the correct view..
+//            setPostSyncDetails();
+//
+//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_DAPP_INSTALLED)) {
+//            String dapp = zMessage.getString("name");
+//
+//            MinimaLogger.log("ACTIVITY : DAPP INSTALLED "+dapp);
+//
+//            setPercentInitial("MiniDAPP installed : "+dapp);
+//
+//            //Set the correct view..
+//            setPostSyncDetails();
+//
+//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_LOG)) {
+//            String log = zMessage.getString("msg");
+//        }
+//    }
 }
