@@ -26,18 +26,8 @@ import org.minima.system.Main;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageListener;
-//import org.minima.objects.TxPoW;
-//import org.minima.objects.base.MiniData;
-//import org.minima.system.brains.ConsensusHandler;
-//import org.minima.system.input.InputMessage;
-//import org.minima.system.network.minidapps.DAPPManager;
-//import org.minima.system.network.rpc.RPCClient;
-//import org.minima.utils.MinimaLogger;
-//import org.minima.utils.ResponseStream;
-//import org.minima.utils.messages.Message;
-//import org.minima.utils.messages.MessageListener;
 
-import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Date;
 
 import global.org.minima.MinimaActivity;
@@ -78,7 +68,7 @@ public class MinimaService extends Service {
     PendingIntent mPendingIntent;
 
     //Information for the Notification
-    TxPoW mTxPow;
+    TxPoW mTxPow = null;
 
     public static final String CHANNEL_ID = "MinimaServiceChannel";
 
@@ -152,7 +142,18 @@ public class MinimaService extends Service {
         });
 
         //Start her up..
-        mStart.fireStarter(getFilesDir().getAbsolutePath());
+        ArrayList<String> vars = new ArrayList<>();
+
+        vars.add("-conf");
+        vars.add(getFilesDir().getAbsolutePath());
+
+        vars.add("-nop2p");
+        vars.add("-daemon");
+
+        vars.add("-connect");
+        vars.add("35.246.45.106:9001");
+
+        mStart.mainStarter(vars.toArray(new String[0]));
 
         //Notify User service is now running!
         Toast.makeText(this, "Minima Service Started", Toast.LENGTH_SHORT).show();
@@ -178,7 +179,11 @@ public class MinimaService extends Service {
 //        MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
 
         //Set the default message
-        startForeground(1, createNotification("Starting up.. please wait.."));
+        if(mTxPow == null){
+            startForeground(1, createNotification("Starting up.. please wait.."));
+        }else{
+            startForeground(1, createNotification("Block "+mTxPow.getBlockNumber()+" @ "+new Date(mTxPow.getTimeMilli().getAsLong())));
+        }
 
         return START_STICKY;
     }

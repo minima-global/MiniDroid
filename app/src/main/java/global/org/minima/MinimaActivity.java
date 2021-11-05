@@ -13,7 +13,9 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,6 +25,7 @@ import androidx.viewpager.widget.ViewPager;
 //import org.minima.system.brains.ConsensusHandler;
 
 import com.google.android.material.tabs.TabLayout;
+import com.jraska.console.Console;
 import com.minima.service.MinimaService;
 
 import org.minima.utils.MinimaLogger;
@@ -39,15 +42,24 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     //The Main View pager
     ViewPager mPager;
 
+    //The main pages
+    MainViewAdapter mMainPages;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_viewpager);
 
+        //Create a new ViewPager adapter
+        mMainPages = new MainViewAdapter(this);
+
         //Get the viewpager
         mPager = (ViewPager)findViewById(R.id.intro_viewpager);
-        mPager.setAdapter(new MainViewAdapter(this));
+        mPager.setAdapter(mMainPages);
+
+        //Refresh the News feed
+        mMainPages.refreshRSSFeed();
 
         TabLayout tabLayout = (TabLayout) findViewById(R.id.tabDots);
         tabLayout.setupWithViewPager(mPager, true);
@@ -131,20 +143,15 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         return true;
     }
 
-//
-//    @Override
-//    public boolean onOptionsItemSelected(MenuItem item) {
-//        // Handle item selection
-//        switch (item.getItemId()) {
-//            case R.id.minimahelp:
-//                Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
-//                return true;
-//
-//            case R.id.minimalogs:
-//                Intent intent = new Intent(MinimaActivity.this, MinimaLogs.class);
-//                startActivity(intent);
-//                return true;
-//
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.minimahelp:
+                Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
+                return true;
+
 //            case R.id.backup:
 //                //First check we are connected..
 //                if(!mSynced){
@@ -178,21 +185,21 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //                startActivityForResult(Intent.createChooser(filechoose, "Select a file"), 123);
 //
 //                return true;
+
+//            case R.id.shareapp:
+//                //Create a link and share that..
+//                String link = "http://mifi.minima.global/apk/minima-latest.apk";
 //
-////            case R.id.shareapp:
-////                //Create a link and share that..
-////                String link = "http://mifi.minima.global/apk/minima-latest.apk";
-////
-////                //Now share it
-////                Intent sendIntent = new Intent();
-////                sendIntent.setAction(Intent.ACTION_SEND);
-////                sendIntent.putExtra(Intent.EXTRA_TEXT, link);
-////                sendIntent.setType("text/plain");
-////
-////                Intent shareIntent = Intent.createChooser(sendIntent, null);
-////                startActivity(shareIntent);
-////
-////                return true;
+//                //Now share it
+//                Intent sendIntent = new Intent();
+//                sendIntent.setAction(Intent.ACTION_SEND);
+//                sendIntent.putExtra(Intent.EXTRA_TEXT, link);
+//                sendIntent.setType("text/plain");
+//
+//                Intent shareIntent = Intent.createChooser(sendIntent, null);
+//                startActivity(shareIntent);
+//
+//                return true;
 //            case R.id.reset:
 //                //Reset the whole thing..
 //                new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert)
@@ -217,18 +224,36 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //                        }).setNegativeButton("No", null).show();
 //
 //                return true;
-//
-//            case R.id.battery:
-//                openBatteryOptimisation();
+
+            case R.id.refreshNews:
+
+                //refresh the News..
+                mMainPages.refreshRSSFeed();
+
+                //Small notification
+                Toast.makeText(this,"Refreshing News..",Toast.LENGTH_SHORT).show();
+
+                return true;
+
+            case R.id.clearconsole:
+                Console.clear();
+
+                //Small notification
+                Toast.makeText(this,"Console cleared..",Toast.LENGTH_SHORT).show();
+
+                return true;
+
+            case R.id.battery:
+                openBatteryOptimisation();
+                return true;
+
+//            case R.id.shutdown:
+//                shutdownMinima();
 //                return true;
-//
-////            case R.id.shutdown:
-////                shutdownMinima();
-////                return true;
-//            default:
-//                return super.onOptionsItemSelected(item);
-//        }
-//    }
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
 
 //    @Override
 //    protected void onActivityResult(int requestCode, int resultCode, Intent data) {

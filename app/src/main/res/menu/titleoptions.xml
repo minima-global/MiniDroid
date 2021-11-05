@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item android:id="@+id/minimalogs"
-        android:title="Logs"/>
 
 <!--    <item android:id="@+id/shareapp"
         android:title="Share this App"/> -->
 
-    <item android:id="@+id/backup"
-        android:title="Backup"/>
-
-    <item android:id="@+id/restore"
-        android:title="Restore"/>
-
 <!--    <item android:id="@+id/shutdown"-->
 <!--        android:title="Shutdown" />-->
 
-    <item android:id="@+id/reset"
-        android:title="Reset" />
+    <item android:id="@+id/refreshNews"
+        android:title="Refresh News" />
+
+    <item android:id="@+id/clearconsole"
+        android:title="Clear Console" />
 
     <item android:id="@+id/battery"
         android:title="Battery Optimise"/>

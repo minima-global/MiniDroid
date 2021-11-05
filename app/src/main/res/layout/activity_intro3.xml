@@ -18,14 +18,14 @@
         android:layout_marginBottom="80px"
         android:fontFamily="@font/manrope"
         android:gravity="center"
-        android:text="Backup and Restore"
+        android:text="Incentive Cash"
         android:textColor="#001C32"
         android:textSize="32dip"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/intro_text1"
-        android:text="@string/intro_backup"
+        android:text="@string/intro_testnet"
         android:textStyle="bold"
         android:textSize="18dip"
         android:textColor="#001C32"

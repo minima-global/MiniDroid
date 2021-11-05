@@ -17,6 +17,13 @@
         It\'s very easy - don\'t worry..
     </string>
 
+    <string name="intro_testnet">
+        Minima is currently in \'beta\' test net.\n\n
+        We are running an Incentive scheme for you to get Minima coins for running the app.\n\n
+        Please visit incentive.minima.global to start your account.\n\n
+        Be sure to select Incentive Cash from the Options Menu to set this up!.\n\n
+    </string>
+
     <string name="intro_conclusion">
         Congratulations.\n\n
         You are now ready to start using Minima.\n\n

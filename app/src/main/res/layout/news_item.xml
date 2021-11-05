@@ -51,6 +51,7 @@
                 android:id="@+id/text_date"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingTop="10dp"
                 android:gravity="right"
                 android:layout_alignParentEnd="true"
                 android:layout_below="@id/text_subtitle"

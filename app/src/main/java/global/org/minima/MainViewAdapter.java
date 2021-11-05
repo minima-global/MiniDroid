@@ -40,8 +40,6 @@ public class MainViewAdapter extends PagerAdapter{
 
         mNewsAdapter = new NewsAdapter(mMinimaActivity);
         mNewsAdapter.add(new NewsModel("","Loading..","Please wait..", new Date()));
-
-        refreshRSSFeed();
     }
 
     public void refreshRSSFeed(){
