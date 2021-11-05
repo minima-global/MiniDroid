@@ -22,6 +22,7 @@ import androidx.core.app.NotificationCompat;
 
 import org.minima.Minima;
 import org.minima.objects.TxPoW;
+import org.minima.system.Main;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageListener;
@@ -84,20 +85,9 @@ public class MinimaService extends Service {
     PowerManager.WakeLock mWakeLock;
     WifiManager.WifiLock mWifiLock;
 
-    boolean mListenerAdded;
-
-    //The Last time some action happened..
-    long mLastActionTime = 0;
-    boolean mStopQuitter = false;
-
     @Override
     public void onCreate() {
         super.onCreate();
-
-        //MinimaLogger.log("Service : onCreate");
-        mListenerAdded  = false;
-        mLastActionTime = System.currentTimeMillis();
-        mStopQuitter    = false;
 
         //Power
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
@@ -115,18 +105,6 @@ public class MinimaService extends Service {
 
         //Start Minima
         mStart = new Minima();
-
-        //Add a log listener..
-        MinimaLogger.setListener(new MessageListener() {
-            @Override
-            public void processMessage(Message zMessage) {
-                Console.writeLine(zMessage.getString("log"));
-            }
-        });
-
-        mStart.fireStarter(getFilesDir().getAbsolutePath());
-
-        Toast.makeText(this, "Minima Service Started", Toast.LENGTH_SHORT).show();
 
         mHandler = new Handler(Looper.getMainLooper());
 
@@ -150,6 +128,34 @@ public class MinimaService extends Service {
         mAlarm.setAlarm(this);
 
         mService = this;
+
+        //Add a Minima listener..
+        Main.setMinimaListener(new MessageListener() {
+            @Override
+            public void processMessage(Message zMessage) {
+                if(zMessage.getMessageType().equals(MinimaLogger.MINIMA_LOG)){
+                    Console.writeLine(zMessage.getString("log"));
+
+                }else if(zMessage.getMessageType().equals(Main.MAIN_NEWBLOCK)){
+                    //Get the TxPoW
+                    mTxPow = (TxPoW) zMessage.getObject("txpow");
+
+                    //Show a notification
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            startForeground(1, createNotification("Block "+mTxPow.getBlockNumber()+" @ "+new Date(mTxPow.getTimeMilli().getAsLong())));
+                        }
+                    });
+                }
+            }
+        });
+
+        //Start her up..
+        mStart.fireStarter(getFilesDir().getAbsolutePath());
+
+        //Notify User service is now running!
+        Toast.makeText(this, "Minima Service Started", Toast.LENGTH_SHORT).show();
     }
 
     public Minima getMinima(){
@@ -169,18 +175,10 @@ public class MinimaService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
 //        MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
 
         //Set the default message
-        startForeground(1, createNotification("Starting up.."));
-
-//        //Only do this once..
-//        if(!mListenerAdded){
-//            mListenerAdded = true;
-//
-//
-//        }
+        startForeground(1, createNotification("Starting up.. please wait.."));
 
         return START_STICKY;
     }
@@ -189,35 +187,14 @@ public class MinimaService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-       //MinimaLogger.log("Service : onDestroy");
-        mListenerAdded = false;
+        //QUIT nicely..
+        mStart.runMinimaCMD("quit");
 
-        MinimaLogger.resetListener();
-
-//        //Post It..
-//        if(mStart != null && mStart.getServer()!=null && mStart.getServer().isRunning()){
-//            MinimaLogger.log("Service : SAVE ONDESTROY");
-//
-//            //Create a response stream
-//            ResponseStream resp = new ResponseStream();
-//
-//            //Send a backup message!
-//            InputMessage backup = new InputMessage("quit",resp);
-//
-//            mStart.getServer().getInputHandler().PostMessage(backup);
-//
-//            //Wait for it..
-//            resp.waitToFinish();
-//            MinimaLogger.log("Service : "+resp.getResponse());
-//        }else{
-//            MinimaLogger.log("Service : Already shutdown..");
-//        }
+        //Not listening anymore..
+        Main.setMinimaListener(null);
 
         //Shut the channel..
         mNotificationManager.deleteNotificationChannel(CHANNEL_ID);
-
-        //Stop the Quitter threa..
-        mStopQuitter = true;
 
         //Mention..
         Toast.makeText(this, "Minima Service Stopped", Toast.LENGTH_SHORT).show();

@@ -31,18 +31,10 @@ import org.minima.utils.messages.MessageListener;
 
 import global.org.minima.intro.IntroductionActivity;
 
-public class MinimaActivity extends AppCompatActivity implements ServiceConnection, MessageListener {
-//public class MinimaActivity extends AppCompatActivity {
-
-    //The IP Text..
-    TextView mTextIP;
-
+public class MinimaActivity extends AppCompatActivity implements ServiceConnection {
 
     //The Service..
     MinimaService mMinima = null;
-
-    boolean mSynced = false;
-    boolean mBound = false;
 
     //The Main View pager
     ViewPager mPager;
@@ -433,124 +425,18 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //        restart.start();
 //    }
 
-//    @Override
-//    protected void onStart() {
-//        super.onStart();
-//    }
-//
-//    @Override
-//    protected void onStop() {
-//        super.onStop();
-//        MinimaLogger.log("Activity : onStop");
-//    }
-
-//    @Override
-//    protected void onResume() {
-//        super.onResume();
-//        setIPText();
-//    }
-//
     @Override
     protected void onDestroy() {
         super.onDestroy();
 
-        //Remove the message listener.. don;t want to clog it up..
-        disconnectFromService();
+        //Unbind from the service..
+        if(mMinima != null){
+            unbindService(this);
+        }
     }
 
-//    public void setIPText() {
-//        //Set the IP - it may change..
-//        if (mSynced) {
-//            mIP = getIP();
-//            mTextIP.setText("\nConnect to Minima v"+ GlobalParams.MINIMA_VERSION +" from your Desktop\n\n" +
-//                    "Open a browser and go to\n\n" +
-//                    "http://" + mIP + ":9004/");
-//        }
-//    }
-//
-//    public String getIP(){
-//        String mHost = "127.0.0.1";
-//        boolean found = false;
-//        try {
-//            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-//            while (!found && interfaces.hasMoreElements()) {
-//                NetworkInterface iface = interfaces.nextElement();
-//                // filters out 127.0.0.1 and inactive interfaces
-//                if (iface.isLoopback() || !iface.isUp())
-//                    continue;
-//
-//                Enumeration<InetAddress> addresses = iface.getInetAddresses();
-//                while(!found && addresses.hasMoreElements()) {
-//                    InetAddress addr = addresses.nextElement();
-//                    String ip   = addr.getHostAddress();
-//                    String name = iface.getDisplayName();
-//
-//                    //Only get the IPv4
-//                    if(!ip.contains(":")) {
-//                        mHost = ip;
-//                        if(name.startsWith("wl")) {
-//                            found = true;
-//                            break;
-//                        }
-//                    }
-//                }
-//            }
-//        } catch (SocketException e) {
-//            System.out.println("Minima Network IP : "+e);
-//        }
-//
-//        return mHost;
-//    }
-//
-//    public void toastPopUp(final String zText){
-//        Runnable littletoast = new Runnable() {
-//            @Override
-//            public void run() {
-//                Toast.makeText(MinimaActivity.this, zText, Toast.LENGTH_LONG).show();
-//            }
-//        };
-//
-//        //Update..
-//        runOnUiThread(littletoast);
-//    }
-//
-//    public void setPostSyncDetails(){
-//        Runnable uiupdate = new Runnable() {
-//            @Override
-//            public void run() {
-//                mSynced = true;
-//                btnMini.setVisibility(View.VISIBLE);
-//                setIPText();
-//                MinimaLogger.log("ACTIVITY : GET STARTED");
-//            }
-//        };
-//
-//        //Update..
-//        runOnUiThread(uiupdate);
-//    }
-//
-//    public void setPercentInitial(final String zMessage){
-//        if(!mSynced) {
-//            Runnable uiupdate = new Runnable() {
-//                @Override
-//                public void run() {
-//                    mTextIP.setText("\n" + zMessage);
-//                }
-//            };
-//
-//            //Update..
-//            runOnUiThread(uiupdate);
-//        }
-//    }
-//
-////    @Override
-////    public void onBackPressed() {
-////        moveTaskToBack(true);
-////    }
-//
-
     public String runMinimaCommand(String zCommand){
-        if(mBound && mMinima!=null){
+        if(mMinima!=null){
 
             //Run a Minima Commmand
             return mMinima.getMinima().runMinimaCMD(zCommand);
@@ -560,75 +446,16 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         }
     }
 
-    private void disconnectFromService(){
-        //MinimaLogger.log("TRY DISCONNECT SERVICE");
-
-//        if(mMinima != null){
-//            try{
-//                mMinima.getMinima().getServer().getConsensusHandler().removeListener(this);
-//            }catch(Exception exc){}
-//        }
-
-        if(mBound){
-            unbindService(this);
-        }
-    }
-
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
         //MinimaLogger.log("CONNECTED TO SERVICE");
         MinimaService.MyBinder binder = (MinimaService.MyBinder)iBinder;
         mMinima = binder.getService();
-        mBound  = true;
     }
 
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
         //MinimaLogger.log("DISCONNECTED TO SERVICE");
-        mBound = false;
+       mMinima = null;
     }
-
-    @Override
-    public void processMessage(Message zMessage) {
-        MinimaLogger.log("MINIMA ACTIVITY.. "+zMessage);
-    }
-
-//    @Override
-//    public void processMessage(Message zMessage) {
-//        if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALSYNC)) {
-//            MinimaLogger.log("ACTIVITY SYNC COMPLETE : " + zMessage);
-//
-//            //Set the correct view..
-//            setPostSyncDetails();
-//
-////            setPercentInitial("Almost Done.. Checking MiniDAPPs");
-//
-//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_RECONNECT)) {
-//            //Reconnecting to network.. notify user..
-//            mSynced = false;
-//            setPercentInitial("Reconnecting in 30 seconds..");
-//
-//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_INITIALPERC)) {
-//            setPercentInitial(zMessage.getString("info"));
-//
-//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_DAPP_RELOAD)) {
-//            MinimaLogger.log("ACTIVITY : DAPPS LOADED");
-//
-//            //Set the correct view..
-//            setPostSyncDetails();
-//
-//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_DAPP_INSTALLED)) {
-//            String dapp = zMessage.getString("name");
-//
-//            MinimaLogger.log("ACTIVITY : DAPP INSTALLED "+dapp);
-//
-//            setPercentInitial("MiniDAPP installed : "+dapp);
-//
-//            //Set the correct view..
-//            setPostSyncDetails();
-//
-//        }else if (zMessage.isMessageType(ConsensusHandler.CONSENSUS_NOTIFY_LOG)) {
-//            String log = zMessage.getString("msg");
-//        }
-//    }
 }

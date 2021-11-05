@@ -82,7 +82,7 @@ public class MainViewAdapter extends PagerAdapter{
             layout = (ViewGroup) inflater.inflate(R.layout.view_minima, collection, false);
 
             TextView maintext = layout.findViewById(R.id.minima_maintext);
-            maintext.setText("v"+GlobalParams.MINIMA_VERSION+"\n\nThe Complete Blockchain Solution");
+            maintext.setText("v"+GlobalParams.MINIMA_VERSION+"\n\nThe Complete Blockchain Solution\n\nFreedom");
 
         }else if(position == 1) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_newsfeed, collection, false);
