@@ -8,6 +8,9 @@
 <!--    <item android:id="@+id/shutdown"-->
 <!--        android:title="Shutdown" />-->
 
+    <item android:id="@+id/incentive"
+        android:title="Incentive Cash" />
+
     <item android:id="@+id/refreshNews"
         android:title="Refresh News" />
 

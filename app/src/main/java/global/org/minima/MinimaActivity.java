@@ -11,9 +11,11 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.text.InputType;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,6 +47,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     //The main pages
     MainViewAdapter mMainPages;
 
+    //The IC User
+    String mICUser = "";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,6 +76,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
         //Do we do the intro..
         SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
+
+        //Get the IC USer
+        mICUser = pref.getString("icuser","");
 
         //Introduction
         boolean doIntro = pref.getBoolean("intro",true);
@@ -224,6 +232,44 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //                        }).setNegativeButton("No", null).show();
 //
 //                return true;
+
+            case R.id.incentive:
+
+                //Show an input dialog..
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle("Incentive Cash User");
+
+                // Set up the input
+                final EditText input = new EditText(this);
+                input.setInputType(InputType.TYPE_CLASS_TEXT);
+                input.setText(mICUser);
+                builder.setView(input);
+
+                // Set up the buttons
+                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        mICUser = input.getText().toString();
+
+                        //Save in
+                        SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
+                        SharedPreferences.Editor editor = pref.edit();
+                        editor.putString("icuser",mICUser);
+                        editor.commit();
+
+                        Toast.makeText(MinimaActivity.this,"IC User updated", Toast.LENGTH_SHORT).show();
+                    }
+                });
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                });
+
+                builder.show();
+
+                return true;
 
             case R.id.refreshNews:
 
