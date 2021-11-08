@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.minima.objects.base.MiniString;
@@ -17,8 +16,6 @@ import org.minima.utils.MiniFormat;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
-import org.minima.utils.messages.Message;
-import org.minima.utils.messages.MessageListener;
 
 public class Minima {
 
@@ -86,6 +83,9 @@ public class Minima {
 				}else if(arg.equals("-host")) {
 					GeneralParams.MINIMA_HOST = zArgs[counter++];
 				
+				}else if(arg.equals("-rpc")) {
+					GeneralParams.RPC_PORT = Integer.parseInt(zArgs[counter++]);
+					
 				}else if(arg.equals("-conf")) {
 					GeneralParams.CONFIGURATION_FOLDER = zArgs[counter++];
 				
@@ -101,6 +101,9 @@ public class Minima {
 				}else if(arg.equals("-nop2p")) {
 					GeneralParams.P2P_ENABLED = false;
 				
+				}else if(arg.equals("-isclient")) {
+					GeneralParams.IS_ACCEPTING_IN_LINKS = false;
+
 				}else if(arg.equals("-p2pnode")) {
 					GeneralParams.P2P_ROOTNODE = zArgs[counter++];
 					
@@ -133,9 +136,11 @@ public class Minima {
 					System.out.println("Minima Help");
 					System.out.println(" -host       : Specify the host IP");
 					System.out.println(" -port       : Specify the Minima port");
+					System.out.println(" -rpc        : Specify the RPC port");
 					System.out.println(" -conf       : Specify the configuration folder");
 					System.out.println(" -daemon     : Run in daemon mode with no stdin input ( services )");
 					System.out.println(" -nop2p      : Disable the automatic P2P system");
+					System.out.println(" -isclient   : Tells the P2P System that this node can't accept incoming connections");
 					System.out.println(" -noconnect  : Stops the P2P system from connecting to other nodes until it's been connected too");
 					System.out.println(" -p2pnode    : Specify the initial P2P host:port list to connect to");
 					System.out.println(" -automine   : Simulate user traffic to construct the blockchain");

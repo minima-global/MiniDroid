@@ -175,15 +175,37 @@ public class MinimaDB {
 	}
 	
 	public void saveState() {
+		
+		//We need read lock 
+		readLock(true);
+		
+		try {
+			//Get the base Database folder
+			File basedb = getBaseDBFolder();
+			
+			//JsonDBs
+			mUserDB.saveDB(new File(basedb,"userprefs.db"));
+			mP2PDB.saveDB(new File(basedb,"p2p.db"));
+			
+			//Custom
+			mCacscade.saveDB(new File(basedb,"cascade.db"));
+			mTxPoWTree.saveDB(new File(basedb,"chaintree.db"));
+		
+		}catch(Exception exc) {
+			MinimaLogger.log("ERROR saving state "+exc);
+		}
+		
+		//Release the krakken
+		readLock(false);
+	}
+	
+	public void saveUserDB() {
+		
 		//Get the base Database folder
 		File basedb = getBaseDBFolder();
 		
 		//JsonDBs
 		mUserDB.saveDB(new File(basedb,"userprefs.db"));
-		mP2PDB.saveDB(new File(basedb,"p2p.db"));
 		
-		//Custom
-		mCacscade.saveDB(new File(basedb,"cascade.db"));
-		mTxPoWTree.saveDB(new File(basedb,"chaintree.db"));
 	}
 }

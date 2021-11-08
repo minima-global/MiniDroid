@@ -31,7 +31,8 @@ public class TxPoWGenerator {
 	/**
 	 * For Now - Hard set the Min TxPoW Difficulty
 	 */
-	public static final BigInteger MIN_TXPOW_VAL 	= Crypto.MAX_VAL.divide(new BigInteger("1000"));
+	public static final BigInteger MIN_HASHES 		= new BigInteger("1000");
+	public static final BigInteger MIN_TXPOW_VAL 	= Crypto.MAX_VAL.divide(MIN_HASHES);
 	public static final MiniData MIN_TXPOWDIFF 		= new MiniData(MIN_TXPOW_VAL);
 	
 	public static TxPoW generateTxPoW(Transaction zTransaction, Witness zWitness) {
@@ -124,19 +125,26 @@ public class TxPoWGenerator {
 		int totaladded = 0;
 		for(TxPoW memtxp : mempool) {
 			
-			//Check if Valid!
-			if(TxPoWChecker.checkTxPoW(tip.getMMR(), memtxp, txpow.getBlockNumber())) {
-				//Add to our list
-				chosentxns.add(memtxp);
+			try {
 				
-				//Add to this TxPoW
-				txpow.addBlockTxPOW(memtxp.getTxPoWIDData());
+				//Check if Valid!
+				if(TxPoWChecker.checkTxPoW(tip.getMMR(), memtxp, txpow.getBlockNumber())) {
+					//Add to our list
+					chosentxns.add(memtxp);
+					
+					//Add to this TxPoW
+					txpow.addBlockTxPOW(memtxp.getTxPoWIDData());
+					
+					//One more to the total..
+					totaladded++;
+				}
 				
-				totaladded++;
+			}catch(Exception exc) {
+				MinimaLogger.log("ERROR CHecking TxPoW "+memtxp.getTxPoWID());
 			}
 			
-			//Max allowed..
-			if(totaladded > 5) {
+			//Max allowed.. 1 txn/s
+			if(totaladded > 50) {
 				break;
 			}
 		}
