@@ -6,10 +6,13 @@ import java.net.SocketException;
 import java.util.Enumeration;
 
 import org.minima.database.MinimaDB;
+import org.minima.database.userprefs.UserDB;
 import org.minima.system.network.minima.NIOManager;
 import org.minima.system.network.p2p.P2PFunctions;
 import org.minima.system.network.p2p.P2PManager;
 import org.minima.system.network.rpc.RPCServer;
+import org.minima.system.network.sshtunnel.SSHManager;
+import org.minima.system.network.webhooks.NotifyManager;
 import org.minima.system.params.GeneralParams;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONObject;
@@ -32,6 +35,16 @@ public class NetworkManager {
 	 * The RPC server
 	 */
 	RPCServer mRPCServer = null;
+	
+	/**
+	 * The SSH Tunnel Manager
+	 */
+	SSHManager mSSHManager;
+	
+	/**
+	 * The Web Hooks for Minima messages
+	 */
+	NotifyManager mNotifyManager;
 	
 	public NetworkManager() {
 		//Calculate the local host
@@ -60,6 +73,12 @@ public class NetworkManager {
 		if(MinimaDB.getDB().getUserDB().isRPCEnabled()) {
 			startRPC();
 		}
+		
+		//Start the SSH Tunnel manager
+		mSSHManager = new SSHManager();
+		
+		//Notifucation of Events
+		mNotifyManager = new NotifyManager();
 	}
 	
 	public void calculateHostIP() {
@@ -105,8 +124,17 @@ public class NetworkManager {
 	public JSONObject getStatus() {
 		JSONObject stats = new JSONObject();
 		
-		stats.put("host", GeneralParams.MINIMA_HOST);
-		stats.put("port", GeneralParams.MINIMA_PORT);
+		UserDB udb 				= MinimaDB.getDB().getUserDB();
+		JSONObject sshsettings = udb.getSSHTunnelSettings();
+		if(udb.isSSHTunnelEnabled()) {
+			stats.put("host", sshsettings.get("host"));
+			stats.put("port", sshsettings.get("remoteport"));
+			
+		}else {
+			stats.put("host", GeneralParams.MINIMA_HOST);
+			stats.put("port", GeneralParams.MINIMA_PORT);
+		}
+		
 		stats.put("connecting", mNIOManager.getConnnectingClients());
 		stats.put("connected", mNIOManager.getConnectedClients());
 		
@@ -119,6 +147,17 @@ public class NetworkManager {
 		}else {
 			stats.put("p2p", "disabled");
 		}
+		
+		//SSH Tunnel
+		JSONObject ssh = new JSONObject();
+		if(udb.isSSHTunnelEnabled()) {
+			ssh.put("enabled", true);
+			ssh.put("user", sshsettings.get("username")+"@"+sshsettings.get("host"));
+		}else {
+			ssh.put("enabled", false);
+		}
+		
+		stats.put("sshtunnel", ssh);
 		
 		return stats;
 	}
@@ -149,10 +188,17 @@ public class NetworkManager {
 		
 		//Send a message to the P2P
 		mP2PManager.PostMessage(P2PFunctions.P2P_SHUTDOWN);
+		
+		//And the SSH
+		mSSHManager.PostMessage(SSHManager.SSHTUNNEL_SHUTDOWN);
+		
+		//And the notify Manager
+		mNotifyManager.PostMessage(NotifyManager.NOTIFY_SHUTDOWN);
 	}
 	
 	public boolean isShutDownComplete() {
-		return mNIOManager.isShutdownComplete() && mP2PManager.isShutdownComplete();
+		return 		mNIOManager.isShutdownComplete() 
+				&& 	mP2PManager.isShutdownComplete();
 	}
 	
 	public MessageProcessor getP2PManager() {
@@ -161,5 +207,13 @@ public class NetworkManager {
 	
 	public NIOManager getNIOManager() {
 		return mNIOManager;
+	}
+	
+	public SSHManager getSSHManager() {
+		return mSSHManager;
+	}
+	
+	public NotifyManager getNotifyManager() {
+		return mNotifyManager;
 	}
 }

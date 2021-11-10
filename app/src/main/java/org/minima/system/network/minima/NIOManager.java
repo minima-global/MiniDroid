@@ -18,6 +18,7 @@ import org.minima.objects.base.MiniByte;
 import org.minima.objects.base.MiniData;
 import org.minima.system.Main;
 import org.minima.system.commands.all.connect;
+import org.minima.system.commands.all.sshtunnel;
 import org.minima.system.network.p2p.P2PFunctions;
 import org.minima.system.params.GeneralParams;
 import org.minima.utils.MinimaLogger;
@@ -115,6 +116,9 @@ public class NIOManager extends MessageProcessor {
 			
 			//The NIOServer has started you can now start up the P2P and pre-connect list
 			Main.getInstance().getNetworkManager().getP2PManager().PostMessage(P2PFunctions.P2P_INIT);
+			
+			//Do we need to start up the SSHTunnel..
+			sshtunnel.startSSHTunnel();
 			
 			//Any nodes to auto connect to.. comma separated list
 			if(!GeneralParams.CONNECT_LIST.equals("")) {
@@ -250,11 +254,15 @@ public class NIOManager extends MessageProcessor {
 			
 			//Which client..
 			String clientid = zMessage.getString("client");
+
+			//Why
+			String reason = zMessage.getString("reason"); 
 			
 			//Check if we have it..
 			if(!MinimaDB.getDB().getTxPoWDB().exists(txpowid)) {
-				
-				MinimaLogger.log("Requesting TxPoW "+txpowid);
+		
+				//Notify..
+				MinimaLogger.log("Requesting TxPoW "+txpowid+" from "+clientid+" : "+reason);
 				
 				//Now get it..
 				sendNetworkMessage(clientid, NIOMessage.MSG_TXPOWREQ, new MiniData(txpowid));
@@ -310,10 +318,14 @@ public class NIOManager extends MessageProcessor {
 	/**
 	 * Small delay before actually posting the request.. 2 second..
 	 */
-	public static void sendDelayedTxPoWReq(String zClientID, String zTxPoWID) {
+	public static void sendDelayedTxPoWReq(String zClientID, String zTxPoWID, String zReason) {
 		TimerMessage timed = new TimerMessage(2000, NIO_TXPOWREQ);
 		timed.addString("client", zClientID);
 		timed.addString("txpowid", zTxPoWID);
+		timed.addString("reason",zReason);
+		
+		MinimaLogger.log("DELAYED Request : "+zTxPoWID+" "+zReason);
+		
 		Main.getInstance().getNIOManager().PostTimerMessage(timed);
 	}
 	
@@ -325,6 +337,11 @@ public class NIOManager extends MessageProcessor {
 	}
 	
 	public static void sendNetworkMessage(String zUID, MiniByte zType, Streamable zObject) throws IOException {
+		//Make sure not null
+		if(zObject == null) {
+			throw new IOException("Cannot sendNetworkMessage with a NULL Object");
+		}
+		
 		//Create a stream to write to
 		ByteArrayOutputStream baos 	= new ByteArrayOutputStream();
 		DataOutputStream dos 		= new DataOutputStream(baos);

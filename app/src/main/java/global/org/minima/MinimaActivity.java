@@ -50,6 +50,8 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     //The IC User
     String mICUser = "";
 
+    boolean mShowPin = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -91,6 +93,8 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
             Intent intro = new Intent(this, IntroductionActivity.class);
             startActivity(intro);
         }
+
+        mShowPin = true;
     }
 
     /**
@@ -497,6 +501,14 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 //    }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+
+        //Show the PIN activity..
+
+    }
+
+        @Override
     protected void onDestroy() {
         super.onDestroy();
 

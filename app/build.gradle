@@ -44,6 +44,9 @@ dependencies {
     //Console for terminal
     implementation 'com.jraska:console:1.1.0'
 
+    //SSH Tunnel
+    implementation 'com.jcraft:jsch:0.1.55'
+
     //Minima requirements
     implementation 'com.h2database:h2:1.4.200'
     implementation 'org.bouncycastle:bcpkix-jdk15on:1.69'

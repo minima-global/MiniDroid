@@ -22,6 +22,7 @@ import org.minima.system.params.GlobalParams;
 import org.minima.utils.MiniFile;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.RPCClient;
+import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageListener;
 import org.minima.utils.messages.MessageProcessor;
@@ -55,9 +56,13 @@ public class Main extends MessageProcessor {
 	 * Main loop messages
 	 */
 	public static final String MAIN_TXPOWMINED 	= "MAIN_TXPOWMINED";
-	public static final String MAIN_AUTOMINE 	= "MAIN_AUTOMINE";
+	public static final String MAIN_AUTOMINE 	= "MAIN_CHECKAUTOMINE";
 	public static final String MAIN_CLEANDB 	= "MAIN_CLEANDB";
 	public static final String MAIN_PULSE 		= "MAIN_PULSE";
+	
+	/**
+	 * Notify Users..
+	 */
 	public static final String MAIN_NEWBLOCK 	= "MAIN_NEWBLOCK";
 	
 	/**
@@ -94,9 +99,9 @@ public class Main extends MessageProcessor {
 	long CLEANDB_TIMER	= 1000 * 60 * 30;
 	
 	/**
-	 * Timer for the automine message - twice every blocktime
+	 * Timer for the automine message
 	 */
-	long AUTOMINE_TIMER = 1000 *60;
+	long AUTOMINE_TIMER = 1000 * 60;
 	
 	public Main() {
 		super("MAIN");
@@ -200,10 +205,13 @@ public class Main extends MessageProcessor {
 	
 	public void setTrace(boolean zTrace, String zFilter) {
 		setFullLogging(zTrace,zFilter);
+		
 		mTxPoWProcessor.setFullLogging(zTrace,zFilter);
 		mTxPoWMiner.setFullLogging(zTrace,zFilter);
+		
 		mNetwork.getNIOManager().setFullLogging(zTrace,zFilter);
 		mNetwork.getP2PManager().setFullLogging(zTrace,zFilter);
+		mNetwork.getSSHManager().setFullLogging(zTrace,zFilter);
 	}
 	
 	private void doGenesis() {
@@ -310,20 +318,30 @@ public class Main extends MessageProcessor {
 			//Get the User
 			String user = MinimaDB.getDB().getUserDB().getIncentiveCashUserID();
 			
-			//Call the RPC End point..
-			RPCClient.sendPUT("http://incentivecash.minima.global/ping/"+user);
+			//Make sure there is a User specified
+			if(!user.equals("")) {
+				//Call the RPC End point..
+				RPCClient.sendPUT("https://incentivecash.minima.global/api/ping/"+user);
+			}
 			
 			//Do it agin..
 			PostTimerMessage(new TimerMessage(IC_TIMER, MAIN_INCENTIVE));
 			
 		}else if(zMessage.getMessageType().equals(MAIN_NEWBLOCK)) {
 			
+			//Get the TxPoW
+			TxPoW txpow = (TxPoW) zMessage.getObject("txpow");
+			
 			//The tip of the TxPoWTree has changed - we have a new block..
 			postMinimaListener(zMessage);
 			
-			//Notify other sections?
-			//..
+			//Notify The Web Hook Listeners
+			JSONObject event = new JSONObject();
+			event.put("event", "NEWBLOCK");
+			event.put("txpow", txpow.toJSON());
 			
+			//And Post it..
+			getNetworkManager().getNotifyManager().PostEvent(event);
 		}
 	}
 }

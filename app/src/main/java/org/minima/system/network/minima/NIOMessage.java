@@ -101,17 +101,14 @@ public class NIOMessage implements Runnable {
 			MiniByte type = MiniByte.ReadFromStream(dis);
 			
 			//Output some info
-//			if(mTrace) {
-//				MinimaLogger.log("[NIOMessage] uid:"+mClientUID+" type:"+convertMessageType(type)+" size:"+MiniFormat.formatSize(data.length));
-//			}
+			if(mTrace) {
+				MinimaLogger.log("[NIOMessage] uid:"+mClientUID+" type:"+convertMessageType(type)+" size:"+MiniFormat.formatSize(data.length));
+			}
 			
 			//Now find the right message
 			if(type.isEqual(MSG_GREETING)) {
 				//We have received a greeting message
 				Greeting greet = Greeting.ReadFromStream(dis);
-				
-				//Message
-				MinimaLogger.log("Greeting received from "+mClientUID+" "+MiniFormat.formatSize(mData.getLength()));
 				
 				//Get the welcome message..
 				String welcome = (String) greet.getExtraData().get("welcome");
@@ -130,9 +127,6 @@ public class NIOMessage implements Runnable {
 			}else if(type.isEqual(MSG_IBD)) {
 				//IBD received..
 				IBD ibd = IBD.ReadFromStream(dis);
-				
-				//Message
-				MinimaLogger.log("IBD received from "+mClientUID+" "+MiniFormat.formatSize(mData.getLength()));
 				
 				//Do some checking!
 //				//Sort the Sync blocks - low to high - they should be in the correct order but just in case..
@@ -185,6 +179,8 @@ public class NIOMessage implements Runnable {
 				if(txpow != null) {
 					//request it..
 					NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOW, txpow);
+				}else {
+					MinimaLogger.log("TxPoW requested from "+mClientUID+" that we don't have.. "+txpowid.to0xString());
 				}
 			
 			}else if(type.isEqual(MSG_TXPOW)) {
@@ -230,19 +226,14 @@ public class NIOMessage implements Runnable {
 						exists = MinimaDB.getDB().getTxPoWDB().exists(txn.to0xString());
 						if(!exists) {
 							//request it.. with a slight delay - as may be in process stack
-							MinimaLogger.log("Delayed Request Missing Txn in TxPoW "+mClientUID+" "+txn.to0xString());
-							NIOManager.sendDelayedTxPoWReq(mClientUID, txn.to0xString());
-//							NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOWREQ, txn);
+							NIOManager.sendDelayedTxPoWReq(mClientUID, txn.to0xString(), txpow.getTxPoWID()+" missing txn");
 						}
 					}
 					
 					//Get the parent if we don't have it..
 					exists = MinimaDB.getDB().getTxPoWDB().exists(txpow.getParentID().to0xString());
 					if(!exists) {
-						//request it..
-						MinimaLogger.log("Delayed Request Missing Parent in TxPoW "+mClientUID+" "+txpow.getParentID().to0xString());
-						NIOManager.sendDelayedTxPoWReq(mClientUID, txpow.getParentID().to0xString());
-//						NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOWREQ, txpow.getParentID());
+						NIOManager.sendDelayedTxPoWReq(mClientUID, txpow.getParentID().to0xString(), txpow.getTxPoWID()+" missing parent");
 					}
 					
 				}else {
@@ -309,9 +300,7 @@ public class NIOMessage implements Runnable {
 				if(found) {
 					//Request all the blocks.. in the correct order
 					for(MiniData block : requestlist) {
-						MinimaLogger.log("Delayed Request PULSE TxPoW from "+mClientUID+" "+block.to0xString());
-						NIOManager.sendDelayedTxPoWReq(mClientUID, block.to0xString());
-//						NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOWREQ, block);
+						NIOManager.sendDelayedTxPoWReq(mClientUID, block.to0xString(), "PULSE");
 					}
 					
 				}else{
