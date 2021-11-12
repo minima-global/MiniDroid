@@ -108,13 +108,29 @@ public class MinimaDB {
 	}
 	
 	public long getCascadeFileSize() {
+		return getDBFileSie("cascade.db");
+	}
+	
+	public long getUserDBFileSize() {
+		return getDBFileSie("userprefs.db");
+	}
+	
+	public long getTxPowTreeFileSize() {
+		return getDBFileSie("chaintree.db");
+	}
+	
+	public long getP2PFileSize() {
+		return getDBFileSie("p2p.db");
+	}
+	
+	private long getDBFileSie(String zFilename) {
 		//Get the base Database folder
 		File basedb = getBaseDBFolder();
 		
-		//The cascade
-		File casc = new File(basedb,"cascade.db");
-		if(casc.exists()) {
-			return casc.length();
+		//The File
+		File file = new File(basedb,zFilename);
+		if(file.exists()) {
+			return file.length();
 		}
 		
 		return 0;
@@ -183,6 +199,14 @@ public class MinimaDB {
 	}
 	
 	public void saveAllDB() {
+		//First the SQL
+		saveSQL();
+		
+		//And the rest
+		saveState();
+	}
+	
+	public void saveSQL() {
 		//We need read lock 
 		readLock(true);
 		
@@ -195,16 +219,8 @@ public class MinimaDB {
 			mArchive.saveDB();
 			mWallet.saveDB();
 			
-			//JsonDBs
-			mUserDB.saveDB(new File(basedb,"userprefs.db"));
-			mP2PDB.saveDB(new File(basedb,"p2p.db"));
-			
-			//Custom
-			mCacscade.saveDB(new File(basedb,"cascade.db"));
-			mTxPoWTree.saveDB(new File(basedb,"chaintree.db"));
-			
 		}catch(Exception exc) {
-			MinimaLogger.log("ERROR saveAllDB "+exc);
+			MinimaLogger.log("ERROR saveSQL "+exc);
 		}
 		
 		//Release the krakken

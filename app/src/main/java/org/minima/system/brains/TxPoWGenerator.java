@@ -111,9 +111,9 @@ public class TxPoWGenerator {
 		
 		//And add the current mempool txpow..
 		ArrayList<TxPoW> mempool = MinimaDB.getDB().getTxPoWDB().getAllUnusedTxns();
-		if(mempool.size()>0) {
-			MinimaLogger.log("MemPool Txns found : "+mempool.size());
-		}
+//		if(mempool.size()>0) {
+//			MinimaLogger.log("MemPool Txns found : "+mempool.size());
+//		}
 		
 		//The final TxPoW transactions put in this TxPoW
 		ArrayList<TxPoW> chosentxns = new ArrayList<>();
@@ -126,6 +126,9 @@ public class TxPoWGenerator {
 		for(TxPoW memtxp : mempool) {
 			
 			try {
+				
+				//Check CoinID not added already..!
+				//..
 				
 				//Check if Valid!
 				if(TxPoWChecker.checkTxPoW(tip.getMMR(), memtxp, txpow.getBlockNumber())) {

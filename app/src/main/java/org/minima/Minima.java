@@ -82,6 +82,7 @@ public class Minima {
 				
 				}else if(arg.equals("-host")) {
 					GeneralParams.MINIMA_HOST = zArgs[counter++];
+					GeneralParams.IS_HOST_SET = true;
 				
 				}else if(arg.equals("-rpc")) {
 					GeneralParams.RPC_PORT = Integer.parseInt(zArgs[counter++]);
@@ -167,7 +168,7 @@ public class Minima {
 		MinimaLogger.log("* (_/\\/\\_)(____)(_)\\_)(____)(_/\\/\\_)(__)(__) *");
 		MinimaLogger.log("*                                            *");
 		MinimaLogger.log("**********************************************");
-		MinimaLogger.log("Welcome to Minima "+GlobalParams.MINIMA_VERSION+" - for assistance type help. Then press enter.");
+		MinimaLogger.log("Welcome to Minima v"+GlobalParams.MINIMA_VERSION+" - for assistance type help. Then press enter.");
 		
 		//Main handler..
 		Main main = new Main();

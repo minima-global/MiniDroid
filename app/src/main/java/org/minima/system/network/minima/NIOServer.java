@@ -18,6 +18,8 @@ import org.minima.utils.messages.Message;
 
 public class NIOServer implements Runnable {
 
+	public static boolean mTraceON = false;
+	
 	NIOManager mNIOManager;
 	
 	int mPort;
@@ -132,6 +134,11 @@ public class NIOServer implements Runnable {
 	        // This is the main loop
 	        while (!mShutDown) {
 	        	
+	        	//Logs..
+	        	if(mTraceON) {
+	        		MinimaLogger.log("[NIOSERVER] Waiting for selection..");
+	        	}
+	        	
 	        	//Select something.. 
 	        	mSelector.select();
 	        	
@@ -206,13 +213,17 @@ public class NIOServer implements Runnable {
 	                    }
 	                    
 	                } catch (Exception e) {
-	                	MinimaLogger.log("NIOClient:"+client.getUID()+" "+e);
-	                    
+	                	
 	                    // Disconnect the user
 	                    client.disconnect();
 	                    
 	                    //Remove from the list..
 	                    mClients.remove(client.getUID());
+	
+	                    //Small Log..
+	                    if(mTraceON) {
+	                    	MinimaLogger.log("[NIOSERVER] NIOClient:"+client.getUID()+" "+e+" total:"+mClients.size());
+	                    }
 	                    
 	                    //Tell the Network Manager
 	                    Message newclient = new Message(NIOManager.NIO_DISCONNECTED)
@@ -226,7 +237,9 @@ public class NIOServer implements Runnable {
 	        }
 	        
 	        //Notify..
-//            MinimaLogger.log("NIOServer SHUTDOWN");
+	        if(mTraceON) {
+	        	MinimaLogger.log("[NIOServer] SHUTDOWN");
+	        }
             
             //Shut down the socket..
             serversocket.close();
@@ -267,6 +280,11 @@ public class NIOServer implements Runnable {
         
         //Add to the total list..
         mClients.put(nioc.getUID(), nioc);
+        
+        //log..
+        if(mTraceON) {
+        	MinimaLogger.log("[NIOSERVER] NEW NIOClient:"+nioc.getUID()+" total:"+mClients.size());
+        }
         
         //Post about it..
         Message newclient = new Message(NIOManager.NIO_NEWCONNECTION).addObject("client", nioc);

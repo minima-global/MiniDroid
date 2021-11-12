@@ -9,14 +9,17 @@ import org.minima.database.wallet.KeyRow;
 import org.minima.objects.Pulse;
 import org.minima.objects.TxBlock;
 import org.minima.objects.TxPoW;
+import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniNumber;
 import org.minima.system.brains.TxPoWMiner;
 import org.minima.system.brains.TxPoWProcessor;
 import org.minima.system.genesis.GenesisMMR;
 import org.minima.system.genesis.GenesisTxPoW;
 import org.minima.system.network.NetworkManager;
+import org.minima.system.network.minima.NIOClient;
 import org.minima.system.network.minima.NIOManager;
 import org.minima.system.network.minima.NIOMessage;
+import org.minima.system.network.minima.NIOServer;
 import org.minima.system.params.GeneralParams;
 import org.minima.system.params.GlobalParams;
 import org.minima.utils.MiniFile;
@@ -61,9 +64,19 @@ public class Main extends MessageProcessor {
 	public static final String MAIN_PULSE 		= "MAIN_PULSE";
 	
 	/**
+	 * Debug Function
+	 */
+	public static final String MAIN_CHECKER 	= "MAIN_CHECKER";
+	MiniData mOldTip 							= MiniData.ZERO_TXPOWID;
+	
+	//Check every 120 seconds..
+	long CHECKER_TIMER							= 1000 * 120;
+	
+	/**
 	 * Notify Users..
 	 */
 	public static final String MAIN_NEWBLOCK 	= "MAIN_NEWBLOCK";
+	public static final String MAIN_BALANCE 	= "MAIN_BALANCE";
 	
 	/**
 	 * Incentive Cash User ping..
@@ -92,6 +105,11 @@ public class Main extends MessageProcessor {
 	 * Are we shutting down..
 	 */
 	boolean mShuttingdown = false;
+	
+	/**
+	 * Are we restoring..
+	 */
+	boolean mRestoring = false;
 	
 	/**
 	 * Timer delay for CleanDB messages - every 30 mins
@@ -124,7 +142,7 @@ public class Main extends MessageProcessor {
 		//Start the engine..
 		mTxPoWProcessor = new TxPoWProcessor();
 		mTxPoWMiner 	= new TxPoWMiner();
-				
+		
 		//Are we running a private network
 		if(GeneralParams.GENESIS) {
 			//Create a genesis node
@@ -133,7 +151,7 @@ public class Main extends MessageProcessor {
 		
 		//Start the networking..
 		mNetwork = new NetworkManager();
-		
+				
 		//Simulate traffic message ( only if auto mine is set )
 		AUTOMINE_TIMER = MiniNumber.THOUSAND.div(GlobalParams.MINIMA_BLOCK_SPEED).getAsLong();
 		PostTimerMessage(new TimerMessage(AUTOMINE_TIMER, MAIN_AUTOMINE));
@@ -144,9 +162,12 @@ public class Main extends MessageProcessor {
 		//Clean the DB (delete old records)
 		PostTimerMessage(new TimerMessage(CLEANDB_TIMER, MAIN_CLEANDB));
 		
-		//Store the IC USer
-		PostTimerMessage(new TimerMessage(IC_TIMER, MAIN_INCENTIVE));
-				
+		//Store the IC User - do fast first time - 30 seconds in.. then every 8 hours
+		PostTimerMessage(new TimerMessage(1000*30, MAIN_INCENTIVE));
+		
+		//Debug Checker
+		PostTimerMessage(new TimerMessage(CHECKER_TIMER, MAIN_CHECKER));
+		
 		//Quick Clean up..
 		System.gc();
 	}
@@ -187,6 +208,31 @@ public class Main extends MessageProcessor {
 		}		
 	}
 	
+	public void restoreReady() {
+		//we are about to restore..
+		mRestoring = true;
+		
+		//Shut down the network
+		mNetwork.shutdownNetwork();
+				
+		//Stop the Miner
+		mTxPoWMiner.stopMessageProcessor();
+		
+		//Stop the main TxPoW processor
+		mTxPoWProcessor.stopMessageProcessor();
+		while(!mTxPoWProcessor.isShutdownComplete()) {
+			try {Thread.sleep(50);} catch (InterruptedException e) {}
+		}
+		
+		//No More timer Messages
+		TimerProcessor.stopTimerProcessor();
+		
+		//Wait for the networking to finish
+		while(!mNetwork.isShutDownComplete()) {
+			try {Thread.sleep(50);} catch (InterruptedException e) {}
+		}		
+	}
+	
 	public NetworkManager getNetworkManager() {
 		return mNetwork;
 	}
@@ -212,6 +258,9 @@ public class Main extends MessageProcessor {
 		mNetwork.getNIOManager().setFullLogging(zTrace,zFilter);
 		mNetwork.getP2PManager().setFullLogging(zTrace,zFilter);
 		mNetwork.getSSHManager().setFullLogging(zTrace,zFilter);
+		
+		NIOClient.mTraceON = zTrace;
+		NIOServer.mTraceON = zTrace;
 	}
 	
 	private void doGenesis() {
@@ -241,7 +290,7 @@ public class Main extends MessageProcessor {
 	@Override
 	protected void processMessage(Message zMessage) throws Exception {
 		//Are we shutting down
-		if(mShuttingdown) {
+		if(mShuttingdown || mRestoring) {
 			return;
 		}
 		
@@ -276,7 +325,7 @@ public class Main extends MessageProcessor {
 			if(GeneralParams.AUTOMINE) {
 				
 				//Create a TxPoW
-				mTxPoWMiner.PostMessage(TxPoWMiner.TXPOWMINER_EMPTYTXPOW);
+				mTxPoWMiner.PostMessage(TxPoWMiner.TXPOWMINER_MINEPULSE);
 			}
 			
 			//Next Attempt
@@ -308,7 +357,7 @@ public class Main extends MessageProcessor {
 			NIOManager.sendNetworkMessageAll(NIOMessage.MSG_PULSE, pulse);
 		
 			//Mine a TxPoW
-			mTxPoWMiner.PostMessage(TxPoWMiner.TXPOWMINER_EMPTYTXPOW);
+			mTxPoWMiner.PostMessage(TxPoWMiner.TXPOWMINER_MINEPULSE);
 			
 			//And then wait again..
 			PostTimerMessage(new TimerMessage(GeneralParams.USER_PULSE_FREQ, MAIN_PULSE));
@@ -341,7 +390,46 @@ public class Main extends MessageProcessor {
 			event.put("txpow", txpow.toJSON());
 			
 			//And Post it..
-			getNetworkManager().getNotifyManager().PostEvent(event);
+			PostNotifyEvent(event);
+			
+		}else if(zMessage.getMessageType().equals(MAIN_BALANCE)) {
+			
+			//The tip of the TxPoWTree has changed - we have a new block..
+			postMinimaListener(zMessage);
+			
+			//Notify The Web Hook Listeners
+			JSONObject event = new JSONObject();
+			event.put("event", "NEWBALANCE");
+			
+			//And Post it..
+			PostNotifyEvent(event);
+			
+		}else if(zMessage.getMessageType().equals(MAIN_CHECKER)) {
+			
+			//Get the Current Tip
+			TxPoWTreeNode tip = MinimaDB.getDB().getTxPoWTree().getTip();
+			
+			//Has it changed
+			if(tip.getTxPoW().getTxPoWIDData().isEqual(mOldTip)) {
+				MinimaLogger.log("Chain tip hasn't changed in 120 seconds "+tip.getTxPoW().getTxPoWID()+" "+tip.getTxPoW().getBlockNumber().toString());
+			}
+			
+			//Keep for the next round
+			mOldTip = tip.getTxPoW().getTxPoWIDData();
+			
+			//Check again..
+			PostTimerMessage(new TimerMessage(CHECKER_TIMER, MAIN_CHECKER));
+		
+		}
+	}
+	
+	/**
+	 * Post a network message to the webhook listeners
+	 * @param zEvent
+	 */
+	private void PostNotifyEvent(JSONObject zEvent) {
+		if(getNetworkManager() != null) {
+			getNetworkManager().getNotifyManager().PostEvent(zEvent);
 		}
 	}
 }

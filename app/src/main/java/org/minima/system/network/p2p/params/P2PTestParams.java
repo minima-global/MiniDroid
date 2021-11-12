@@ -35,7 +35,7 @@ public class P2PTestParams {
     /**
      * Time between P2P system assessing if it can receive inbound connections milliseconds
      */
-    public static int NODE_NOT_ACCEPTING_CHECK_DELAY = 600_000;
+    public static int NODE_NOT_ACCEPTING_CHECK_DELAY = 60_000;
 
     /**
      * Time in ms before walk link messages expire
@@ -47,10 +47,12 @@ public class P2PTestParams {
      */
     public static int AUTH_KEY_EXPIRY = 300_000;
 
+    public static int METRICS_DELAY = 5_000;
+
+    public static String METRICS_URL = "http://metrics:5000/network";
 
     public static List<InetSocketAddress> DEFAULT_NODE_LIST = Arrays.asList(
-            new InetSocketAddress("127.0.0.1", 9001),
-            new InetSocketAddress("127.0.0.1", 9101)
+            new InetSocketAddress("minima_one", 9001)
     );
 
     public static void setTestParams() {
@@ -63,6 +65,8 @@ public class P2PTestParams {
         P2PParams.TGT_NUM_LINKS = TGT_NUM_LINKS;
         P2PParams.TGT_NUM_NONE_P2P_LINKS = TGT_NUM_NONE_P2P_LINKS;
         P2PParams.MIN_NUM_CONNECTIONS = MIN_NUM_CONNECTIONS;
+        P2PParams.METRICS_DELAY = METRICS_DELAY;
+        P2PParams.METRICS_URL = METRICS_URL;
     }
 
 
