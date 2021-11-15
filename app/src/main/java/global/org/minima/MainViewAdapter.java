@@ -74,8 +74,6 @@ public class MainViewAdapter extends PagerAdapter{
         LayoutInflater inflater = LayoutInflater.from(mMinimaActivity);
         ViewGroup layout = null;
 
-        System.out.println("Position: "+position);
-
         if(position == 0) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_minima, collection, false);
 

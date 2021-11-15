@@ -147,7 +147,7 @@ public class MinimaService extends Service {
         vars.add("-conf");
         vars.add(getFilesDir().getAbsolutePath());
 
-        vars.add("isclient");
+        vars.add("-isclient");
 
 //        vars.add("-nop2p");
 //        vars.add("-daemon");
