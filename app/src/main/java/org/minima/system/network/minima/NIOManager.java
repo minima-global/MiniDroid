@@ -49,7 +49,7 @@ public class NIOManager extends MessageProcessor {
 	 */
 	public static final String NIO_CHECKLASTMSG 	= "NIO_CHECKLASTMSG";
 	long LASTREAD_CHECKER 		= 1000 * 60;
-	long MAX_LASTREAD_CHECKER 	= 1000 * 60 * 3;
+	long MAX_LASTREAD_CHECKER 	= 1000 * 60 * 5;
 	
 	/**
 	 * How long before a reconnect attempt
@@ -291,7 +291,7 @@ public class NIOManager extends MessageProcessor {
 				if(diff > MAX_LASTREAD_CHECKER) {
 					
 					//Too long a dely.. ?
-					MinimaLogger.log("No recent message (3 mins) from "+conn.getUID()+" disconnect/reconnect ..");
+					MinimaLogger.log("No recent message (5 mins) from "+conn.getUID()+" disconnect/reconnect ..");
 					
 					//Disconnect
 					disconnect(conn.getUID());
@@ -381,6 +381,21 @@ public class NIOManager extends MessageProcessor {
 			throw new IOException("Cannot sendNetworkMessage with a NULL Object");
 		}
 		
+		//Create the network message
+		MiniData niodata = createNIOMessage(zType, zObject);
+		
+		//For ALL or for ONE
+		if(!zUID.equals("")) {
+			//Send it..
+			Main.getInstance().getNIOManager().getNIOServer().sendMessage(zUID,niodata);
+		}else {
+			//Send it..
+			Main.getInstance().getNIOManager().getNIOServer().sendMessageAll(niodata);
+		}
+	}
+	
+	public static MiniData createNIOMessage(MiniByte zType, Streamable zObject) throws IOException {
+		
 		//Create a stream to write to
 		ByteArrayOutputStream baos 	= new ByteArrayOutputStream();
 		DataOutputStream dos 		= new DataOutputStream(baos);
@@ -404,13 +419,6 @@ public class NIOManager extends MessageProcessor {
 		//request it..
 		MiniData data = new MiniData(bb);
 		
-		//For ALL or for ONE
-		if(!zUID.equals("")) {
-			//Send it..
-			Main.getInstance().getNIOManager().getNIOServer().sendMessage(zUID,data);
-		}else {
-			//Send it..
-			Main.getInstance().getNIOManager().getNIOServer().sendMessageAll(data);
-		}
+		return data;
 	}
 }

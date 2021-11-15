@@ -147,11 +147,13 @@ public class MinimaService extends Service {
         vars.add("-conf");
         vars.add(getFilesDir().getAbsolutePath());
 
-        vars.add("-nop2p");
-        vars.add("-daemon");
+        vars.add("isclient");
 
-        vars.add("-connect");
-        vars.add("35.246.45.106:9001");
+//        vars.add("-nop2p");
+//        vars.add("-daemon");
+//
+//        vars.add("-connect");
+//        vars.add("35.246.45.106:9001");
 
         mStart.mainStarter(vars.toArray(new String[0]));
 
