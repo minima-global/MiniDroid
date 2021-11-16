@@ -1,6 +1,8 @@
 package global.org.minima;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,12 +41,13 @@ public class MainViewAdapter extends PagerAdapter{
         mMinimaActivity = zContext;
 
         mNewsAdapter = new NewsAdapter(mMinimaActivity);
-        mNewsAdapter.add(new NewsModel("","Loading..","Please wait..", new Date()));
+        mNewsAdapter.add(new NewsModel("","Loading..","Please wait..", new Date(),""));
     }
 
     public void refreshRSSFeed(){
         //url of RSS feed
-        String urlString = "http://www.androidcentral.com/feed";
+//        String urlString = "http://www.androidcentral.com/feed";
+        String urlString = "https://medium.com/feed/@icminima";
 
         Parser parser = new Parser();
         parser.onFinish(new Parser.OnTaskCompleted() {
@@ -53,7 +56,7 @@ public class MainViewAdapter extends PagerAdapter{
                 mNewsAdapter.clear();
 
                 for(Article art : arrayList){
-                    NewsModel cm = new NewsModel(art.getImage(),art.getTitle(), art.getDescription(), art.getPubDate());
+                    NewsModel cm = new NewsModel(art.getImage(),art.getTitle(), art.getDescription(), art.getPubDate(), art.getLink());
                     mNewsAdapter.add(cm);
                 }
 
@@ -90,6 +93,12 @@ public class MainViewAdapter extends PagerAdapter{
                 @Override
                 public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                     NewsModel nm = mNewsAdapter.getItem(position);
+
+                    //Open the link in a browser
+                    if(!nm.getLink().equals("")){
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(nm.getLink()));
+                        mMinimaActivity.startActivity(browserIntent);
+                    }
                 }
             });
 

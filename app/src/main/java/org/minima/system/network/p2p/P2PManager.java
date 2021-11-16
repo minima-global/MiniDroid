@@ -3,10 +3,12 @@ package org.minima.system.network.p2p;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
 import org.minima.database.MinimaDB;
+import org.minima.system.network.minima.NIOClient;
 import org.minima.system.network.minima.NIOClientInfo;
 import org.minima.system.network.p2p.messages.P2PDoSwap;
 import org.minima.system.network.p2p.messages.P2PGreeting;
@@ -44,8 +46,6 @@ public class P2PManager extends MessageProcessor {
         if (GeneralParams.TEST_PARAMS) {
             MinimaLogger.log("[+] P2P System using Test Params");
             P2PTestParams.setTestParams();
-        } else {
-            MinimaLogger.log("[+] P2P System NOT using Test Params");
         }
         //And start the loop timer..
         PostTimerMessage(new TimerMessage(10_000, P2P_LOOP));
@@ -97,13 +97,15 @@ public class P2PManager extends MessageProcessor {
             p2pdb.setVersion();
             p2pdb.setPeersList(new ArrayList<>());
         }
+        MinimaLogger.log("[+] P2P Version: " + P2PParams.VERSION);
 
         List<InetSocketAddress> peers = p2pdb.getPeersList();
         state.getKnownPeers().addAll(peers);
         state.setAcceptingInLinks(GeneralParams.IS_ACCEPTING_IN_LINKS);
+        state.setMyMinimaAddress(GeneralParams.MINIMA_HOST);
 
-        if (!GeneralParams.MINIMA_HOST.isEmpty()) {
-            state.setMyMinimaAddress(GeneralParams.MINIMA_HOST);
+        if (GeneralParams.IS_HOST_SET) {
+            state.setHostSet(true);
         }
 
         state.setNoConnect(GeneralParams.NOCONNECT);
@@ -202,6 +204,7 @@ public class P2PManager extends MessageProcessor {
         } else {
             state.setLoopDelay(10_000 + (long) rand.nextInt(3_000));
         }
+        state.getKnownPeers().remove(state.getMyMinimaAddress());
 
         if (!state.isNoConnect()) {
             int numEntryNodes = 1;
@@ -216,13 +219,33 @@ public class P2PManager extends MessageProcessor {
                 } else if (state.getOutLinks().size() < numEntryNodes) {
                     InetSocketAddress connectionAddress = (InetSocketAddress) state.getKnownPeers().toArray()[rand.nextInt(state.getKnownPeers().size())];
                     P2PFunctions.checkConnect(connectionAddress.getHostString(), connectionAddress.getPort());
-                } else {
+                } else if (state.isAcceptingInLinks()) {
                     sendMsgs.addAll(SwapLinksFunctions.joinScaleOutLinks(state, P2PParams.TGT_NUM_LINKS, P2PFunctions.getAllConnections()));
                     sendMsgs.addAll(SwapLinksFunctions.requestInLinks(state, P2PParams.TGT_NUM_LINKS, P2PFunctions.getAllConnections()));
                     sendMsgs.addAll(SwapLinksFunctions.onConnectedLoadBalanceRequest(state, P2PFunctions.getAllConnections()));
                 }
+
+                List<NIOClientInfo> clientInfos = P2PFunctions.getAllConnections();
+                for (NIOClientInfo client : clientInfos) {
+                    if ((!client.isIncoming() && !state.getOutLinks().containsKey(client.getUID())) || !client.ismValidGreeting()) {
+                        sendMsgs.add(new Message(P2P_SEND_DISCONNECT).addString("uid", client.getUID()));
+                        state.getKnownPeers().remove(new InetSocketAddress(client.getHost(), client.getPort()));
+                    }
+                    if (!client.ismValidGreeting()){
+                        state.getKnownPeers().remove(new InetSocketAddress(client.getHost(), client.getPort()));
+                    }
+                }
+
             } else {
                 MinimaLogger.log("[-] No Known peers!");
+                state.setDoingDiscoveryConnection(true);
+                InetSocketAddress connectionAddress = P2PParams.DEFAULT_NODE_LIST.get(rand.nextInt(P2PParams.DEFAULT_NODE_LIST.size()));
+                MinimaLogger.log("[+] Doing discovery connection with default node: " + connectionAddress);
+                if (connectionAddress != null) {
+                    sendMsgs.add(new Message(P2PManager.P2P_SEND_CONNECT)
+                            .addObject(ADDRESS_LITERAL, connectionAddress));
+
+                }
             }
         }
         return sendMsgs;
@@ -230,9 +253,6 @@ public class P2PManager extends MessageProcessor {
 
     public JSONObject getStatus() {
         JSONObject ret = new JSONObject();
-
-        ret.put("isDoingDiscoveryConnection", state.isDoingDiscoveryConnection());
-        ret.put("isNoConnect", state.isNoConnect());
         ret.put("isAcceptingInLinks", state.isAcceptingInLinks());
         ret.put("numInLinks", state.getInLinks().size());
         ret.put("numOutLinks", state.getOutLinks().size());
@@ -267,15 +287,17 @@ public class P2PManager extends MessageProcessor {
             shutdown();
         } else if (zMessage.isMessageType(P2PFunctions.P2P_CONNECTED)) {
             sendMsgs.addAll(connect(zMessage, state));
-            MinimaLogger.log(getStatus().toString());
         } else if (zMessage.isMessageType(P2PFunctions.P2P_DISCONNECTED)) {
             SwapLinksFunctions.onDisconnected(state, zMessage);
-            MinimaLogger.log(getStatus().toString());
         } else if (zMessage.isMessageType(P2PFunctions.P2P_MESSAGE)) {
             sendMsgs.addAll(processJsonMessages(zMessage, state));
         } else if (zMessage.isMessageType(P2P_LOOP)) {
             sendMsgs.addAll(processLoop(state));
             PostTimerMessage(new TimerMessage(state.getLoopDelay(), P2P_LOOP));
+        } else if (zMessage.isMessageType(P2PFunctions.P2P_NOCONNECT)) {
+            NIOClient client  = (NIOClient) zMessage.getObject("client");
+            InetSocketAddress conn = new InetSocketAddress(client.getHost(), client.getPort());
+            state.getKnownPeers().remove(conn);
         } else if (zMessage.isMessageType(P2P_ASSESS_CONNECTIVITY)) {
             sendMsgs.addAll(assessConnectivity(state));
             PostTimerMessage(new TimerMessage(P2PParams.NODE_NOT_ACCEPTING_CHECK_DELAY, P2P_ASSESS_CONNECTIVITY));

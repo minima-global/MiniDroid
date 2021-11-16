@@ -67,6 +67,8 @@ public class P2PState {
 
     private boolean noConnect = false;
 
+    private boolean isHostSet = false;
+
     public P2PState() {
         // Creates a new empty state
     }
@@ -199,5 +201,13 @@ public class P2PState {
 
     public void setNoConnect(boolean noConnect) {
         this.noConnect = noConnect;
+    }
+
+    public boolean isHostSet() {
+        return isHostSet;
+    }
+
+    public void setHostSet(boolean hostSet) {
+        isHostSet = hostSet;
     }
 }

@@ -432,6 +432,10 @@ public class Main extends MessageProcessor {
 			
 			//Get the Current Tip
 			TxPoWTreeNode tip = MinimaDB.getDB().getTxPoWTree().getTip();
+			if(tip == null) {
+				MinimaLogger.log("No tip found in Main Checker..");
+				return;
+			}
 			
 			//Has it changed
 			if(tip.getTxPoW().getTxPoWIDData().isEqual(mOldTip)) {
@@ -441,9 +445,11 @@ public class Main extends MessageProcessor {
 			//Keep for the next round
 			mOldTip = tip.getTxPoW().getTxPoWIDData();
 			
+			//Post  A Ping Message.. The top TxPoWID
+			NIOManager.sendNetworkMessageAll(NIOMessage.MSG_TXPOWID, tip.getTxPoW().getTxPoWIDData());
+			
 			//Check again..
 			PostTimerMessage(new TimerMessage(CHECKER_TIMER, MAIN_CHECKER));
-		
 		}
 	}
 	

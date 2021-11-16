@@ -36,6 +36,7 @@ public class NIOMessage implements Runnable {
 	public static final MiniByte MSG_GENMESSAGE = new MiniByte(5);
 	public static final MiniByte MSG_PULSE 		= new MiniByte(6);
 	public static final MiniByte MSG_P2P 		= new MiniByte(7);
+	public static final MiniByte MSG_PING 		= new MiniByte(8);
 	
 	/**
 	 * Helper function that converts to String 
@@ -107,10 +108,18 @@ public class NIOMessage implements Runnable {
 			
 			//Now find the right message
 			if(type.isEqual(MSG_GREETING)) {
+				//Get the client.. unless an internal message
+				NIOClient nioclient = Main.getInstance().getNIOManager().getNIOServer().getClient(mClientUID);
+				if(nioclient == null) {
+					MinimaLogger.log(mClientUID+" Error null client on Greeting NIOMessage..");
+					return;
+				}
+				
 				//We have received a greeting message
 				Greeting greet = Greeting.ReadFromStream(dis);
 				
 				//What version..
+				//if(!greet.getVersion().toString().startsWith("TN-P2P.100")) {
 				if(!greet.getVersion().toString().startsWith("0.100")) {
 					MinimaLogger.log("Greeting with Incompatible Version! "+greet.getVersion().toString());
 					
@@ -120,12 +129,23 @@ public class NIOMessage implements Runnable {
 					return;
 				}
 				
-				//Get the welcome message..
-				String welcome = (String) greet.getExtraData().get("welcome");
-				if(welcome != null) {
-					//Tell the NIOServer
-					Main.getInstance().getNIOManager().getNIOServer().setWelcome(mClientUID, welcome);
+				//Get the Host / Port..
+				if(greet.getExtraData().containsKey("host")) {
+					nioclient.overrideHost(greet.getExtraDataValue("host"));
 				}
+				if(greet.getExtraData().containsKey("port")) {
+					nioclient.setMinimaPort(Integer.parseInt(greet.getExtraDataValue("port")));
+				}
+				
+				//Get the welcome message..
+				nioclient.setWelcomeMessage("Minima v"+greet.getVersion());
+				nioclient.setValidGreeting(true);
+				
+//				String welcome = (String) greet.getExtraData().get("welcome");
+//				if(welcome != null) {
+//					//Tell the NIOServer
+//					Main.getInstance().getNIOManager().getNIOServer().setWelcome(mClientUID, welcome);
+//				}
 				
 				//Create an IBD response to that Greeting..
 				IBD ibd = new IBD();
@@ -239,14 +259,16 @@ public class NIOMessage implements Runnable {
 						exists = MinimaDB.getDB().getTxPoWDB().exists(txn.to0xString());
 						if(!exists) {
 							//request it.. with a slight delay - as may be in process stack
-							NIOManager.sendDelayedTxPoWReq(mClientUID, txn.to0xString(), txpow.getTxPoWID()+" missing txn");
+							NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOWREQ, txpow.getTxPoWIDData());
+//							NIOManager.sendDelayedTxPoWReq(mClientUID, txn.to0xString(), txpow.getTxPoWID()+" missing txn");
 						}
 					}
 					
 					//Get the parent if we don't have it..
 					exists = MinimaDB.getDB().getTxPoWDB().exists(txpow.getParentID().to0xString());
 					if(!exists) {
-						NIOManager.sendDelayedTxPoWReq(mClientUID, txpow.getParentID().to0xString(), txpow.getTxPoWID()+" missing parent");
+						NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOWREQ, txpow.getParentID());
+//						NIOManager.sendDelayedTxPoWReq(mClientUID, txpow.getParentID().to0xString(), txpow.getTxPoWID()+" missing parent");
 					}
 					
 				}else {
@@ -260,6 +282,10 @@ public class NIOMessage implements Runnable {
 				
 				//Foe now..
 				MinimaLogger.log(mClientUID+":"+msg.toString());
+			
+			}else if(type.isEqual(MSG_PING)) {
+				//Read inn the Top Block..
+				MiniData txpowid = MiniData.ReadFromStream(dis);
 			
 			}else if(type.isEqual(MSG_P2P)) {
 				
@@ -311,20 +337,23 @@ public class NIOMessage implements Runnable {
 				
 				//Did we find a crossover..
 				if(found) {
+					
 					//Request all the blocks.. in the correct order
 					for(MiniData block : requestlist) {
 						NIOManager.sendDelayedTxPoWReq(mClientUID, block.to0xString(), "PULSE");
 					}
 					
 				}else{
+				
+					//Hmm something funny..
 					MinimaLogger.log("NO CROSSOVER BLOCK FOUND from "+mClientUID+" .. disconnecting");
 					Main.getInstance().getNIOManager().disconnect(mClientUID);
 				}
 				
 			}else {
+				
 				//UNKNOWN MESSAGE..
 				MinimaLogger.log("Unknown Message type received from "+mClientUID+" type:"+type+" size:"+data.length);
-				return;
 			}
 			
 		} catch (Exception e) {

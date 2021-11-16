@@ -22,9 +22,9 @@ public class NIOClient {
 	public static boolean mTraceON = false;
 	
 	/**
-	 * 8K buffer for send and receive.. 32KB
+	 * 8K buffer for send and receive.. 8KB
 	 */
-	public static final int MAX_NIO_BUFFERS = 32 * 1024;
+	public static final int MAX_NIO_BUFFERS = 8 * 1024;
 
 	/**
 	 * The Maximum size of a single message 32MB
@@ -51,10 +51,11 @@ public class NIOClient {
 	String 			mHost;
 	int 			mPort;
 	
+	int 			mMinimaPort=-1;
+	
 	boolean mIncoming;
 	
 	private ArrayList<MiniData> mMessages;
-	
 	
 	NIOManager mNIOMAnager;
 	
@@ -63,6 +64,10 @@ public class NIOClient {
 	long mTimeConnected = 0;
 	
 	long mLastMessageRead;
+	
+	int mConnectAttempts = 1;
+	
+	boolean mValidGreeting = false;
 	
 	/**
 	 * Specify extra info
@@ -111,7 +116,9 @@ public class NIOClient {
 		ret.put("incoming", isIncoming());
 		ret.put("host", mHost);
 		ret.put("port", mPort);
+		ret.put("minimaport", mMinimaPort);
 		ret.put("connected", new Date(mTimeConnected).toString());
+		ret.put("valid", mValidGreeting);
 		
 		return ret;
 	}
@@ -132,12 +139,40 @@ public class NIOClient {
 		return mIncoming;
 	}
 	
+	public void overrideHost(String zHost) {
+		mHost = zHost;
+	}
+	
 	public String getHost() {
 		return mHost;
 	}
 	
+	public void setPort(int zPort) {
+		mPort = zPort;
+	}
+	
 	public int getPort() {
 		return mPort;
+	}
+	
+	public void setMinimaPort(int zPort) {
+		mMinimaPort = zPort;
+	}
+	
+	public int getMinimaPort() {
+		return mMinimaPort;
+	}
+	
+	public boolean isValidGreeting() {
+		return mValidGreeting;
+	}
+	
+	public void setValidGreeting(boolean zValid) {
+		mValidGreeting = zValid;
+	}
+	
+	public String getWelcomeMessage() {
+		return mWelcomeMessage;
 	}
 	
 	public void setWelcomeMessage(String zWelcome) {
@@ -150,6 +185,18 @@ public class NIOClient {
 	
 	public long getLastReadTime() {
 		return mLastMessageRead;
+	}
+	
+	public int getConnectAttempts() {
+		return mConnectAttempts;
+	}
+	
+	public void incrementConnectAttempts() {
+		mConnectAttempts++;
+	}
+	
+	public void setConnectAttempts(int zConnectAttempts) {
+		mConnectAttempts = zConnectAttempts;
 	}
 	
 	public void sendData(MiniData zData) {
