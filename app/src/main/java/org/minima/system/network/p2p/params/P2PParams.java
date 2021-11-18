@@ -17,7 +17,7 @@ public class P2PParams {
     /**
      * Desired number of client (nodes that can't accept inbound connections) to maintain
      */
-    public static int TGT_NUM_NONE_P2P_LINKS = 30;
+    public static int TGT_NUM_NONE_P2P_LINKS = 50;
 
     /**
      * Desired number of connections clients should maintain
@@ -55,7 +55,9 @@ public class P2PParams {
     public static String METRICS_URL = "http://35.242.245.96:5000//network";
 
     public static List<InetSocketAddress> DEFAULT_NODE_LIST = Arrays.asList(
-            new InetSocketAddress("35.242.245.96", 9001)
+            new InetSocketAddress("34.76.220.73", 9001), // minima-tn100-testnet-vm
+            new InetSocketAddress("34.134.70.105", 9001), // base-testnet-1
+            new InetSocketAddress("34.134.70.105", 9001) // base-testnet-2
             );
 
 }

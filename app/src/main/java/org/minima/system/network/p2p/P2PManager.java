@@ -3,7 +3,6 @@ package org.minima.system.network.p2p;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
@@ -197,7 +196,7 @@ public class P2PManager extends MessageProcessor {
         return sendmsgs;
     }
 
-    private static List<Message> processLoop(P2PState state) {
+    private List<Message> processLoop(P2PState state) {
         List<Message> sendMsgs = new ArrayList<>();
         if (state.getOutLinks().size() >= P2PParams.TGT_NUM_LINKS) {
             state.setLoopDelay(P2PParams.LOOP_DELAY + (long) rand.nextInt(P2PParams.LOOP_DELAY_VARIABILITY));
@@ -227,14 +226,27 @@ public class P2PManager extends MessageProcessor {
 
                 List<NIOClientInfo> clientInfos = P2PFunctions.getAllConnections();
                 for (NIOClientInfo client : clientInfos) {
-                    if ((!client.isIncoming() && !state.getOutLinks().containsKey(client.getUID())) || !client.ismValidGreeting()) {
-                        sendMsgs.add(new Message(P2P_SEND_DISCONNECT).addString("uid", client.getUID()));
-                        state.getKnownPeers().remove(new InetSocketAddress(client.getHost(), client.getPort()));
-                    }
-                    if (!client.ismValidGreeting()){
-                        state.getKnownPeers().remove(new InetSocketAddress(client.getHost(), client.getPort()));
+                    if (client.isConnected()) {
+                        if ((!client.isIncoming() && !state.getOutLinks().containsKey(client.getUID())) || !client.ismValidGreeting()) {
+                            sendMsgs.add(new Message(P2P_SEND_DISCONNECT).addString("uid", client.getUID()));
+                            state.getKnownPeers().remove(new InetSocketAddress(client.getHost(), client.getPort()));
+
+                        }
+                        if (!client.ismValidGreeting()) {
+                            state.getKnownPeers().remove(new InetSocketAddress(client.getHost(), client.getPort()));
+                        }
                     }
                 }
+
+                List<String> idsToRemove = new ArrayList<>();
+                for (String uid: state.getNoneP2PLinks().keySet()){
+                    NIOClientInfo info = P2PFunctions.getNIOCLientInfo(uid);
+                    if (info == null){
+                        idsToRemove.add(uid);
+                    }
+                }
+
+                idsToRemove.forEach(x -> state.getNoneP2PLinks().remove(x));
 
             } else {
                 MinimaLogger.log("[-] No Known peers!");
@@ -248,6 +260,9 @@ public class P2PManager extends MessageProcessor {
                 }
             }
         }
+//        JSONObject status = getStatus();
+//        status.remove("p2p_state");
+//        MinimaLogger.log(status.toString());
         return sendMsgs;
     }
 
@@ -259,7 +274,7 @@ public class P2PManager extends MessageProcessor {
         ret.put("numNotAcceptingConnP2PLinks", state.getNotAcceptingConnP2PLinks().size());
         ret.put("numNoneP2PLinks", state.getNoneP2PLinks().size());
         ret.put("numKnownPeers", state.getKnownPeers().size());
-        if (state.getMyMinimaAddress() != null) {
+        if (state.getMyMinimaAddress() != null && state.isAcceptingInLinks()) {
             ret.put("p2p_state", state.toJson());
         }
         return ret;

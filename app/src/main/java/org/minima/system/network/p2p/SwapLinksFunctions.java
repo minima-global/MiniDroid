@@ -1,7 +1,11 @@
 package org.minima.system.network.p2p;
 
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -88,24 +92,12 @@ public class SwapLinksFunctions {
     public static void onDisconnected(P2PState state, Message zMessage) {
         //Get the details
         String uid = zMessage.getString("uid");
-        boolean incoming = zMessage.getBoolean("incoming");
-        boolean reconnect = zMessage.getBoolean("reconnect");
 
         // Remove uid from current connections
-        InetSocketAddress removedAddress = null;
-        if (incoming) {
-
-            removedAddress = state.getInLinks().remove(uid);
-            if (removedAddress == null) {
-                removedAddress = state.getNotAcceptingConnP2PLinks().remove(uid);
-            }
-            if (removedAddress == null) {
-                removedAddress = state.getNoneP2PLinks().remove(uid);
-            }
-        } else {
-            removedAddress = state.getOutLinks().remove(uid);
-        }
-
+        state.getInLinks().remove(uid);
+        state.getNotAcceptingConnP2PLinks().remove(uid);
+        state.getOutLinks().remove(uid);
+        state.getNoneP2PLinks().remove(uid);
     }
 
     public static void updateKnownPeersFromGreeting(P2PState state, P2PGreeting greeting) {
