@@ -253,7 +253,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        mICUser = input.getText().toString();
+                        mICUser = input.getText().toString().trim();
 
                         //Save in
                         SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
@@ -261,7 +261,12 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                         editor.putString("icuser",mICUser);
                         editor.commit();
 
-                        Toast.makeText(MinimaActivity.this,"IC User updated", Toast.LENGTH_SHORT).show();
+                        //Run a command..
+                        String cmd = "incentivecash uid:"+mICUser;
+                        runMinimaCommand(cmd);
+
+                        //Small message
+                        Toast.makeText(MinimaActivity.this,"IC User Updated - Check Console", Toast.LENGTH_SHORT).show();
                     }
                 });
                 builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -518,14 +523,24 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         }
     }
 
-    public String runMinimaCommand(String zCommand){
+    public void runMinimaCommand(final String zCommand){
         if(mMinima!=null){
 
-            //Run a Minima Commmand
-            return mMinima.getMinima().runMinimaCMD(zCommand);
-        }
-        else{
-            return "Not connected to Minima Service..";
+            Runnable cmd = new Runnable() {
+                @Override
+                public void run() {
+
+                    //Run a command..
+                    String resp = mMinima.getMinima().runMinimaCMD(zCommand);
+
+                    //Put it in the Console..
+                    Console.writeLine(zCommand);
+                    Console.writeLine(resp);
+                }
+            };
+
+            Thread tt = new Thread(cmd);
+            tt.start();
         }
     }
 

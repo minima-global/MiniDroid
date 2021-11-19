@@ -117,12 +117,8 @@ public class MainViewAdapter extends PagerAdapter{
                     String text = mConsoleInput.getText().toString();
                     mConsoleInput.setText("");
 
-                    //Add to the Console..
-                    Console.writeLine(text);
-
                     //Run it..
-                    String result = mMinimaActivity.runMinimaCommand(text);
-                    Console.writeLine(result);
+                    mMinimaActivity.runMinimaCommand(text);
 
 //                    // Check if no view has focus:
 //                    View view = mMinimaActivity.getCurrentFocus();
