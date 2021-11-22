@@ -1,6 +1,8 @@
 package global.org.minima.news;
 
 import android.content.Context;
+import android.text.Html;
+import android.text.Spanned;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,6 +11,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
+
+import org.minima.utils.MinimaLogger;
 
 import global.org.minima.R;
 
@@ -46,8 +50,16 @@ public class NewsAdapter extends ArrayAdapter<NewsModel> {
             }
         }
 
+        //Set thew Title
         holder.tvTitle.setText(model.getTitle());
-        holder.tvSubtitle.setText(model.getDescription());
+
+        //Make the HTML readable..
+        String htmltext = model.getDescription();
+        htmltext = htmltext.replaceAll("(<(/)img>)|(<img.+?>)", "");
+        htmltext = htmltext.replaceAll("(<(/)figure>)|(<figure.+?>)", "");
+        holder.tvSubtitle.setText(Html.fromHtml(htmltext, Html.FROM_HTML_MODE_LEGACY));
+
+        //Set the Date
         holder.tvDate.setText(model.getDate().toString());
 
         return convertView;

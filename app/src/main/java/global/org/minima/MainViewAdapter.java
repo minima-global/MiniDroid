@@ -22,6 +22,7 @@ import com.prof.rssparser.Article;
 import com.prof.rssparser.Parser;
 
 import org.minima.system.params.GlobalParams;
+import org.minima.utils.MinimaLogger;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -56,7 +57,8 @@ public class MainViewAdapter extends PagerAdapter{
                 mNewsAdapter.clear();
 
                 for(Article art : arrayList){
-                    NewsModel cm = new NewsModel(art.getImage(),art.getTitle(), art.getDescription(), art.getPubDate(), art.getLink());
+                    NewsModel cm = new NewsModel(art.getImage(),art.getTitle(), art.getContent(), art.getPubDate(), art.getLink());
+
                     mNewsAdapter.add(cm);
                 }
 
@@ -91,8 +93,8 @@ public class MainViewAdapter extends PagerAdapter{
 
             newsfeed.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
-                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                    NewsModel nm = mNewsAdapter.getItem(position);
+                public void onItemClick(AdapterView<?> adapterView, View view, int zItemPosition, long l) {
+                    NewsModel nm = mNewsAdapter.getItem(zItemPosition);
 
                     //Open the link in a browser
                     if(!nm.getLink().equals("")){
