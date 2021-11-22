@@ -50,8 +50,6 @@
 
         </activity>
 
-        <activity android:name=".MinimaLogs" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"></activity>
-
         <!-- Intro Activity -->
         <activity android:name=".intro.IntroductionActivity" android:launchMode="singleInstance"  android:configChanges="keyboardHidden|orientation|screenSize"/>
 

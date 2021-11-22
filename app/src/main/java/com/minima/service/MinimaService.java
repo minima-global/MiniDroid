@@ -153,7 +153,7 @@ public class MinimaService extends Service {
         vars.add("-isclient");
         vars.add("-mobile");
 
-        //Test Values
+//        //Test Values
 //        vars.add("-nop2p");
 //        vars.add("-genesis");
 //        vars.add("-test");

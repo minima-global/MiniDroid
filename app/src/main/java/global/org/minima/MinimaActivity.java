@@ -48,7 +48,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     MainViewAdapter mMainPages;
 
     //The IC User
-    String mICUser = "";
+//    String mICUser = "";
 
     boolean mShowPin = false;
 
@@ -79,8 +79,8 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         //Do we do the intro..
         SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
 
-        //Get the IC USer
-        mICUser = pref.getString("icuser","");
+//        //Get the IC USer
+//        mICUser = pref.getString("icuser","");
 
         //Introduction
         boolean doIntro = pref.getBoolean("intro",true);
@@ -239,44 +239,52 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
             case R.id.incentive:
 
-                //Show an input dialog..
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle("Incentive Cash User");
+                //Start a web browser
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://incentivecash.minima.global/"));
+                startActivity(browserIntent);
 
-                // Set up the input
-                final EditText input = new EditText(this);
-                input.setInputType(InputType.TYPE_CLASS_TEXT);
-                input.setText(mICUser);
-                builder.setView(input);
+//                //Show an input dialog..
+//                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+//                builder.setTitle("Incentive Cash User");
+//
+//                // Set up the input
+//                final EditText input = new EditText(this);
+//                input.setInputType(InputType.TYPE_CLASS_TEXT);
+//                input.setText(mICUser);
+//                builder.setView(input);
+//
+//                // Set up the buttons
+//                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+//                    @Override
+//                    public void onClick(DialogInterface dialog, int which) {
+//
+//                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://incentivecash.minima.global/"));
+//                        startActivity(browserIntent);
 
-                // Set up the buttons
-                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        mICUser = input.getText().toString().trim();
-
-                        //Save in
-                        SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
-                        SharedPreferences.Editor editor = pref.edit();
-                        editor.putString("icuser",mICUser);
-                        editor.commit();
-
-                        //Run a command..
-                        String cmd = "incentivecash uid:"+mICUser;
-                        runMinimaCommand(cmd);
-
-                        //Small message
-                        Toast.makeText(MinimaActivity.this,"IC User Updated - Check Console", Toast.LENGTH_SHORT).show();
-                    }
-                });
-                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.cancel();
-                    }
-                });
-
-                builder.show();
+//                        mICUser = input.getText().toString().trim();
+//
+//                        //Save in
+//                        SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
+//                        SharedPreferences.Editor editor = pref.edit();
+//                        editor.putString("icuser",mICUser);
+//                        editor.commit();
+//
+//                        //Run a command..
+//                        String cmd = "incentivecash uid:"+mICUser;
+//                        runMinimaCommand(cmd);
+//
+//                        //Small message
+//                        Toast.makeText(MinimaActivity.this,"IC User Updated - Check Console", Toast.LENGTH_SHORT).show();
+//                    }
+//                });
+//                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+//                    @Override
+//                    public void onClick(DialogInterface dialog, int which) {
+//                        dialog.cancel();
+//                    }
+//                });
+//
+//                builder.show();
 
                 return true;
 
@@ -536,6 +544,26 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                     //Put it in the Console..
                     Console.writeLine(zCommand);
                     Console.writeLine(resp);
+                }
+            };
+
+            Thread tt = new Thread(cmd);
+            tt.start();
+        }
+    }
+
+    public void runICCommand(String zCommand) {
+        if(mMinima!=null){
+
+            Runnable cmd = new Runnable() {
+                @Override
+                public void run() {
+
+                    //Run a command..
+                    String resp = mMinima.getMinima().runMinimaCMD(zCommand);
+
+                    //Set the output in the IC Window..
+                    mMainPages.updateICData(resp);
                 }
             };
 

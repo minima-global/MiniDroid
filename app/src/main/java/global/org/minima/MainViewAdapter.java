@@ -2,16 +2,22 @@ package global.org.minima;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
+import android.text.method.ScrollingMovementMethod;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
@@ -36,6 +42,12 @@ public class MainViewAdapter extends PagerAdapter{
 
     EditText mConsoleInput;
 
+    EditText mICInput;
+    TextView mICData;
+
+    //The IC User
+    String mICUser = "";
+
     NewsAdapter mNewsAdapter;
 
     public MainViewAdapter(MinimaActivity zContext){
@@ -43,6 +55,24 @@ public class MainViewAdapter extends PagerAdapter{
 
         mNewsAdapter = new NewsAdapter(mMinimaActivity);
         mNewsAdapter.add(new NewsModel("","Loading..","Please wait..", new Date(),""));
+
+        //Do we do the intro..
+        SharedPreferences pref = mMinimaActivity.getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
+
+        //Get the IC USer
+        mICUser = pref.getString("icuser","");
+    }
+
+    public void updateICData(final String ICText){
+
+        Runnable update = new Runnable() {
+            @Override
+            public void run() {
+                mICData.setText(ICText);
+            }
+        };
+
+        mMinimaActivity.runOnUiThread(update);
     }
 
     public void refreshRSSFeed(){
@@ -58,8 +88,7 @@ public class MainViewAdapter extends PagerAdapter{
 
                 for(Article art : arrayList){
                     NewsModel cm = new NewsModel(art.getImage(),art.getTitle(), art.getContent(), art.getPubDate(), art.getLink());
-
-                    mNewsAdapter.add(cm);
+                   mNewsAdapter.add(cm);
                 }
 
                 mNewsAdapter.notifyDataSetChanged();
@@ -105,6 +134,53 @@ public class MainViewAdapter extends PagerAdapter{
             });
 
         }else if(position == 2) {
+            layout = (ViewGroup) inflater.inflate(R.layout.view_ic, collection, false);
+
+            //Get the edit text
+            mICInput = (EditText)layout.findViewById(R.id.ic_input);
+            mICInput.setText(mICUser);
+
+            //Get the output window..
+            mICData = (TextView)layout.findViewById(R.id.ic_data);
+            mICData.setMovementMethod(new ScrollingMovementMethod());
+
+            //And now run a Minima Command..
+            if(!mICUser.equals("")) {
+                mMinimaActivity.runICCommand("incentivecash uid:" + mICUser);
+            }else{
+                mICData.setText("Please set you Incentive Cash Node ID");
+            }
+
+            //Get the button..
+            Button update = layout.findViewById(R.id.ic_update);
+            update.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    // Hide keyboard
+                    View icview = mMinimaActivity.getCurrentFocus();
+                    if (icview != null) {
+                        InputMethodManager imm = (InputMethodManager) mMinimaActivity.getSystemService(Context.INPUT_METHOD_SERVICE);
+                        imm.hideSoftInputFromWindow(icview.getWindowToken(), 0);
+                    }
+
+                    //Get the text
+                    mICUser = mICInput.getText().toString().trim();
+
+                    //Store it..
+                    SharedPreferences pref = mMinimaActivity.getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
+                    SharedPreferences.Editor editor = pref.edit();
+                    editor.putString("icuser",mICUser);
+                    editor.commit();
+
+                    //And now run a Minima Command..
+                    mMinimaActivity.runICCommand("incentivecash uid:"+mICUser);
+
+                    //Small message
+                    Toast.makeText(mMinimaActivity,"IC User Updated", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+        }else if(position == 3) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_terminal, collection, false);
 
             Console console = layout.findViewById(R.id.console_window);
@@ -150,7 +226,7 @@ public class MainViewAdapter extends PagerAdapter{
 
     @Override
     public int getCount() {
-        return 3;
+        return 4;
     }
 
     @Override
