@@ -146,7 +146,7 @@ public class MinimaService extends Service {
 
         vars.add("-daemon");
 
-        vars.add("-conf");
+        vars.add("-data");
         vars.add(getFilesDir().getAbsolutePath());
 
         //Normal
