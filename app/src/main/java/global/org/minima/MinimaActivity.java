@@ -30,7 +30,11 @@ import com.google.android.material.tabs.TabLayout;
 import com.jraska.console.Console;
 import com.minima.service.MinimaService;
 
+import org.minima.Minima;
 import org.minima.utils.MinimaLogger;
+import org.minima.utils.json.JSONObject;
+import org.minima.utils.json.parser.JSONParser;
+import org.minima.utils.json.parser.ParseException;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageListener;
 
@@ -64,6 +68,31 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         //Get the viewpager
         mPager = (ViewPager)findViewById(R.id.intro_viewpager);
         mPager.setAdapter(mMainPages);
+        mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {}
+
+            @Override
+            public void onPageSelected(int position) {
+                switch (position){
+                    case 0 :
+                        MinimaActivity.this.setTitle("Minima");
+                    break;
+                    case 1 :
+                        MinimaActivity.this.setTitle("News");
+                        break;
+                    case 2 :
+                        MinimaActivity.this.setTitle("Incentive Cash");
+                        break;
+                    case 3 :
+                        MinimaActivity.this.setTitle("Console");
+                        break;
+                }
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {}
+        });
 
         //Refresh the News feed
         mMainPages.refreshRSSFeed();
@@ -155,7 +184,6 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         return true;
     }
 
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
@@ -164,127 +192,11 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
                 return true;
 
-//            case R.id.backup:
-//                //First check we are connected..
-//                if(!mSynced){
-//                    Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
-//                    return true;
-//                }
-//
-//                //Get a timeStamp..
-//                SimpleDateFormat s = new SimpleDateFormat("dd_MM_yyyy_hhmmss");
-//                String format = s.format(new Date());
-//
-//                //Get the file location..
-//                File backup = new File(getFilesDir(),"backup-"+format+".minima");
-//
-//                //Run a function..
-//                Toast.makeText(this,"Minima Backup to "+backup.getAbsolutePath(),Toast.LENGTH_LONG).show();
-//                backupMinima(backup.getAbsolutePath());
-//                return true;
-//
-//            case R.id.restore:
-//                //First check we are connected..
-//                if(!mSynced){
-//                    Toast.makeText(this,"Waiting to connect to Minima..",Toast.LENGTH_LONG).show();
-//                    return true;
-//                }
-//
-//                //Open a file chooser app
-//                Intent filechoose = new Intent().setType("*/*")
-//                        .setAction(Intent.ACTION_GET_CONTENT);
-//
-//                startActivityForResult(Intent.createChooser(filechoose, "Select a file"), 123);
-//
-//                return true;
-
-//            case R.id.shareapp:
-//                //Create a link and share that..
-//                String link = "http://mifi.minima.global/apk/minima-latest.apk";
-//
-//                //Now share it
-//                Intent sendIntent = new Intent();
-//                sendIntent.setAction(Intent.ACTION_SEND);
-//                sendIntent.putExtra(Intent.EXTRA_TEXT, link);
-//                sendIntent.setType("text/plain");
-//
-//                Intent shareIntent = Intent.createChooser(sendIntent, null);
-//                startActivity(shareIntent);
-//
-//                return true;
-//            case R.id.reset:
-//                //Reset the whole thing..
-//                new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert)
-//                        .setTitle("Reset Minima").setMessage("Are you sure you want to RESET Minima ?\n\nThis will wipe all information..")
-//                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-//                            @Override
-//                            public void onClick(DialogInterface dialog, int which) {
-//                                Toast.makeText(MinimaActivity.this, "Resetting.. Please wait",Toast.LENGTH_LONG).show();
-//
-//                                //Get the shared prefs..
-//                                SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
-//
-//                                //Permanent store
-//                                SharedPreferences.Editor editor = pref.edit();
-//                                editor.putBoolean("minidapps",false);
-//                                editor.commit();
-//
-//                                //Now reset
-//                                resetMinima();
-//
-//                            }
-//                        }).setNegativeButton("No", null).show();
-//
-//                return true;
-
-            case R.id.incentive:
+           case R.id.incentive:
 
                 //Start a web browser
                 Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://incentivecash.minima.global/"));
                 startActivity(browserIntent);
-
-//                //Show an input dialog..
-//                AlertDialog.Builder builder = new AlertDialog.Builder(this);
-//                builder.setTitle("Incentive Cash User");
-//
-//                // Set up the input
-//                final EditText input = new EditText(this);
-//                input.setInputType(InputType.TYPE_CLASS_TEXT);
-//                input.setText(mICUser);
-//                builder.setView(input);
-//
-//                // Set up the buttons
-//                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//                    @Override
-//                    public void onClick(DialogInterface dialog, int which) {
-//
-//                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://incentivecash.minima.global/"));
-//                        startActivity(browserIntent);
-
-//                        mICUser = input.getText().toString().trim();
-//
-//                        //Save in
-//                        SharedPreferences pref = getApplicationContext().getSharedPreferences("MinimaPref", 0); // 0 - for private mode
-//                        SharedPreferences.Editor editor = pref.edit();
-//                        editor.putString("icuser",mICUser);
-//                        editor.commit();
-//
-//                        //Run a command..
-//                        String cmd = "incentivecash uid:"+mICUser;
-//                        runMinimaCommand(cmd);
-//
-//                        //Small message
-//                        Toast.makeText(MinimaActivity.this,"IC User Updated - Check Console", Toast.LENGTH_SHORT).show();
-//                    }
-//                });
-//                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-//                    @Override
-//                    public void onClick(DialogInterface dialog, int which) {
-//                        dialog.cancel();
-//                    }
-//                });
-//
-//                builder.show();
 
                 return true;
 
@@ -531,6 +443,14 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         }
     }
 
+    public String runCommandSync(String zCommand){
+        if(mMinima != null){
+            return mMinima.getMinima().runMinimaCMD(zCommand);
+        }
+
+        return "Minima not connected..";
+    }
+
     public void runMinimaCommand(final String zCommand){
         if(mMinima!=null){
 
@@ -561,9 +481,25 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
 
                     //Run a command..
                     String resp = mMinima.getMinima().runMinimaCMD(zCommand);
+                    resp = resp.replaceAll("\n","");
 
-                    //Set the output in the IC Window..
-                    mMainPages.updateICData(resp);
+                    try {
+                        JSONObject json    = (JSONObject) new JSONParser().parse(resp);
+                        JSONObject reply   = (JSONObject)json.get("response");
+                        JSONObject details = (JSONObject)reply.get("details");
+                        JSONObject rewards = (JSONObject)details.get("rewards");
+
+                        long daily   = (long)rewards.get("dailyRewards");
+                        double prev  = (double)rewards.get("previousRewards");
+                        String lastping = (String)details.get("lastPing");
+
+                        //Set the output in the IC Window..
+                        mMainPages.updateICData("Previous:"+prev+" Daily:"+daily,lastping);
+
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+
                 }
             };
 

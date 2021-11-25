@@ -1,5 +1,6 @@
 package global.org.minima;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -44,6 +45,7 @@ public class MainViewAdapter extends PagerAdapter{
 
     EditText mICInput;
     TextView mICData;
+    TextView mICPing;
 
     //The IC User
     String mICUser = "";
@@ -63,12 +65,13 @@ public class MainViewAdapter extends PagerAdapter{
         mICUser = pref.getString("icuser","");
     }
 
-    public void updateICData(final String ICText){
+    public void updateICData(final String ICRewards, final String ICPing){
 
         Runnable update = new Runnable() {
             @Override
             public void run() {
-                mICData.setText(ICText);
+                mICData.setText(ICRewards);
+                mICPing.setText(ICPing);
             }
         };
 
@@ -112,7 +115,24 @@ public class MainViewAdapter extends PagerAdapter{
             layout = (ViewGroup) inflater.inflate(R.layout.view_minima, collection, false);
 
             TextView maintext = layout.findViewById(R.id.minima_maintext);
-            maintext.setText("v"+GlobalParams.MINIMA_VERSION+"\n\nThe Complete Blockchain Solution\n\nFreedom");
+            maintext.setText("v"+GlobalParams.MINIMA_VERSION+"\n\nThe Complete Blockchain Solution");
+
+            //Get the button
+            Button status = (Button)layout.findViewById(R.id.minima_status);
+            status.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+
+                    //Get some data..
+                    String statustext = mMinimaActivity.runCommandSync("status");
+
+                    new AlertDialog.Builder(mMinimaActivity)
+                            .setTitle("Minima Status")
+                            .setMessage(statustext)
+                            .setIcon(R.drawable.ic_minima_new)
+                            .show();
+                }
+            });
 
         }else if(position == 1) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_newsfeed, collection, false);
@@ -134,7 +154,7 @@ public class MainViewAdapter extends PagerAdapter{
             });
 
         }else if(position == 2) {
-            layout = (ViewGroup) inflater.inflate(R.layout.view_ic, collection, false);
+            layout = (ViewGroup) inflater.inflate(R.layout.view_ic_new, collection, false);
 
             //Get the edit text
             mICInput = (EditText)layout.findViewById(R.id.ic_input);
@@ -142,7 +162,7 @@ public class MainViewAdapter extends PagerAdapter{
 
             //Get the output window..
             mICData = (TextView)layout.findViewById(R.id.ic_data);
-            mICData.setMovementMethod(new ScrollingMovementMethod());
+            mICPing = (TextView)layout.findViewById(R.id.ic_lastping);
 
             //And now run a Minima Command..
             if(!mICUser.equals("")) {
@@ -176,7 +196,7 @@ public class MainViewAdapter extends PagerAdapter{
                     mMinimaActivity.runICCommand("incentivecash uid:"+mICUser);
 
                     //Small message
-                    Toast.makeText(mMinimaActivity,"IC User Updated", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(mMinimaActivity,"IC Details Updated", Toast.LENGTH_SHORT).show();
                 }
             });
 

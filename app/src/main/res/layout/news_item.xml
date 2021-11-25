@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:clipToPadding="false"
     android:orientation="vertical"
     android:paddingBottom="@dimen/newsitem_padding_top"
@@ -11,7 +12,8 @@
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="20dp">
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -26,7 +28,7 @@
                 android:layout_width="96dp"
                 android:layout_height="96dp"
                 android:contentDescription="@string/app_name"
-                android:src="@mipmap/ic_launcher" />
+                android:src="@mipmap/ic_launcher"/>
 
             <TextView
                 android:id="@+id/text_title"

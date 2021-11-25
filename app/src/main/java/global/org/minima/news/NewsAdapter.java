@@ -11,6 +11,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Transformation;
 
 import org.minima.utils.MinimaLogger;
 
@@ -44,7 +45,14 @@ public class NewsAdapter extends ArrayAdapter<NewsModel> {
             holder.imageView.setImageResource(R.drawable.ic_minima_new);
         }else{
             try{
-                Picasso.get().load(model.getImageID()).resize(256,256).centerCrop().into(holder.imageView);
+
+                Picasso.get()
+                        .load(model.getImageID())
+                        .resize(256,256)
+                        .centerCrop()
+                        .transform(new RoundedCornersTransform())
+                        .into(holder.imageView);
+
             }catch (Exception exc){
 
             }

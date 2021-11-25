@@ -150,13 +150,13 @@ public class MinimaService extends Service {
         vars.add(getFilesDir().getAbsolutePath());
 
         //Normal
-        vars.add("-isclient");
-        vars.add("-mobile");
+//        vars.add("-isclient");
+//        vars.add("-mobile");
 
-//        //Test Values
-//        vars.add("-nop2p");
-//        vars.add("-genesis");
-//        vars.add("-test");
+        //Test Values
+        vars.add("-nop2p");
+        vars.add("-genesis");
+        vars.add("-test");
 
 //        vars.add("-connect");
 //        vars.add("35.246.45.106:9001");
