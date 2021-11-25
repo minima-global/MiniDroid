@@ -496,8 +496,9 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                         //Set the output in the IC Window..
                         mMainPages.updateICData("Previous:"+prev+" Daily:"+daily,lastping);
 
-                    } catch (ParseException e) {
-                        e.printStackTrace();
+                    } catch (Exception e) {
+                        mMainPages.updateICData("Error - No User found","..");
+                       e.printStackTrace();
                     }
 
                 }
