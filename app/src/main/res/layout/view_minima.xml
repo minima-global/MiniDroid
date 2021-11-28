@@ -33,7 +33,7 @@
 
     <TextView
         android:id="@+id/minima_maintext"
-        android:text="\n\nThe Complete Blockchain Solution"
+        android:text="\n\nThe Complete Blockchain Solution\n\nFreedom"
         android:textStyle="bold"
         android:textSize="18dip"
         android:textColor="#001C32"
@@ -45,17 +45,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
-    <Button
-        android:id="@+id/minima_status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textStyle="bold"
-        android:textColor="#FFFFFF"
-        android:textSize="20dip"
-        android:fontFamily="@font/manrope"
-        android:background="@drawable/roundbutton"
-        android:paddingLeft="30dip"
-        android:paddingRight="30dip"
-        android:text="Status"/>
+<!--    <Button-->
+<!--        android:id="@+id/minima_status"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:textStyle="bold"-->
+<!--        android:textColor="#FFFFFF"-->
+<!--        android:textSize="20dip"-->
+<!--        android:fontFamily="@font/manrope"-->
+<!--        android:background="@drawable/roundbutton"-->
+<!--        android:paddingLeft="30dip"-->
+<!--        android:paddingRight="30dip"-->
+<!--        android:text="Status"/>-->
 
 </LinearLayout>

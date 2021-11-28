@@ -11,7 +11,9 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.text.Html;
 import android.text.InputType;
+import android.text.Spanned;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -79,10 +81,10 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                         MinimaActivity.this.setTitle("Minima");
                     break;
                     case 1 :
-                        MinimaActivity.this.setTitle("News");
+                        MinimaActivity.this.setTitle("Incentive Cash");
                         break;
                     case 2 :
-                        MinimaActivity.this.setTitle("Incentive Cash");
+                        MinimaActivity.this.setTitle("News");
                         break;
                     case 3 :
                         MinimaActivity.this.setTitle("Console");
@@ -189,7 +191,16 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         // Handle item selection
         switch (item.getItemId()) {
             case R.id.minimahelp:
-                Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
+
+                Spanned text = Html.fromHtml("<br>Please visit <b>minima.global</b><br><br>Thank you",Html.FROM_HTML_MODE_LEGACY);
+
+                new AlertDialog.Builder(this)
+                        .setTitle("Help")
+                        .setMessage(text)
+                        .setIcon(R.drawable.ic_minima_new)
+                        .show();
+
+//                Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
                 return true;
 
            case R.id.incentive:
@@ -493,8 +504,12 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                         double prev  = (double)rewards.get("previousRewards");
                         String lastping = (String)details.get("lastPing");
 
+                        //Calculate the total
+                        double totalrewards = daily+prev;
+
                         //Set the output in the IC Window..
-                        mMainPages.updateICData("Previous:"+prev+" Daily:"+daily,lastping);
+//                        mMainPages.updateICData("Previous:"+prev+" Daily:"+daily,lastping);
+                        mMainPages.updateICData(totalrewards+" Minima",lastping);
 
                     } catch (Exception e) {
                         mMainPages.updateICData("Error - No User found","..");

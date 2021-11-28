@@ -115,26 +115,26 @@ public class MainViewAdapter extends PagerAdapter{
             layout = (ViewGroup) inflater.inflate(R.layout.view_minima, collection, false);
 
             TextView maintext = layout.findViewById(R.id.minima_maintext);
-            maintext.setText("v"+GlobalParams.MINIMA_VERSION+"\n\nThe Complete Blockchain Solution");
+            maintext.setText("v"+GlobalParams.MINIMA_VERSION+"\n\nThe Complete Blockchain Solution\n\nFreedom");
 
-            //Get the button
-            Button status = (Button)layout.findViewById(R.id.minima_status);
-            status.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
+//            //Get the button
+//            Button status = (Button)layout.findViewById(R.id.minima_status);
+//            status.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View view) {
+//
+//                    //Get some data..
+//                    String statustext = mMinimaActivity.runCommandSync("status");
+//
+//                    new AlertDialog.Builder(mMinimaActivity)
+//                            .setTitle("Minima Status")
+//                            .setMessage(statustext)
+//                            .setIcon(R.drawable.ic_minima_new)
+//                            .show();
+//                }
+//            });
 
-                    //Get some data..
-                    String statustext = mMinimaActivity.runCommandSync("status");
-
-                    new AlertDialog.Builder(mMinimaActivity)
-                            .setTitle("Minima Status")
-                            .setMessage(statustext)
-                            .setIcon(R.drawable.ic_minima_new)
-                            .show();
-                }
-            });
-
-        }else if(position == 1) {
+        }else if(position == 2) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_newsfeed, collection, false);
 
             ListView newsfeed = (ListView)layout;
@@ -153,7 +153,7 @@ public class MainViewAdapter extends PagerAdapter{
                 }
             });
 
-        }else if(position == 2) {
+        }else if(position == 1) {
             layout = (ViewGroup) inflater.inflate(R.layout.view_ic_new, collection, false);
 
             //Get the edit text
