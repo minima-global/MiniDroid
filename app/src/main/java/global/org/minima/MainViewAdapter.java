@@ -168,7 +168,7 @@ public class MainViewAdapter extends PagerAdapter{
             if(!mICUser.equals("")) {
                 mMinimaActivity.runICCommand("incentivecash uid:" + mICUser);
             }else{
-                mICData.setText("Please set you Incentive Cash Node ID");
+                mICData.setText("Please set your Incentive Cash Node ID");
             }
 
             //Get the button..
