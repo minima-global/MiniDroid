@@ -192,12 +192,26 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         switch (item.getItemId()) {
             case R.id.minimahelp:
 
-                Spanned text = Html.fromHtml("<br>Please visit <b>minima.global</b><br><br>Thank you",Html.FROM_HTML_MODE_LEGACY);
+                Spanned text = Html.fromHtml("<br>Please visit <b>minima.global/getstarted</b><br><br>Thank you",Html.FROM_HTML_MODE_LEGACY);
 
                 new AlertDialog.Builder(this)
                         .setTitle("Help")
                         .setMessage(text)
                         .setIcon(R.drawable.ic_minima_new)
+                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                //Start a web browser
+                                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://minima.global/getstarted"));
+                                startActivity(browserIntent);
+                            }
+                        })
+                        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                dialogInterface.cancel();
+                            }
+                        })
                         .show();
 
 //                Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
@@ -503,6 +517,10 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                         long daily   = (long)rewards.get("dailyRewards");
                         double prev  = (double)rewards.get("previousRewards");
                         String lastping = (String)details.get("lastPing");
+
+                        //Remove the T and Z..
+                        lastping = lastping.replace("T"," ");
+                        lastping = lastping.replace("Z","");
 
                         //Calculate the total
                         double totalrewards = daily+prev;

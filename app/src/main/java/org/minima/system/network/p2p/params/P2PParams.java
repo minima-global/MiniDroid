@@ -22,7 +22,7 @@ public class P2PParams {
     /**
      * Desired number of connections clients should maintain
      */
-    public static int MIN_NUM_CONNECTIONS = 2;
+    public static int MIN_NUM_CONNECTIONS = 3;
 
     /**
      * Time between P2P system assessing its state in milliseconds
@@ -39,6 +39,8 @@ public class P2PParams {
      * Time between P2P system assessing if it can receive inbound connections milliseconds
      */
     public static int NODE_NOT_ACCEPTING_CHECK_DELAY = 3600_000;
+
+    public static int SAVE_DATA_DELAY = 3600_000;
 
     /**
      * Time in ms before walk link messages expire
