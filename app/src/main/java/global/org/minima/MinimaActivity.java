@@ -192,7 +192,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
         switch (item.getItemId()) {
             case R.id.minimahelp:
 
-                Spanned text = Html.fromHtml("<br>Please visit <b>minima.global/getstarted</b><br><br>Thank you",Html.FROM_HTML_MODE_LEGACY);
+                Spanned text = Html.fromHtml("<br>Please visit <b>minima.global/get-involved</b><br><br>Thank you",Html.FROM_HTML_MODE_LEGACY);
 
                 new AlertDialog.Builder(this)
                         .setTitle("Help")
@@ -202,7 +202,7 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 //Start a web browser
-                                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://minima.global/getstarted"));
+                                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://minima.global/get-involved"));
                                 startActivity(browserIntent);
                             }
                         })
