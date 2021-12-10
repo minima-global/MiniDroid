@@ -180,15 +180,15 @@ public class MinimaService extends Service {
 
         vars.add("-rpcenable");
 
-//        //Test Values
-        vars.add("-test");
-        vars.add("-clean");
-        vars.add("-nop2p");
+////        //Test Values
+//        vars.add("-test");
+//        vars.add("-clean");
+//        vars.add("-nop2p");
 
 //        vars.add("-connect");
 //        vars.add("10.0.2.2:9001");
 
-        vars.add("-genesis");
+//        vars.add("-genesis");
 //        vars.add("-automine");
 
         mStart.mainStarter(vars.toArray(new String[0]));
