@@ -248,11 +248,42 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 return true;
 
 //            case R.id.shutdown:
-//                shutdownMinima();
+//                Toast.makeText(this,"Shutting down Minima..",Toast.LENGTH_LONG).show();
+//                    shutDownMinima();
 //                return true;
+
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void shutDownMinima(){
+
+        Runnable shut = new Runnable() {
+            @Override
+            public void run() {
+//                //Run a quit command
+//                runMinimaCommand("quit");
+//
+//                //Wait  a few seconds..
+//                try {
+//                    Thread.sleep(5000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+                //Now stop the service..
+                Intent minimaintent = new Intent(getBaseContext(), MinimaService.class);
+                stopService(minimaintent);
+
+                //And exit..
+                finish();
+            }
+        };
+
+        Thread rr = new Thread(shut);
+        rr.start();
+
     }
 
 //    @Override

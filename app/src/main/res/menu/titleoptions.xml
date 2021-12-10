@@ -20,6 +20,9 @@
     <item android:id="@+id/battery"
         android:title="Battery Optimise"/>
 
+<!--    <item android:id="@+id/shutdown"-->
+<!--        android:title="Shutdown"/>-->
+
     <item android:id="@+id/minimahelp"
         android:title="Help"/>
 

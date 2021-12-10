@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -153,7 +154,12 @@ public class MinimaService extends Service {
                     }else if(event.equals("MAXIMA")){
 
                         //Broadcast the Maxima Message ( Currently ONLY MaxChat gets it.. can be configured )
-
+                        Intent i= new Intent();
+                        ComponentName cn = new ComponentName("com.minima.maxchat","com.minima.maxchat.MyBroadcastReceiver");
+                        i.setComponent(cn);
+                        i.setAction("com.minima.maxchat.MINIMA_MESSAGE");
+                        i.putExtra("data", data.toString());
+                        sendBroadcast(i);
 
                     }
                 }
@@ -172,19 +178,18 @@ public class MinimaService extends Service {
         vars.add("-isclient");
         vars.add("-mobile");
 
+        vars.add("-rpcenable");
+
 //        //Test Values
-//        vars.add("-test");
-//        vars.add("-clean");
-//        vars.add("-nop2p");
+        vars.add("-test");
+        vars.add("-clean");
+        vars.add("-nop2p");
+
 //        vars.add("-connect");
 //        vars.add("10.0.2.2:9001");
 
-        vars.add("-rpcenable");
-//        vars.add("-genesis");
+        vars.add("-genesis");
 //        vars.add("-automine");
-
-//        vars.add("-connect");
-//        vars.add("35.246.45.106:9001");
 
         mStart.mainStarter(vars.toArray(new String[0]));
 
