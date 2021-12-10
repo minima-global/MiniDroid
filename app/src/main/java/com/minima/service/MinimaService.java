@@ -23,7 +23,9 @@ import androidx.core.app.NotificationCompat;
 import org.minima.Minima;
 import org.minima.objects.TxPoW;
 import org.minima.system.Main;
+import org.minima.system.network.webhooks.NotifyManager;
 import org.minima.utils.MinimaLogger;
+import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageListener;
 
@@ -68,7 +70,7 @@ public class MinimaService extends Service {
     PendingIntent mPendingIntent;
 
     //Information for the Notification
-    TxPoW mTxPow = null;
+    JSONObject mTxPowJSON = null;
 
     public static final String CHANNEL_ID = "MinimaServiceChannel";
 
@@ -126,17 +128,34 @@ public class MinimaService extends Service {
                 if(zMessage.getMessageType().equals(MinimaLogger.MINIMA_LOG)){
                     Console.writeLine(zMessage.getString("log"));
 
-                }else if(zMessage.getMessageType().equals(Main.MAIN_NEWBLOCK)){
-                    //Get the TxPoW
-                    mTxPow = (TxPoW) zMessage.getObject("txpow");
+                }else if(zMessage.getMessageType().equals(NotifyManager.NOTIFY_POST)){
+                    //Get the JSON..
+                    JSONObject notify = (JSONObject) zMessage.getObject("notify");
 
-                    //Show a notification
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            startForeground(1, createNotification("Block "+mTxPow.getBlockNumber()+" @ "+new Date(mTxPow.getTimeMilli().getAsLong())));
-                        }
-                    });
+                    //What is the Event..
+                    String event    = (String) notify.get("event");
+                    JSONObject data = (JSONObject) notify.get("data");
+
+                    if(event.equals("NEWBLOCK")) {
+
+                        //Get the TxPoW
+                        mTxPowJSON = (JSONObject) data.get("txpow");
+
+                        //Show a notification
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                //Set status Bar notification
+                                setMinimaNotification();
+                            }
+                        });
+
+                    }else if(event.equals("MAXIMA")){
+
+                        //Broadcast the Maxima Message ( Currently ONLY MaxChat gets it.. can be configured )
+
+
+                    }
                 }
             }
         });
@@ -153,10 +172,16 @@ public class MinimaService extends Service {
         vars.add("-isclient");
         vars.add("-mobile");
 
-        //Test Values
-//        vars.add("-nop2p");
-//        vars.add("-genesis");
+//        //Test Values
 //        vars.add("-test");
+//        vars.add("-clean");
+//        vars.add("-nop2p");
+//        vars.add("-connect");
+//        vars.add("10.0.2.2:9001");
+
+        vars.add("-rpcenable");
+//        vars.add("-genesis");
+//        vars.add("-automine");
 
 //        vars.add("-connect");
 //        vars.add("35.246.45.106:9001");
@@ -184,16 +209,26 @@ public class MinimaService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-//        MinimaLogger.log("Service : OnStartCommand "+startId+" "+mListenerAdded);
 
-        //Set the default message
-        if(mTxPow == null){
-            startForeground(1, createNotification("Starting up.. please wait.."));
-        }else{
-            startForeground(1, createNotification("Block "+mTxPow.getBlockNumber()+" @ "+new Date(mTxPow.getTimeMilli().getAsLong())));
-        }
+        //Set status Bar notification
+        setMinimaNotification();
 
         return START_STICKY;
+    }
+
+    private void setMinimaNotification(){
+        //Set the default message
+        if(mTxPowJSON == null){
+            startForeground(1, createNotification("Starting up.. please wait.."));
+
+        }else{
+            JSONObject header = (JSONObject)mTxPowJSON.get("header");
+
+            String block    = (String) header.get("block");
+            String date     = (String) header.get("date");
+
+            startForeground(1, createNotification("Block " + block + " @ " + date));
+        }
     }
 
     @Override

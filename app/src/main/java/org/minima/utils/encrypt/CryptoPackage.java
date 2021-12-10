@@ -5,6 +5,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.KeyPair;
+import java.security.Security;
 
 import org.minima.objects.base.MiniData;
 import org.minima.utils.Streamable;
@@ -32,8 +33,8 @@ public class CryptoPackage implements Streamable {
 	 * @throws Exception 
 	 */
 	public void encrypt(byte[] zData, byte[] zRSAPublicKey) throws Exception {
-		//Create an AES 256 bit key
-		byte[] secret = EncryptDecrypt.secretKey();
+		//Create an AES key
+		byte[] secret = GenerateKey.secretKey();
     	
 		//Now encrypt the data with the secret
 		byte[] encrypteddata = EncryptDecrypt.encryptSYM(secret, zData);
@@ -91,20 +92,25 @@ public class CryptoPackage implements Streamable {
 	} 
 	
 	public static void main(String[] zArgs) throws Exception {
-		KeyPair generateKeyPair = EncryptDecrypt.generateKeyPair();
+		//We use Bouncy
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		 		
+		KeyPair generateKeyPair = GenerateKey.generateKeyPair();
 		
 		byte[] publicKey 		= generateKeyPair.getPublic().getEncoded();
 		MiniData pubk 			= new MiniData(publicKey);
 		
 		byte[] privateKey	 	= generateKeyPair.getPrivate().getEncoded();
-
+		MiniData privk 			= new MiniData(privateKey);
+		
 		MiniData rdata = MiniData.getRandomData(256);
 		CryptoPackage cp = new CryptoPackage();
 		cp.encrypt(rdata.getBytes(), publicKey);
 		
-		System.out.println("Public Key : "+pubk.getLength());
-		System.out.println("Data       : "+rdata.getLength());
-		System.out.println("Enc Data   : "+cp.getCompleteEncryptedData().getLength());
+		System.out.println("Public Key  : "+pubk.getLength());
+		System.out.println("Private Key : "+privk.getLength());
+		System.out.println("Data        : "+rdata.getLength());
+		System.out.println("Enc Data    : "+cp.getCompleteEncryptedData().getLength());
 		
 		byte[] dec = cp.decrypt(privateKey);
 		MiniData decdata = new MiniData(dec);

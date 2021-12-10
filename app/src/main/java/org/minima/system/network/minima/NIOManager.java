@@ -39,6 +39,7 @@ public class NIOManager extends MessageProcessor {
 	
 	public static final String NIO_DISCONNECT 		= "NIO_DISCONNECT";
 	public static final String NIO_DISCONNECTED		= "NIO_DISCONNECTED";
+	public static final String NIO_DISCONNECTALL 	= "NIO_DISCONNECTALL";
 	
 	public static final String NIO_RECONNECT 		= "NIO_RECONNECT";
 	
@@ -128,11 +129,17 @@ public class NIOManager extends MessageProcessor {
 		
 		if(zMessage.getMessageType().equals(NIO_SERVERSTARTED)) {
 			
+			//Do we need to start up the SSHTunnel..
+			if(MinimaDB.getDB().getUserDB().isSSHTunnelEnabled()){
+				//Start the SSH Tunnel..
+				sshtunnel.startSSHTunnel();
+			
+				//Wait a few seconds for it to work..
+				Thread.sleep(5000);
+			}
+			
 			//The NIOServer has started you can now start up the P2P and pre-connect list
 			Main.getInstance().getNetworkManager().getP2PManager().PostMessage(P2PFunctions.P2P_INIT);
-			
-			//Do we need to start up the SSHTunnel..
-			sshtunnel.startSSHTunnel();
 			
 			//Any nodes to auto connect to.. comma separated list
 			if(!GeneralParams.CONNECT_LIST.equals("")) {
@@ -235,6 +242,22 @@ public class NIOManager extends MessageProcessor {
 				tmsg.addObject("client", nc);
 				NIOManager.this.PostTimerMessage(tmsg);
 			}
+		
+		}else if(zMessage.getMessageType().equals(NIO_DISCONNECTALL)) {
+			
+			//Disconnect from all the clients..!
+			
+			Enumeration<NIOClient> clients = mConnectingClients.elements();
+			while(clients.hasMoreElements()) {
+				NIOClient nc = clients.nextElement();
+				disconnect(nc.getUID());
+			}
+			
+			ArrayList<NIOClient> conns = mNIOServer.getAllNIOClients();
+			for(NIOClient conn : conns) {
+				disconnect(conn.getUID());
+			}
+			
 			
 		}else if(zMessage.getMessageType().equals(NIO_DISCONNECT)) {
 			//Get the UID
@@ -282,20 +305,20 @@ public class NIOManager extends MessageProcessor {
 			//New connection.. 
 			NIOClient nioc = (NIOClient)zMessage.getObject("client");
 		
-			//Create the Greeting..
-			Greeting greet = new Greeting().createGreeting();
-			
-			//And send it..
-			NIOManager.sendNetworkMessage(nioc.getUID(), NIOMessage.MSG_GREETING, greet);
-			
-			//Tell the P2P..
-			Message newconn = new Message(P2PFunctions.P2P_CONNECTED);
-			newconn.addString("uid", nioc.getUID());
-			newconn.addBoolean("incoming", nioc.isIncoming());
-			newconn.addObject("client", nioc);
-			Main.getInstance().getNetworkManager().getP2PManager().PostMessage(newconn);
-			
-			MinimaLogger.log("INFO : "+nioc.getUID()+" connection success @ "+nioc.getHost());
+			//Is this an outgoing connection..
+			if(!nioc.isIncoming()) {
+				
+				//Only Send this ONCE!
+				if(!nioc.haveSentGreeting()) {
+					nioc.setSentGreeting(true);	
+				
+					//Create the Greeting..
+					Greeting greet = new Greeting().createGreeting();
+					
+					//And send it..
+					NIOManager.sendNetworkMessage(nioc.getUID(), NIOMessage.MSG_GREETING, greet);
+				}
+			}
 			
 		}else if(zMessage.getMessageType().equals(NIO_INCOMINGMSG)) {
 			//Who is it from
