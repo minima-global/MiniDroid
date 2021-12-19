@@ -190,6 +190,19 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
         switch (item.getItemId()) {
+            case R.id.status:
+
+                //Get some data..
+                String statustext = runCommandSync("status");
+
+                new AlertDialog.Builder(this)
+                        .setTitle("Minima Status")
+                        .setMessage(statustext)
+                        .setIcon(R.drawable.ic_minima_new)
+                        .show();
+
+                return true;
+
             case R.id.minimahelp:
 
                 Spanned text = Html.fromHtml("<br>Please visit <b>minima.global/get-involved</b><br><br>Thank you",Html.FROM_HTML_MODE_LEGACY);
