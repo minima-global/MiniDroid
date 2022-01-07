@@ -20,6 +20,9 @@
     <item android:id="@+id/clearconsole"
         android:title="Clear Console" />
 
+    <item android:id="@+id/maximahost"
+        android:title="Maxima Host" />
+
     <item android:id="@+id/battery"
         android:title="Battery Optimise"/>
 

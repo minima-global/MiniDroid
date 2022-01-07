@@ -260,6 +260,36 @@ public class MinimaActivity extends AppCompatActivity implements ServiceConnecti
                 openBatteryOptimisation();
                 return true;
 
+            case R.id.maximahost:
+
+                final EditText mhost = new EditText(this);
+                new AlertDialog.Builder(this)
+                        .setTitle("Maxima Host")
+                        .setMessage("Please set your Maxima host here :")
+                        .setView(mhost)
+                        .setIcon(R.drawable.ic_minima_new)
+                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                //Get the Host..
+                                String mh = mhost.getText().toString().trim();
+
+                                runMinimaCommand("maxima action:sethost data:"+mh);
+
+                                Toast.makeText(MinimaActivity.this, "Maxima Host set to "+mh+"\n\nPlease wait for connection..", Toast.LENGTH_SHORT).show();
+                            }
+                        })
+                        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                dialogInterface.cancel();
+                            }
+                        })
+                        .show();
+
+//                Toast.makeText(this,"HELP! I NEED SOMEBODY!",Toast.LENGTH_SHORT).show();
+                return true;
+
 //            case R.id.shutdown:
 //                Toast.makeText(this,"Shutting down Minima..",Toast.LENGTH_LONG).show();
 //                    shutDownMinima();
