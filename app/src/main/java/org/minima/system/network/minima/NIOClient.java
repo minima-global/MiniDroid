@@ -71,6 +71,10 @@ public class NIOClient {
 	
 	boolean mSentGreeting = false;
 	
+	boolean mP2PGreeting = false;
+	
+	String mMaximaIdent = "";
+	
 	/**
 	 * Specify extra info
 	 */
@@ -110,6 +114,11 @@ public class NIOClient {
     	mLastMessageRead 	= mTimeConnected; 
     }
 	
+	@Override
+	public String toString() {
+		return toJSON().toString();
+	}
+	
 	public JSONObject toJSON() {
 		JSONObject ret = new JSONObject();
 		
@@ -122,6 +131,10 @@ public class NIOClient {
 		ret.put("connected", new Date(mTimeConnected).toString());
 		ret.put("valid", mValidGreeting);
 		ret.put("sentgreeting", mSentGreeting);
+		
+		if(isMaximaClient()) {
+			ret.put("maxima", mMaximaIdent);
+		}
 		
 		return ret;
 	}
@@ -140,6 +153,18 @@ public class NIOClient {
 	
 	public boolean isIncoming() {
 		return mIncoming;
+	}
+	
+	public boolean isMaximaClient() {
+		return !mMaximaIdent.equals("");
+	}
+	
+	public void setMaximaIdent(String zMaxima) {
+		mMaximaIdent = zMaxima;
+	}
+	
+	public String getMaximaIdent() {
+		return mMaximaIdent;
 	}
 	
 	public void overrideHost(String zHost) {
@@ -166,6 +191,10 @@ public class NIOClient {
 		return mMinimaPort;
 	}
 	
+	public String getFullAddress() {
+		return mHost+":"+mPort;
+	}
+	
 	public boolean isValidGreeting() {
 		return mValidGreeting;
 	}
@@ -176,6 +205,14 @@ public class NIOClient {
 	
 	public boolean haveSentGreeting() {
 		return mSentGreeting;
+	}
+	
+	public void setReceivedP2PGreeting() {
+		mP2PGreeting = true;
+	}
+	
+	public boolean hasReceivedP2PGreeting() {
+		return mP2PGreeting;
 	}
 	
 	public void setSentGreeting(boolean zSent) {

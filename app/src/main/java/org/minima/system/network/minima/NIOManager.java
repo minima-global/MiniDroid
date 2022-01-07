@@ -20,6 +20,7 @@ import org.minima.system.Main;
 import org.minima.system.commands.all.connect;
 import org.minima.system.commands.all.sshtunnel;
 import org.minima.system.network.NetworkManager;
+import org.minima.system.network.maxima.Maxima;
 import org.minima.system.network.p2p.P2PFunctions;
 import org.minima.system.params.GeneralParams;
 import org.minima.utils.MinimaLogger;
@@ -130,6 +131,39 @@ public class NIOManager extends MessageProcessor {
 		}
 		
 		return connections;
+	}
+	
+	public NIOClient checkConnected(String zHost) {
+		//Who are we trying to connect to
+		Enumeration<NIOClient> clients = mConnectingClients.elements();
+		while(clients.hasMoreElements()) {
+			NIOClient nc = clients.nextElement();
+			if(zHost.equals(nc.getFullAddress())) {
+				return nc;
+			}
+		}
+		
+		//Who are we connected to..
+		ArrayList<NIOClient> conns = mNIOServer.getAllNIOClients();
+		for(NIOClient conn : conns) {
+			if(zHost.equals(conn.getFullAddress())) {
+				return conn;
+			}
+		}
+		
+		return null;
+	}
+	
+	public NIOClient getMaximaUID(String zMaximaPubKey) {
+		//Who are we connected to..
+		ArrayList<NIOClient> conns = mNIOServer.getAllNIOClients();
+		for(NIOClient conn : conns) {
+			if(conn.isMaximaClient() && conn.getMaximaIdent().equals(zMaximaPubKey)) {
+				return conn;
+			}
+		}
+		
+		return null;
 	}
 	
 	@Override
@@ -303,6 +337,8 @@ public class NIOManager extends MessageProcessor {
 			}
 			
 			//Tell the P2P..
+//			MinimaLogger.log("DISCONNECTED P2P Client UID : "+nioc.getUID()+" @ "+nioc.getHost()+":"+nioc.getPort());
+			
 			Message newconn = new Message(P2PFunctions.P2P_DISCONNECTED);
 			newconn.addString("uid", nioc.getUID());
 			newconn.addBoolean("incoming", nioc.isIncoming());
@@ -322,6 +358,20 @@ public class NIOManager extends MessageProcessor {
 				
 					//Create the Greeting..
 					Greeting greet = new Greeting().createGreeting();
+					
+					//Is this my Maxima Host..
+					Maxima max = Main.getInstance().getMaxima();
+					if(max.isHostSet()) {
+						//Check it..
+						String hostclient = nioc.getHost()+":"+nioc.getPort(); 
+						
+						if(hostclient.equals(max.getMaximaHost())) {
+							MinimaLogger.log("Connected to Maxima Host!");
+							
+							//This is our Maxima Host - add our Maxima Public Key
+							greet.getExtraData().put("maxima", max.getPublicKey());
+						}
+					}
 					
 					//And send it..
 					NIOManager.sendNetworkMessage(nioc.getUID(), NIOMessage.MSG_GREETING, greet);

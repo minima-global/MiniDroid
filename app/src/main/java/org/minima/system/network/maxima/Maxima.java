@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.security.KeyPair;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -14,6 +15,8 @@ import org.minima.database.userprefs.UserDB;
 import org.minima.objects.base.MiniData;
 import org.minima.objects.base.MiniString;
 import org.minima.system.Main;
+import org.minima.system.commands.all.connect;
+import org.minima.system.network.minima.NIOClient;
 import org.minima.system.network.minima.NIOManager;
 import org.minima.system.network.minima.NIOMessage;
 import org.minima.system.params.GeneralParams;
@@ -24,6 +27,7 @@ import org.minima.utils.MinimaLogger;
 import org.minima.utils.encrypt.CryptoPackage;
 import org.minima.utils.encrypt.GenerateKey;
 import org.minima.utils.encrypt.SignVerify;
+import org.minima.utils.json.JSONArray;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
 import org.minima.utils.messages.MessageProcessor;
@@ -37,15 +41,18 @@ public class Maxima extends MessageProcessor {
 	public static final String MAXIMA_INIT 			= "MAXIMA_INIT";
 	public static final String MAXIMA_RECMESSAGE 	= "MAXIMA_RECMESSAGE";
 	public static final String MAXIMA_SENDMESSAGE 	= "MAXIMA_SENDDMESSAGE";
-	
-	public static final String MAXIMA_TEST_MSG 		= "MAXIMA_TEST_MSG";
-	public long MAXIMA_TEST_TIMER					= 1000 * 60 * 10;
+	public static final String MAXIMA_HOSTCONNECT 	= "MAXIMA_HOSTCONNECT";
 	
 	/**
 	 * UserDB data
 	 */
 	private static final String MAXIMA_PUBKEY 	= "maxima_publickey";
 	private static final String MAXIMA_PRIVKEY 	= "maxima_privatekey";
+	
+	private static final String MAXIMA_CLIENTS 	= "maxima_clients";
+	
+	private static final String MAXIMA_HOSTSET 	= "maxima_hostset";
+	private static final String MAXIMA_HOST 	= "maxima_host";
 	
 	/**
 	 * The Respnse message for a Maxima Message
@@ -61,38 +68,115 @@ public class Maxima extends MessageProcessor {
 	private boolean mInited 	= false;
 	public boolean mMaximaLogs 	= true;
 	
+	/**
+	 * Who are we forwarding messages to
+	 */
+	JSONArray mMaximaClients = new JSONArray();
+
+	/**
+	 * Who is Hosting
+	 */
+	boolean mIsMaxHostSet = false;
+	String mHost;
+	
 	public Maxima() {
 		super("MAXIMA");
-		PostMessage(MAXIMA_INIT);
 		
-		//Start the test message..
-//		PostTimerMessage(new TimerMessage(5000, MAXIMA_TEST_MSG));
+		PostMessage(MAXIMA_INIT);
 	}
 	
 	public boolean isInited() {
 		return mInited;
 	}
 	
-	public String getIdentity() {
+	public String getPublicKey() {
+		return BaseConverter.encode32(mPublic.getBytes());
+	}
+	
+	public boolean isHostSet() {
+		return mIsMaxHostSet;
+	}
+	
+	public String getMaximaHost() {
+		if(mIsMaxHostSet) {
+			return mHost;
+		}
+		return GeneralParams.MINIMA_HOST+":"+GeneralParams.MINIMA_PORT;
+	}
+
+	public void setMaximaHost(String zHost) {
+		if(zHost.equals("")) {
+			mIsMaxHostSet = false;
+			
+			//Disconnect if need be
+			NIOClient nioc = Main.getInstance().getNIOManager().checkConnected(mHost);
+			if(nioc != null) {
+				Main.getInstance().getNIOManager().disconnect(nioc.getUID());
+			}
+			
+			//Reset
+			mHost = GeneralParams.MINIMA_HOST+":"+GeneralParams.MINIMA_PORT;
+			
+		}else {
+			mIsMaxHostSet 	= true;
+			mHost 			= zHost;
+		}
 		
-		//What is your Host..
-		String host = GeneralParams.MINIMA_HOST;
-		int port 	= GeneralParams.MINIMA_PORT;
-		
-		//Base32
-		String b32 = BaseConverter.encode32(mPublic.getBytes());
-		
-		return b32+"@"+host+":"+port;
+		MinimaDB.getDB().getUserDB().setBoolean(MAXIMA_HOSTSET, mIsMaxHostSet);
+		MinimaDB.getDB().getUserDB().setString(MAXIMA_HOST, mHost);
+		MinimaDB.getDB().saveUserDB();
+	}
+	
+	public String getFullIdentity() {
+		return getPublicKey()+"@"+getMaximaHost();
 	}
 	
 	public MaximaMessage createMaximaMessage(String zFullTo, String zApplication, MiniData zData) {
 		MaximaMessage maxima 	= new MaximaMessage();
-		maxima.mFrom 			= new MiniString(getIdentity());
+		maxima.mFrom 			= new MiniString(getFullIdentity());
 		maxima.mTo 				= new MiniString(zFullTo);
 		maxima.mApplication 	= new MiniString(zApplication);
 		maxima.mData 			= zData;
 		
 		return maxima;
+	}
+	
+	public void addValidMaximaClient(String zClient) {
+		
+		//Remove the @ section
+		String client = zClient;
+		if(zClient.contains("@")) {
+			int index 	= zClient.indexOf("@");
+			client 		= zClient.substring(0,index);
+		}
+		
+		//Add
+		mMaximaClients.add(client);
+		
+		MinimaDB.getDB().getUserDB().setJSONArray(MAXIMA_CLIENTS, mMaximaClients);
+		MinimaDB.getDB().saveUserDB();
+	}
+	
+	public void removeValidMaximaClient(String zClient) {
+		mMaximaClients.remove(zClient);
+		
+		MinimaDB.getDB().getUserDB().setJSONArray(MAXIMA_CLIENTS, mMaximaClients);
+		MinimaDB.getDB().saveUserDB();
+	}
+	
+	public JSONArray getMaximaClients() {
+		
+		JSONArray ret = new JSONArray();
+		
+		//Get all the connected clientgs..
+		ArrayList<NIOClient> allclients = Main.getInstance().getNIOManager().getNIOServer().getAllNIOClients();
+		for(NIOClient nioc : allclients) {
+			if(nioc.isMaximaClient()) {
+				ret.add(nioc.getMaximaIdent());
+			}
+		}
+		
+		return ret;
 	}
 	
 	@Override
@@ -113,10 +197,41 @@ public class Maxima extends MessageProcessor {
 				mPrivate = udb.getData(MAXIMA_PRIVKEY, MiniData.ZERO_TXPOWID);
 			}
 			
+			//Is the Host HARD set
+			mIsMaxHostSet = udb.getBoolean(MAXIMA_HOSTSET, false); 
+			
+			//The Host
+			mHost = udb.getString(MAXIMA_HOST, GeneralParams.MINIMA_HOST+":"+GeneralParams.MINIMA_PORT);
+			
+			//Get the valid client list
+			mMaximaClients = udb.getJSONArray(MAXIMA_CLIENTS);
+			
 			mInited = true;
 			
 			//Save the DB
 			MinimaDB.getDB().saveUserDB();
+		
+			//Now try and connect to pout host..
+			PostTimerMessage(new TimerMessage(10000, MAXIMA_HOSTCONNECT));
+			
+		}else if(zMessage.getMessageType().equals(MAXIMA_HOSTCONNECT)) {
+			
+			//Connect to the Host
+			if(mIsMaxHostSet) {
+				
+				//Are we already connected
+				if(Main.getInstance().getNIOManager().checkConnected(mHost) == null) {
+					
+					MinimaLogger.log("Connecting to our Maxima Host "+mHost);
+					
+					//Connecting to Maxima Host
+					Message connectmsg = connect.createConnectMessage(mHost);
+					Main.getInstance().getNIOManager().PostMessage(connectmsg);
+				}
+			}
+			
+			//Check every minute..
+			PostTimerMessage(new TimerMessage(60000, MAXIMA_HOSTCONNECT));
 			
 		}else if(zMessage.getMessageType().equals(MAXIMA_SENDMESSAGE)) {
 			
@@ -160,9 +275,35 @@ public class Maxima extends MessageProcessor {
 			//received a Message!
 			MaximaPackage mpkg = (MaximaPackage) zMessage.getObject("maxpackage");
 			
-			//Is it for us!
+			//Is it for us?
 			if(!mpkg.mTo.isEqual(mPublic)) {
-				MinimaLogger.log("MAXIMA message received to unknown PublicKey : "+mpkg.mTo.to0xString());
+				
+				//The pubkey Mx version
+				String pubk = BaseConverter.encode32(mpkg.mTo.getBytes());
+				
+				//Check if it one of our allowed clients! - For now allow all..
+//				if(mMaximaClients.contains(pubk)) {
+					
+					//Forward it to them!
+					NIOClient client =  Main.getInstance().getNIOManager().getMaximaUID(pubk);
+					
+					//Do we have it
+					if(client != null) {
+						if(mMaximaLogs) {
+							MinimaLogger.log("MAXIMA message forwarded to client Client "+pubk);
+						}
+						
+						//Send to the client we are connected to..
+						NIOManager.sendNetworkMessage(client.getUID(), NIOMessage.MSG_MAXIMA, mpkg);
+						
+					}else{
+						MinimaLogger.log("MAXIMA message received for Client we are not connected to : "+pubk);
+					}
+					
+//				}else {
+//					MinimaLogger.log("MAXIMA message received to unknown PublicKey : "+mpkg.mTo.to0xString());
+//				}
+				
 				return;
 			}
 			
@@ -209,24 +350,6 @@ public class Maxima extends MessageProcessor {
 			
 			//Notify The Listeners
 			Main.getInstance().PostNotifyEvent("MAXIMA",maxjson);
-		
-		}else if(zMessage.getMessageType().equals(MAXIMA_TEST_MSG)) {
-			
-			//Get the Maxima Message
-			MaximaMessage maxima 	= createMaximaMessage(getIdentity(), "maxchat", new MiniData("0xFF"));
-			
-			//Send to Maxima..
-			Message sender = new Message(Maxima.MAXIMA_SENDMESSAGE);
-			sender.addObject("maxima", maxima);
-			sender.addString("publickey", mPublic.to0xString());
-			sender.addString("tohost", GeneralParams.MINIMA_HOST);
-			sender.addInteger("toport", GeneralParams.MINIMA_PORT);
-			
-			//Post It!
-			PostMessage(sender);
-			
-			//And again in a minute..
-			PostTimerMessage(new TimerMessage(MAXIMA_TEST_TIMER, MAXIMA_TEST_MSG));
 		}
 	}
 

@@ -6,14 +6,17 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.minima.objects.base.MiniData;
+import org.minima.system.Main;
 import org.minima.system.network.minima.NIOClient;
 import org.minima.system.network.minima.NIOClientInfo;
 import org.minima.system.network.p2p.messages.P2PGreeting;
 import org.minima.system.network.p2p.messages.P2PWalkLinks;
+import org.minima.system.params.GeneralParams;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.messages.Message;
@@ -43,11 +46,18 @@ public class SwapLinksFunctions {
         boolean sendMessages = true;
         if (incoming) {
             InetSocketAddress incomingAddress = new InetSocketAddress(info.getHost(), 0);
-            if (state.getNoneP2PLinks().containsValue(incomingAddress)) {
-                msgs.add(new Message(P2PManager.P2P_SEND_DISCONNECT).addString("uid", uid));
-                sendMessages = false;
+            
+            if(info.getHost().equals("127.0.0.1")) {
+            	//It's an SSH Forward address with no HOST set..
+            	state.getNoneP2PLinks().put(uid, new InetSocketAddress(info.getHost(), 0));
+            	
+            }else {
+                if (state.getNoneP2PLinks().containsValue(incomingAddress) && !info.isMaximaClient()) {
+	                msgs.add(new Message(P2PManager.P2P_SEND_DISCONNECT).addString("uid", uid));
+	                sendMessages = false;
+	            }
+	            state.getNoneP2PLinks().put(uid, new InetSocketAddress(info.getHost(), 0));
             }
-            state.getNoneP2PLinks().put(uid, new InetSocketAddress(info.getHost(), 0));
         } else {
             state.getNoneP2PLinks().put(uid, new InetSocketAddress(info.getHost(), info.getPort()));
         }
@@ -125,11 +135,23 @@ public class SwapLinksFunctions {
             String host = client.getHost();
             int port = greeting.getMyMinimaPort();
             InetSocketAddress minimaAddress = new InetSocketAddress(host, port);
+            
+            boolean addtoknown = !host.contains("127.0.0.1");
+//            MinimaLogger.log("P2P GREETING UID:"+uid+" valid:"+state.getNoneP2PLinks().containsKey(uid)+" @ "+minimaAddress+" addtoknown:"+addtoknown);
             state.getNoneP2PLinks().remove(uid);
+            
+            //The NIOClient has received a P2Pgreeting.. Check if NULL or Tests fail
+            if(Main.getInstance() != null) {
+	            NIOClient nioclient = Main.getInstance().getNIOManager().getNIOServer().getClient(uid);
+	            nioclient.setReceivedP2PGreeting();
+            }
+            
             if (greeting.isAcceptingInLinks()) {
-                state.getKnownPeers().add(minimaAddress);
+            	if(addtoknown) {
+            		state.getKnownPeers().add(minimaAddress);
+            	}
+                
                 // Peers are assumed to not be P2P Links until we get a valid P2P Greeting
-
                 if (client.isIncoming()) {
                     state.getInLinks().put(uid, minimaAddress);
                 } else {
@@ -153,7 +175,7 @@ public class SwapLinksFunctions {
                 state.getNotAcceptingConnP2PLinks().put(uid, minimaAddress);
             }
         } else {
-            MinimaLogger.log("[-] ERROR Client is null when processing greeting: " + greeting.toJson());
+            MinimaLogger.log("[-] ERROR Client is null UID:"+uid+" when processing greeting: " + greeting.toJson());
         }
         return noconnect;
     }
@@ -176,8 +198,15 @@ public class SwapLinksFunctions {
             state.setHostSet(true);
             state.getKnownPeers().remove(state.getMyMinimaAddress());
             MinimaLogger.log("[+] Setting My IP: " + hostIP);
+            
+//            //Set this globally..
+//            if(!GeneralParams.IS_HOST_SET) {
+//            	GeneralParams.IS_HOST_SET = true;
+//            	GeneralParams.MINIMA_HOST = hostIP;
+//            }
+            
         } else {
-            MinimaLogger.log("[-] Failed to set my ip. Secrets do not match. MySecret: " + state.getIpReqSecret() + " Received secret: " + secret);
+            MinimaLogger.log("[-] WARNING : Failed to set my ip. Secrets do not match - could be a delay. MySecret: " + state.getIpReqSecret() + " Received secret: " + secret);
         }
     }
 

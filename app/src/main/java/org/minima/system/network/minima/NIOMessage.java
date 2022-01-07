@@ -20,12 +20,15 @@ import org.minima.system.brains.TxPoWChecker;
 import org.minima.system.network.maxima.Maxima;
 import org.minima.system.network.maxima.MaximaPackage;
 import org.minima.system.network.p2p.P2PFunctions;
+import org.minima.system.network.p2p.P2PManager;
+import org.minima.system.params.GeneralParams;
 import org.minima.utils.ListCheck;
 import org.minima.utils.MiniFormat;
 import org.minima.utils.MinimaLogger;
 import org.minima.utils.json.JSONObject;
 import org.minima.utils.json.parser.JSONParser;
 import org.minima.utils.messages.Message;
+import org.minima.utils.messages.TimerMessage;
 
 public class NIOMessage implements Runnable {
 
@@ -139,6 +142,13 @@ public class NIOMessage implements Runnable {
 					return;
 				}
 				
+				//Is this a port foprwrad address
+				if(nioclient.getHost().equals("127.0.0.1")) {
+					if(greet.getExtraData().containsKey("host")) {
+						MinimaLogger.log("Greeting from SSH Port with HOST set : "+greet.getExtraDataValue("host"));
+					}
+				}
+				
 				//Get the Host / Port..
 				if(greet.getExtraData().containsKey("host")) {
 					nioclient.overrideHost(greet.getExtraDataValue("host"));
@@ -147,11 +157,18 @@ public class NIOMessage implements Runnable {
 					nioclient.setMinimaPort(Integer.parseInt(greet.getExtraDataValue("port")));
 				}
 				
+				//Is there Maxima Ident..
+				if(greet.getExtraData().containsKey("maxima")) {
+					MinimaLogger.log("Maxima Client Connected "+nioclient);
+					nioclient.setMaximaIdent(greet.getExtraDataValue("maxima"));
+				}
+				
 				//Get the welcome message..
 				nioclient.setWelcomeMessage("Minima v"+greet.getVersion());
 				nioclient.setValidGreeting(true);
 				
 				//Tell the P2P..
+//				MinimaLogger.log("CONNECTED P2P Client "+nioclient);
 				Message newconn = new Message(P2PFunctions.P2P_CONNECTED);
 				newconn.addString("uid", nioclient.getUID());
 				newconn.addBoolean("incoming", nioclient.isIncoming());
@@ -343,16 +360,47 @@ public class NIOMessage implements Runnable {
 				//P2P message..
 				MiniString msg = MiniString.ReadFromStream(dis);
 				
+				//Should not be receiving these..
+				if(!GeneralParams.P2P_ENABLED) {
+					return;
+				}
+				
+				//Get the Client
+				NIOClient nioclient = Main.getInstance().getNIOManager().getNIOServer().getClient(mClientUID);
+				
+				//Is this one of our Maxima Clients / Hosts.. if so ignore all P2P messages..
+				Maxima max = Main.getInstance().getMaxima();
+				if(nioclient.isMaximaClient()) {
+					//Don't forward these messages..
+					return;
+				}else if(max.isHostSet() && nioclient.getFullAddress().equals(max.getMaximaHost())) {
+					//Don't forward..
+					return;
+				}
+				
 				//Convert to JSON
 				JSONObject json = (JSONObject) new JSONParser().parse(msg.toString());
 				
-				//Create the message
-				Message p2p = new Message(P2PFunctions.P2P_MESSAGE);
-				p2p.addString("uid", mClientUID);
-				p2p.addObject("message", json);
+				//Have we received a p2p greeting..?
+				P2PManager p2pmanager = (P2PManager)Main.getInstance().getNetworkManager().getP2PManager();
 				
-				//And forward to thew P2P
-				Main.getInstance().getNetworkManager().getP2PManager().PostMessage(p2p);
+				if(!nioclient.hasReceivedP2PGreeting()) {
+//					MinimaLogger.log("RECEIVED P2P MSG BEFORE GREETING.. DELAYING BY 10s.. "+json.toJSONString());
+					
+					//Post with delay
+					TimerMessage p2p = new TimerMessage(10000, P2PFunctions.P2P_MESSAGE);
+					p2p.addString("uid", mClientUID);
+					p2p.addObject("message", json);
+					p2pmanager.PostTimerMessage(p2p);
+					
+				}else {
+					//Post directly
+					Message p2p = new Message(P2PFunctions.P2P_MESSAGE);
+					p2p.addString("uid", mClientUID);
+					p2p.addObject("message", json);
+					p2pmanager.PostMessage(p2p);
+					
+				}
 				
 			}else if(type.isEqual(MSG_PULSE)) {
 				
@@ -391,6 +439,7 @@ public class NIOMessage implements Runnable {
 					
 					//Request all the blocks.. in the correct order
 					for(MiniData block : requestlist) {
+//						NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOWREQ, block);
 						NIOManager.sendDelayedTxPoWReq(mClientUID, block.to0xString(), "PULSE");
 					}
 					
@@ -415,7 +464,7 @@ public class NIOMessage implements Runnable {
 				
 				Main.getInstance().getMaxima().PostMessage(maxmsg);
 				
-				//Notify that Client that we received the message.. this makes them disconnect
+				//Notify that Client that we received the message.. this makes external client disconnect ( internal just a ping )
 				NIOManager.sendNetworkMessage(mClientUID, MSG_PING, MiniData.ONE_TXPOWID);
 				
 			}else {
