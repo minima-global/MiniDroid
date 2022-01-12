@@ -153,14 +153,53 @@ public class MinimaService extends Service {
 
                     }else if(event.equals("MAXIMA")){
 
-                        //Broadcast the Maxima Message ( Currently ONLY MaxChat gets it.. can be configured )
-                        Intent i= new Intent();
-                        ComponentName cn = new ComponentName("com.minima.maxchat","com.minima.maxchat.MyBroadcastReceiver");
-                        i.setComponent(cn);
-                        i.setAction("com.minima.maxchat.MINIMA_MESSAGE");
-                        i.putExtra("data", data.toString());
-                        sendBroadcast(i);
+                        //How big is the message
+                        String datastr  = data.toString();
+                        int datalen     = datastr.length();
+                        int maxsize     = 50000;
 
+                        if(datalen < maxsize) {
+
+                            //Broadcast the Maxima Message ( Currently ONLY MaxChat / MaxWeb gets it.. can be configured )
+                            Intent mchat= new Intent();
+                            ComponentName cn = new ComponentName("com.minima.maxchat","com.minima.maxchat.MyBroadcastReceiver");
+                            mchat.setComponent(cn);
+                            mchat.setAction("com.minima.maxchat.MINIMA_MESSAGE");
+                            mchat.putExtra("data", datastr);
+                            sendBroadcast(mchat);
+
+                            Intent i2 = new Intent();
+                            ComponentName cn2 = new ComponentName("com.minima.webtest", "com.minima.webtest.MyBroadcastReceiver");
+                            i2.setComponent(cn2);
+                            i2.setAction("com.minima.webtest.MINIMA_MESSAGE");
+                            i2.putExtra("data", datastr);
+                            sendBroadcast(i2);
+
+                        }else{
+                            //Use a multi broadcast - otherwise Android plays up..:(
+                            int numdivs = (int)Math.ceil ((double)datalen / (double)maxsize);
+                            MinimaLogger.log("Multi Broadcast large message "+datalen+" "+numdivs);
+
+                            for(int i=0;i<numdivs;i++){
+                                Intent i2 = new Intent();
+                                ComponentName cn2 = new ComponentName("com.minima.webtest", "com.minima.webtest.MyBroadcastReceiver");
+                                i2.setComponent(cn2);
+                                i2.setAction("com.minima.webtest.MINIMA_MESSAGE");
+                                i2.putExtra("multi", true);
+                                i2.putExtra("multitotal", numdivs);
+                                i2.putExtra("multinum", i);
+
+                                int start   = i*maxsize;
+                                int end     = start + maxsize;
+                                if(end>datalen){
+                                    end = datalen;
+                                }
+                                String datadiv = datastr.substring(start,end);
+                                i2.putExtra("data", datadiv);
+
+                                sendBroadcast(i2);
+                            }
+                        }
                     }
                 }
             }
