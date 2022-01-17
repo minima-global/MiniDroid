@@ -14,6 +14,7 @@ import org.minima.objects.Pulse;
 import org.minima.objects.TxPoW;
 import org.minima.objects.base.MiniByte;
 import org.minima.objects.base.MiniData;
+import org.minima.objects.base.MiniNumber;
 import org.minima.objects.base.MiniString;
 import org.minima.system.Main;
 import org.minima.system.brains.TxPoWChecker;
@@ -275,6 +276,32 @@ public class NIOMessage implements Runnable {
 					return;
 				}
 				
+				//Now get the current tip details
+				TxPoWTreeNode tip 		= MinimaDB.getDB().getTxPoWTree().getTip();
+				TxPoWTreeNode cascade 	= MinimaDB.getDB().getTxPoWTree().getRoot();
+				MMR tipmmr 				= tip.getMMR();
+				TxPoW tiptxpow			= tip.getTxPoW();
+				
+				//The block and cascade block
+				MiniNumber cascadeblock = cascade.getBlockNumber();
+				MiniNumber block 		= txpow.getBlockNumber();
+				
+				//Check if is a block and within range of our current tip
+				double blockdiffratio = TxPoWChecker.checkDifficulty(tip.getTxPoW().getBlockDifficulty(), txpow.getBlockDifficulty());
+				
+				//For BOTH txns and blocks
+				if(block.isLess(cascadeblock)) {
+					//Block before cascade
+					MinimaLogger.log("Received block before cascade.. "+block+" / "+cascadeblock+" difficulty:"+blockdiffratio);
+					return;
+				}
+				
+				if(blockdiffratio < 0.25) {
+					//Block difficulty too low..
+					MinimaLogger.log("Received txpow with block difficulty too low.. "+blockdiffratio+" "+txpow.getBlockNumber()+" "+txpow.getTxPoWID());
+					return;
+				}
+				
 				//OK - Some basic checks..
 				if(!TxPoWChecker.checkTxPoWBasic(txpow)) {
 					//These MUST PASS
@@ -286,11 +313,6 @@ public class NIOMessage implements Runnable {
 					MinimaLogger.log("Invalid signatures on txpow from "+mClientUID+" "+txpow.getTxPoWID());
 					return;
 				}
-				
-				//Now get the current tip details
-				TxPoWTreeNode tip 	= MinimaDB.getDB().getTxPoWTree().getTip();
-				MMR tipmmr 			= tip.getMMR();
-				TxPoW tiptxpow		= tip.getTxPoW();
 				
 				//More CHECKS.. if ALL these pass will forward otherwise may be a branch txpow that we requested
 				boolean fullyvalid = true;
@@ -337,7 +359,7 @@ public class NIOMessage implements Runnable {
 						}
 					}
 					
-					//Get the parent if we don't have it..
+					//Get the parent if we don't have it.. and is infront of the Cascade..
 					exists = MinimaDB.getDB().getTxPoWDB().exists(txpow.getParentID().to0xString());
 					if(!exists) {
 						NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOWREQ, txpow.getParentID());
@@ -439,8 +461,8 @@ public class NIOMessage implements Runnable {
 					
 					//Request all the blocks.. in the correct order
 					for(MiniData block : requestlist) {
-//						NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOWREQ, block);
-						NIOManager.sendDelayedTxPoWReq(mClientUID, block.to0xString(), "PULSE");
+						NIOManager.sendNetworkMessage(mClientUID, MSG_TXPOWREQ, block);
+//						NIOManager.sendDelayedTxPoWReq(mClientUID, block.to0xString(), "PULSE");
 					}
 					
 				}else{
